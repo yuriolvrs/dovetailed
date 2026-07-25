@@ -34,6 +34,7 @@ async function mapWithConcurrency<T, R>(
   limit: number,
   fn: (item: T) => Promise<R>,
   onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
@@ -41,6 +42,7 @@ async function mapWithConcurrency<T, R>(
 
   async function worker(): Promise<void> {
     while (next < items.length) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       const i = next++;
       results[i] = await fn(items[i]);
       onProgress?.(++done, items.length);
@@ -55,7 +57,11 @@ function toCandidateList(candidates: { atom: ProfileAtom }[]): MatchCandidate[] 
   return candidates.map((c) => ({ id: c.atom.id, text: c.atom.text, sourceLabel: c.atom.sourceLabel }));
 }
 
-async function matchOneRequirement(requirement: Requirement, atoms: ProfileAtom[]): Promise<RequirementMatch> {
+async function matchOneRequirement(
+  requirement: Requirement,
+  atoms: ProfileAtom[],
+  signal?: AbortSignal,
+): Promise<RequirementMatch> {
   const candidates = retrieveCandidates(requirement.text, matchable(atoms));
   if (candidates.length === 0) {
     return { requirementId: requirement.id, status: 'gap_no_candidates', atomIds: [] };
@@ -63,11 +69,16 @@ async function matchOneRequirement(requirement: Requirement, atoms: ProfileAtom[
 
   const candidateIds = new Set(candidates.map((c) => c.atom.id));
   const prompt = buildMatchRequirementPrompt(requirement.text, toCandidateList(candidates));
-  const verification = await generateStructured(prompt, isMatchVerification, { temperature: 0.1, maxTokens: 300 });
+  const verification = await generateStructured(prompt, isMatchVerification, { temperature: 0.1, maxTokens: 300, signal });
 
   const confirmedIds = verification.atomIds.filter((id) => candidateIds.has(id));
   if (confirmedIds.length === 0) {
-    return { requirementId: requirement.id, status: 'gap_unverified', atomIds: [] };
+    return {
+      requirementId: requirement.id,
+      status: 'gap_unverified',
+      atomIds: [],
+      consideredAtomIds: candidates.map((c) => c.atom.id),
+    };
   }
 
   return { requirementId: requirement.id, status: verification.status, atomIds: confirmedIds };
@@ -77,21 +88,25 @@ async function matchOneRequirement(requirement: Requirement, atoms: ProfileAtom[
  * Runs the full matching pass; verification calls run with limited
  * concurrency. `onProgress` (if given) fires after each requirement
  * finishes, so callers can show something better than an indefinite spinner
- * on a pass that's one LLM call per requirement.
+ * on a pass that's one LLM call per requirement. `signal` (if given) lets a
+ * caller cancel an in-progress pass; a cancelled pass rejects with an
+ * `AbortError` rather than returning partial results.
  *
- * In plain terms: checks every requirement against your profile and reports
- * progress as it goes.
+ * In plain terms: checks every requirement against your profile, reports
+ * progress as it goes, and can be stopped partway through.
  */
 export async function runMatching(
   requirements: Requirement[],
   atoms: ProfileAtom[],
   onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<RequirementMatch[]> {
   return mapWithConcurrency(
     requirements,
     CONCURRENCY,
-    (requirement) => matchOneRequirement(requirement, atoms),
+    (requirement) => matchOneRequirement(requirement, atoms, signal),
     onProgress,
+    signal,
   );
 }
 
@@ -124,5 +139,10 @@ export function statusAfterReject(
     return { ...match, atomIds: [fallback.atom.id] };
   }
 
-  return { requirementId: match.requirementId, status: 'gap_unverified', atomIds: [] };
+  return {
+    requirementId: match.requirementId,
+    status: 'gap_unverified',
+    atomIds: [],
+    consideredAtomIds: candidates.filter((c) => c.atom.id !== rejectedAtomId).map((c) => c.atom.id),
+  };
 }

@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle, Circle, Plus } from 'lucide-react';
 import type { JobPosting } from '../types';
 import { ARRANGEMENTS, listJobPostings, newJobPosting, postingLabel, saveJobPosting } from '../lib/jobStore';
+import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import {
   Badge,
   Btn,
@@ -121,6 +122,7 @@ export default function JobsPage() {
                 location && posting.arrangement
                   ? `${location} (${posting.arrangement})`
                   : location || posting.arrangement || '';
+              const fitScore = computeFitScore(posting.analysis);
 
               return (
                 <Link key={posting.id} to={`/jobs/${posting.id}`} className="block">
@@ -140,6 +142,7 @@ export default function JobsPage() {
                           Not analyzed
                         </Badge>
                       )}
+                      {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit: {fitScore}%</Badge>}
                     </div>
                     {company && <p className="text-sm text-slate-700 mt-0.5">{company}</p>}
                     {locationArrangement && (

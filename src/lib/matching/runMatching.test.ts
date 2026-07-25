@@ -48,7 +48,9 @@ describe('runMatching', () => {
 
     const result = await runMatching([req], atoms);
 
-    expect(result).toEqual([{ requirementId: 'r1', status: 'gap_unverified', atomIds: [] }]);
+    expect(result).toEqual([
+      { requirementId: 'r1', status: 'gap_unverified', atomIds: [], consideredAtomIds: ['java'] },
+    ]);
   });
 
   it('ignores any atomId the LLM returns that was not in the candidate set', async () => {
@@ -58,7 +60,9 @@ describe('runMatching', () => {
 
     const result = await runMatching([req], atoms);
 
-    expect(result).toEqual([{ requirementId: 'r1', status: 'gap_unverified', atomIds: [] }]);
+    expect(result).toEqual([
+      { requirementId: 'r1', status: 'gap_unverified', atomIds: [], consideredAtomIds: ['java'] },
+    ]);
   });
 });
 
@@ -81,6 +85,6 @@ describe('statusAfterReject', () => {
     const match: RequirementMatch = { requirementId: 'r1', status: 'full', atomIds: ['java'] };
     const atoms = [atom({ id: 'java', text: 'Java' })];
     const result = statusAfterReject(match, 'Java experience', atoms, 'java');
-    expect(result).toEqual({ requirementId: 'r1', status: 'gap_unverified', atomIds: [] });
+    expect(result).toEqual({ requirementId: 'r1', status: 'gap_unverified', atomIds: [], consideredAtomIds: [] });
   });
 });

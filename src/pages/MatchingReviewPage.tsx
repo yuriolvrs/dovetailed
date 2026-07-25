@@ -10,7 +10,7 @@
 // In plain terms: the screen where you check the AI's read on how well your
 // profile covers each requirement, and fix it up where needed.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, FileText } from 'lucide-react';
 import type { JobPosting, MatchStatus, Profile, ProfileAtom, RequirementMatch } from '../types';
@@ -18,6 +18,7 @@ import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { loadProfile, saveProfile } from '../lib/profileStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
+import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import { llmErrorMessage } from '../lib/llm';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
 import { RemoveItemButton } from '../components/EditableList';
@@ -34,15 +35,19 @@ const SOURCE_BADGE_LABEL: Record<ProfileAtom['source'], string> = {
 const STATUS_DOT: Record<MatchStatus, string> = {
   full: 'bg-emerald-500',
   partial: 'bg-amber-500',
+  // gap_unverified gets its own color (not the same red as gap_no_candidates)
+  // since it means something meaningfully different: candidates were found,
+  // the LLM just didn't confirm any of them -- worth a second look, not a
+  // dead end.
   gap_no_candidates: 'bg-red-500',
-  gap_unverified: 'bg-red-500',
+  gap_unverified: 'bg-orange-500',
 };
 
 const STATUS_LABEL: Record<MatchStatus, string> = {
   full: 'Full match',
   partial: 'Partial match',
   gap_no_candidates: 'Gap',
-  gap_unverified: 'Gap',
+  gap_unverified: 'Gap — possible matches found',
 };
 
 type PickerTarget = { mode: 'swap'; atomId: string } | null;
@@ -63,6 +68,7 @@ export default function MatchingReviewPage() {
   const [rematchError, setRematchError] = useState<string | null>(null);
   const [rematchProgress, setRematchProgress] = useState<{ done: number; total: number } | null>(null);
   const [expandedAtomIds, setExpandedAtomIds] = useState<Set<string>>(new Set());
+  const rematchAbortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -175,10 +181,15 @@ export default function MatchingReviewPage() {
     setRematchError(null);
     setRematchStatus('loading');
     setRematchProgress({ done: 0, total: posting.analysis.requirements.length });
+    const controller = new AbortController();
+    rematchAbortRef.current = controller;
     try {
       const freshAtoms = buildProfileAtoms(profile);
-      const matches = await runMatching(posting.analysis.requirements, freshAtoms, (done, total) =>
-        setRematchProgress({ done, total }),
+      const matches = await runMatching(
+        posting.analysis.requirements,
+        freshAtoms,
+        (done, total) => setRematchProgress({ done, total }),
+        controller.signal,
       );
       const next = { ...posting, analysis: { ...posting.analysis, matches } };
       await saveJobPosting(next);
@@ -186,11 +197,21 @@ export default function MatchingReviewPage() {
       setRematchStatus('idle');
       setConfirmingRematch(false);
     } catch (err) {
-      setRematchError(llmErrorMessage(err, 'Re-matching'));
-      setRematchStatus('error');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setRematchStatus('idle');
+        setConfirmingRematch(false);
+      } else {
+        setRematchError(llmErrorMessage(err, 'Re-matching'));
+        setRematchStatus('error');
+      }
     } finally {
       setRematchProgress(null);
+      rematchAbortRef.current = null;
     }
+  }
+
+  function handleCancelRematch() {
+    rematchAbortRef.current?.abort();
   }
 
   // Wipes every requirement back to an unmatched gap -- no LLM call, just a
@@ -266,6 +287,7 @@ export default function MatchingReviewPage() {
         ...existing,
         atomIds: [...existing.atomIds, atomId],
         status: wasGap ? 'full' : existing.status,
+        consideredAtomIds: wasGap ? undefined : existing.consideredAtomIds,
       };
       return matches.map((m) => (m.requirementId === selected.id ? updated : m));
     });
@@ -300,14 +322,18 @@ export default function MatchingReviewPage() {
   const isGap = selectedMatch.status === 'gap_no_candidates' || selectedMatch.status === 'gap_unverified';
   const swapAtomId = pickerTarget?.mode === 'swap' ? pickerTarget.atomId : null;
   const swapAtom = swapAtomId ? atomsById.get(swapAtomId) : undefined;
+  const fitScore = computeFitScore(posting.analysis);
 
   return (
     <div className="pb-16">
       <div className="flex items-center justify-between mb-2">
-        <Link to={`/jobs/${posting.id}`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium">
-          <ArrowLeft size={15} />
-          Back to posting
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to={`/jobs/${posting.id}`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium">
+            <ArrowLeft size={15} />
+            Back to posting
+          </Link>
+          {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit score: {fitScore}%</Badge>}
+        </div>
         {!confirmingRematch && !confirmingClear ? (
           <div className="flex items-center gap-2">
             <Btn size="sm" variant="danger" onClick={() => setConfirmingClear(true)}>
@@ -340,8 +366,13 @@ export default function MatchingReviewPage() {
         )}
       </div>
       {rematchProgress && (
-        <div className="mb-4 max-w-xs ml-auto">
-          <ProgressBar done={rematchProgress.done} total={rematchProgress.total} />
+        <div className="mb-4 max-w-xs ml-auto flex items-center gap-3">
+          <div className="flex-1">
+            <ProgressBar done={rematchProgress.done} total={rematchProgress.total} />
+          </div>
+          <Btn size="sm" variant="secondary" onClick={handleCancelRematch}>
+            Cancel
+          </Btn>
         </div>
       )}
       {rematchError && <p className="text-xs text-red-600 mb-4">{rematchError}</p>}
@@ -416,6 +447,32 @@ export default function MatchingReviewPage() {
                 {selectedMatch.status === 'gap_no_candidates'
                   ? 'No matching experience found for this requirement.'
                   : "We found possible profile matches, but couldn't confirm any of them satisfy this requirement."}
+              </div>
+            )}
+
+            {selectedMatch.status === 'gap_unverified' && (selectedMatch.consideredAtomIds?.length ?? 0) > 0 && (
+              <div className="space-y-2 mb-3">
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-1">
+                  Considered but not confirmed
+                </p>
+                {selectedMatch.consideredAtomIds!.map((atomId) => {
+                  const atom = atomsById.get(atomId);
+                  if (!atom) return null;
+                  return (
+                    <div
+                      key={atomId}
+                      className="rounded-xl border border-orange-200 bg-orange-50 flex items-start justify-between gap-3 px-3 py-2.5"
+                    >
+                      <div className="flex items-start gap-2 min-w-0">
+                        <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
+                        <span className="text-sm text-slate-700 break-words">{atom.text}</span>
+                      </div>
+                      <Btn size="sm" variant="secondary" onClick={() => addEvidence(atomId)}>
+                        Use as evidence
+                      </Btn>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

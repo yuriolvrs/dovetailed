@@ -123,6 +123,13 @@ export interface RequirementMatch {
   status: MatchStatus;
   /** References into ProfileAtom -- never free text. */
   atomIds: string[];
+  /**
+   * Only set when status is 'gap_unverified': the candidate atoms retrieval
+   * found for this requirement, none of which the LLM confirmed. Shown to
+   * the user as "considered but not confirmed" so they can judge for
+   * themselves and add one manually if they disagree with the LLM's call.
+   */
+  consideredAtomIds?: string[];
 }
 
 export interface JobAnalysis {

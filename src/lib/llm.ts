@@ -10,6 +10,8 @@ import { JsonParseError, parseJson } from './json';
 export interface GenerateOptions {
   temperature?: number;
   maxTokens?: number;
+  /** Aborts the in-flight request (and any pending rate-limit retry) when triggered. */
+  signal?: AbortSignal;
 }
 
 const DEFAULT_PROXY_URL = 'http://localhost:8787';
@@ -29,8 +31,22 @@ interface ChatCompletionResponse {
 const RATE_LIMIT_MAX_RETRIES = 4;
 const RATE_LIMIT_FALLBACK_DELAYS_MS = [2000, 5000, 10000, 15000];
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        reject(new DOMException('Aborted', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
 }
 
 // The provider's 429 body says exactly how long to wait (e.g. "Please try
@@ -54,10 +70,11 @@ export async function generate(prompt: string, options: GenerateOptions = {}): P
         temperature: options.temperature,
         max_tokens: options.maxTokens,
       }),
+      signal: options.signal,
     });
 
     if (response.status === 429 && attempt < RATE_LIMIT_MAX_RETRIES) {
-      await sleep(retryDelayMs(await response.text(), attempt));
+      await sleep(retryDelayMs(await response.text(), attempt), options.signal);
       continue;
     }
 
