@@ -104,12 +104,15 @@ export async function exportAllData(): Promise<BackupFile> {
     db.jobPostings,
     db.generations,
     db.latexTemplates,
-    async () => ({
-      profiles: await db.profiles.toArray(),
-      jobPostings: await db.jobPostings.toArray(),
-      generations: await db.generations.toArray(),
-      latexTemplates: await db.latexTemplates.toArray(),
-    }),
+    async () => {
+      const [profiles, jobPostings, generations, latexTemplates] = await Promise.all([
+        db.profiles.toArray(),
+        db.jobPostings.toArray(),
+        db.generations.toArray(),
+        db.latexTemplates.toArray(),
+      ]);
+      return { profiles, jobPostings, generations, latexTemplates };
+    },
   );
   return buildBackup(data);
 }

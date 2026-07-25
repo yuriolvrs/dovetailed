@@ -9,19 +9,10 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
 
-export function Card({
-  children,
-  className = '',
-  onClick,
-}: {
-  children: ReactNode;
-  className?: string;
-  onClick?: () => void;
-}) {
+export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      onClick={onClick}
-      className={`bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] ${className}`}
     >
       {children}
     </div>

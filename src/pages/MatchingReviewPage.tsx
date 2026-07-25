@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText } from 'lucide-react';
 import type { JobPosting, MatchStatus, Profile, ProfileAtom, RequirementMatch } from '../types';
 import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { loadProfile, saveProfile } from '../lib/profileStore';
@@ -20,6 +20,7 @@ import { buildProfileAtoms } from '../lib/profileAtoms';
 import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
 import { llmErrorMessage } from '../lib/llm';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
+import { RemoveItemButton } from '../components/EditableList';
 import { Badge, Btn, Card, ProgressBar, SectionTitle } from '../components/ui/primitives';
 
 const SOURCE_BADGE_LABEL: Record<ProfileAtom['source'], string> = {
@@ -109,6 +110,31 @@ export default function MatchingReviewPage() {
       .filter((atom) => usage.has(atom.id))
       .map((atom) => ({ atom, requirementTexts: usage.get(atom.id)! }));
   }, [posting, atoms]);
+
+  const matchByRequirementId = useMemo(() => {
+    const matches = posting && posting !== 'missing' ? (posting.analysis?.matches ?? []) : [];
+    return new Map(matches.map((m) => [m.requirementId, m]));
+  }, [posting]);
+
+  const usedAtomIds = useMemo(() => {
+    const matches = posting && posting !== 'missing' ? (posting.analysis?.matches ?? []) : [];
+    return new Set(matches.flatMap((m) => m.atomIds));
+  }, [posting]);
+
+  const additionalInfoTexts = useMemo(() => new Set(profile?.additionalInfo ?? []), [profile]);
+
+  // Additional information picker: browses the same atoms as the requirement
+  // picker (EvidenceModal decides which sources are selectable), but greys
+  // out/labels "Added" whichever ones are already used as evidence for some
+  // requirement or already copied into Additional information itself -- same
+  // dim treatment the requirement picker uses, rather than hiding them.
+  const additionalInfoDisabledIds = useMemo(
+    () =>
+      new Set(
+        atoms.filter((atom) => usedAtomIds.has(atom.id) || additionalInfoTexts.has(atom.text)).map((a) => a.id),
+      ),
+    [atoms, usedAtomIds, additionalInfoTexts],
+  );
 
   function toggleExpanded(atomId: string) {
     setExpandedAtomIds((prev) => {
@@ -210,22 +236,9 @@ export default function MatchingReviewPage() {
   // inherit the `!profile` early return's narrowing -- they read it through
   // this already-narrowed alias instead.
   const currentProfile: Profile = profile;
-  const analysis = posting.analysis;
-  const matchByRequirementId = new Map(analysis.matches.map((m) => [m.requirementId, m]));
   const selected = requirements.find((r) => r.id === selectedId) ?? requirements[0];
   const selectedMatch: RequirementMatch =
     matchByRequirementId.get(selected.id) ?? { requirementId: selected.id, status: 'gap_no_candidates', atomIds: [] };
-
-  // Additional information picker: browses the same atoms as the requirement
-  // picker (EvidenceModal decides which sources are selectable), but greys
-  // out/labels "Added" whichever ones are already used as evidence for some
-  // requirement or already copied into Additional information itself -- same
-  // dim treatment the requirement picker uses, rather than hiding them.
-  const usedAtomIds = new Set(analysis.matches.flatMap((m) => m.atomIds));
-  const additionalInfoTexts = new Set(profile.additionalInfo);
-  const additionalInfoDisabledIds = new Set(
-    atoms.filter((atom) => usedAtomIds.has(atom.id) || additionalInfoTexts.has(atom.text)).map((a) => a.id),
-  );
 
   function selectRequirement(reqId: string) {
     setSelectedId(reqId);
@@ -491,16 +504,11 @@ export default function MatchingReviewPage() {
                       <Badge color="blue">Additional</Badge>
                       <span className="text-sm text-slate-700">{text}</span>
                     </div>
-                    <button
-                      type="button"
+                    <RemoveItemButton
                       onClick={() =>
                         updateProfile({ additionalInfo: profile.additionalInfo.filter((_, i) => i !== index) })
                       }
-                      className="shrink-0 text-slate-300 hover:text-red-400 transition-colors p-0.5"
-                      aria-label="Remove"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    />
                   </div>
                 ))}
               </div>

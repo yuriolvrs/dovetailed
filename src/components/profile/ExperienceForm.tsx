@@ -9,18 +9,14 @@ import type { ReactNode } from 'react';
 import type { ExperienceEntry } from '../../types';
 import { EditableList } from '../EditableList';
 import { StringList } from '../StringList';
+import { DateRangeFields } from './DateRangeFields';
 import {
   Card,
   Collapsible,
   CollapsibleSectionHeader,
   FieldInput,
-  FieldSelect,
   fieldLabelClass,
-  MONTHS,
-  yearOptions,
 } from '../ui/primitives';
-
-const YEARS = yearOptions();
 
 function newExperienceEntry(): ExperienceEntry {
   return { section: 'Experience', company: '', title: '', current: false, bullets: [] };
@@ -79,64 +75,7 @@ export function ExperienceForm({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className={`mb-1.5 block ${fieldLabelClass}`}>Start Date</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <FieldSelect
-                      value={entry.startMonth ?? ''}
-                      onChange={(startMonth) => update({ ...entry, startMonth })}
-                      options={MONTHS}
-                      placeholder="Month"
-                    />
-                    <FieldSelect
-                      value={entry.startYear ?? ''}
-                      onChange={(startYear) => update({ ...entry, startYear })}
-                      options={YEARS}
-                      placeholder="Year"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <span className={`mb-1.5 block ${fieldLabelClass}`}>End Date</span>
-                  {entry.current ? (
-                    <div className="px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-sm">
-                      Present
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <FieldSelect
-                        value={entry.endMonth ?? ''}
-                        onChange={(endMonth) => update({ ...entry, endMonth })}
-                        options={MONTHS}
-                        placeholder="Month"
-                      />
-                      <FieldSelect
-                        value={entry.endYear ?? ''}
-                        onChange={(endYear) => update({ ...entry, endYear })}
-                        options={YEARS}
-                        placeholder="Year"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={entry.current}
-                  onChange={(e) =>
-                    update({
-                      ...entry,
-                      current: e.target.checked,
-                      ...(e.target.checked ? { endMonth: undefined, endYear: undefined } : {}),
-                    })
-                  }
-                  className="rounded border-slate-300 text-blue-600"
-                />
-                Currently working here
-              </label>
+              <DateRangeFields entry={entry} update={update} currentLabel="Currently working here" />
 
               <FieldInput
                 label="Location"

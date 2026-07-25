@@ -49,6 +49,16 @@ function stripLabelPrefix(label: string): string {
 
 type ChipVariant = 'default' | 'added' | 'confirmed';
 
+// Confirmed evidence always wins over "already added elsewhere" -- shared so
+// the chip and entry-list treatments of the same atom never disagree.
+// In plain terms: figures out whether to show an atom as picked, greyed out,
+// or normal.
+function atomState(atomId: string, confirmedIds: Set<string>, addedIds: Set<string>): ChipVariant {
+  if (confirmedIds.has(atomId)) return 'confirmed';
+  if (addedIds.has(atomId)) return 'added';
+  return 'default';
+}
+
 function SkillChip({
   atom,
   variant,
@@ -108,8 +118,9 @@ function EntryCard({
       <p className="text-xs font-semibold text-slate-800 mb-2">{stripLabelPrefix(label)}</p>
       <div className="space-y-1">
         {bullets.map((atom) => {
-          const confirmed = confirmedIds.has(atom.id);
-          const added = !confirmed && addedIds.has(atom.id);
+          const state = atomState(atom.id, confirmedIds, addedIds);
+          const confirmed = state === 'confirmed';
+          const added = state === 'added';
           return (
             <button
               key={atom.id}
@@ -276,7 +287,7 @@ export function EvidenceModal({
                 <SkillChip
                   key={atom.id}
                   atom={atom}
-                  variant={confirmedIds.has(atom.id) ? 'confirmed' : addedIds.has(atom.id) ? 'added' : 'default'}
+                  variant={atomState(atom.id, confirmedIds, addedIds)}
                   onSelect={() => selectExisting(atom.id)}
                   onRemove={() => removeExisting(atom.id)}
                 />

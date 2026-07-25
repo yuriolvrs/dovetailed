@@ -44,15 +44,6 @@ export default function ProfilePage() {
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
-  function commit(patch: Partial<Profile>) {
-    setProfile((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, ...patch };
-      void saveProfile(next);
-      return next;
-    });
-  }
-
   if (!profile) {
     return <p className="text-sm text-slate-400">Loading…</p>;
   }
@@ -74,7 +65,7 @@ export default function ProfilePage() {
         <FieldTextarea
           value={profile.summary}
           onChange={(summary) => updateLive({ summary })}
-          onBlur={() => commit({ summary: profile.summary })}
+          onBlur={() => update({ summary: profile.summary })}
           placeholder="A short professional summary..."
           rows={3}
         />
@@ -87,7 +78,7 @@ export default function ProfilePage() {
       <WritingSamplesForm
         value={profile.writingSamples}
         onChange={(writingSamples) => updateLive({ writingSamples })}
-        onCommit={(writingSamples) => commit({ writingSamples })}
+        onCommit={(writingSamples) => update({ writingSamples })}
       />
 
       <BackupControls onDataChanged={refresh} />

@@ -52,6 +52,7 @@ export class RateLimiter {
     const entry = this.hits.get(key);
     if (!entry || now - entry.windowStart >= this.windowMs) {
       this.hits.set(key, { count: 1, windowStart: now });
+      this.sweep(now);
       return true;
     }
     if (entry.count >= this.maxRequests) {
@@ -59,5 +60,15 @@ export class RateLimiter {
     }
     entry.count += 1;
     return true;
+  }
+
+  // Drops expired entries so IPs that hit the endpoint once don't stay in
+  // memory for the life of the isolate.
+  private sweep(now: number): void {
+    for (const [key, entry] of this.hits) {
+      if (now - entry.windowStart >= this.windowMs) {
+        this.hits.delete(key);
+      }
+    }
   }
 }

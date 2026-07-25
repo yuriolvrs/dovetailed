@@ -21,6 +21,23 @@ interface EditableListProps<T> {
   hideAddButton?: boolean;
 }
 
+// Small trash-icon button for removing a row -- shared so every "remove this
+// item" affordance in the app looks and behaves identically, whether or not
+// the row lives inside an EditableList.
+// In plain terms: the little trash icon used to remove a row from a list.
+export function RemoveItemButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 text-slate-300 hover:text-red-400 transition-colors p-0.5"
+      aria-label="Remove"
+    >
+      <Trash2 size={13} />
+    </button>
+  );
+}
+
 /**
  * Generic add/remove list editor. Owns list chrome only; callers render the
  * per-item fields. Every repeating-list section in the app (skills,
@@ -64,14 +81,7 @@ export function EditableList<T>({
           className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-100 p-4"
         >
           <div className="flex-1">{renderItem(item, (next) => updateAt(index, next), index)}</div>
-          <button
-            type="button"
-            onClick={() => removeAt(index)}
-            className="shrink-0 text-slate-300 hover:text-red-400 transition-colors p-0.5"
-            aria-label="Remove"
-          >
-            <Trash2 size={13} />
-          </button>
+          <RemoveItemButton onClick={() => removeAt(index)} />
         </div>
       ))}
       {!hideAddButton && (
