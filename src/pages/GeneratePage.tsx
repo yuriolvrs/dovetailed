@@ -311,7 +311,7 @@ export default function GeneratePage() {
                   analysis={posting.analysis}
                   onChange={updateContent}
                 />
-                <div className="lg:sticky lg:top-20">
+                <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
                   <ResumePrintView content={generation.content as ResumeContent} variant="preview" />
                 </div>
               </div>

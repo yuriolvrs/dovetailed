@@ -109,7 +109,7 @@ export default function JobsPage() {
             <X size={16} />
           </button>
         </div>
-        <div className="p-5 space-y-3 overflow-y-auto">
+        <div className="p-5 space-y-3 overflow-y-auto scroll-thin">
           <div className="grid grid-cols-2 gap-3">
             <FieldInput
               label="Job Title"
