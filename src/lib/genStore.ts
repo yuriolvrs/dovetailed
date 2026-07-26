@@ -1,13 +1,24 @@
 // What this file is: small helper functions for creating, loading, and
 // saving generations (resume/cover letter) in Dexie's `generations` table.
-// Mirrors jobStore.ts's pattern. One generation per (posting, type) --
-// regenerating overwrites it, matching the matching screen's "Re-run"
-// pattern -- so the id is deterministic instead of a fresh uuid each time.
+// Mirrors jobStore.ts's pattern. One *current* generation per (posting,
+// type) -- regenerating overwrites it, matching the matching screen's
+// "Re-run" pattern -- so the id is deterministic instead of a fresh uuid
+// each time. Past versions aren't lost, though: snapshotGeneration copies
+// the about-to-be-overwritten generation into a separate `generationSnapshots`
+// table first, and listSnapshots/deleteSnapshot manage that history.
 // In plain terms: the code that reads and saves your generated resume (and
-// later, cover letter) to your browser's storage.
+// later, cover letter) to your browser's storage, plus the version history
+// of past resumes for one job.
 
 import { db } from './db';
-import type { CoverLetterContent, Generation, GenerationType, ResumeContent, SourceMapEntry } from '../types';
+import type {
+  CoverLetterContent,
+  Generation,
+  GenerationSnapshot,
+  GenerationType,
+  ResumeContent,
+  SourceMapEntry,
+} from '../types';
 import { normalizeSkills } from './profileStore';
 
 function generationId(jobPostingId: string, type: GenerationType): string {
@@ -67,4 +78,37 @@ export async function loadGeneration(
 export async function listGenerationsForPosting(jobPostingId: string): Promise<Generation[]> {
   const generations = await db.generations.where('jobPostingId').equals(jobPostingId).toArray();
   return generations.map(migrateGeneration);
+}
+
+/**
+ * Saves a copy of a Generation into version history, just before it's about
+ * to be overwritten (regenerate, or restoring a different snapshot) so the
+ * prior version isn't lost. A fresh uuid, since -- unlike the single "current"
+ * generation -- more than one snapshot can exist per posting/type.
+ * In plain terms: keeps a backup copy of a resume right before it gets
+ * replaced, so you can get it back later.
+ */
+export async function snapshotGeneration(generation: Generation): Promise<void> {
+  const snapshot: GenerationSnapshot = {
+    id: crypto.randomUUID(),
+    jobPostingId: generation.jobPostingId,
+    type: generation.type,
+    createdAt: generation.createdAt,
+    content: generation.content,
+    sourceMap: generation.sourceMap,
+  };
+  await db.generationSnapshots.put(snapshot);
+}
+
+/**
+ * Past versions of a posting's generation, newest first.
+ * In plain terms: the list of earlier resume versions you can go back to.
+ */
+export async function listSnapshots(jobPostingId: string, type: GenerationType): Promise<GenerationSnapshot[]> {
+  const snapshots = await db.generationSnapshots.where('jobPostingId').equals(jobPostingId).toArray();
+  return snapshots.filter((s) => s.type === type).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function deleteSnapshot(id: string): Promise<void> {
+  await db.generationSnapshots.delete(id);
 }

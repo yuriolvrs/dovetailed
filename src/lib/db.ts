@@ -11,6 +11,7 @@ import type {
   Profile,
   JobPosting,
   Generation,
+  GenerationSnapshot,
   LatexTemplate,
 } from '../types';
 import { SCHEMA_VERSION } from '../types';
@@ -19,6 +20,7 @@ export class AppDatabase extends Dexie {
   profiles!: EntityTable<Profile, 'id'>;
   jobPostings!: EntityTable<JobPosting, 'id'>;
   generations!: EntityTable<Generation, 'id'>;
+  generationSnapshots!: EntityTable<GenerationSnapshot, 'id'>;
   latexTemplates!: EntityTable<LatexTemplate, 'id'>;
 
   constructor() {
@@ -31,6 +33,7 @@ export class AppDatabase extends Dexie {
       profiles: 'id',
       jobPostings: 'id, createdAt',
       generations: 'id, jobPostingId, createdAt, type',
+      generationSnapshots: 'id, jobPostingId, createdAt, type',
       latexTemplates: 'id, name',
     });
   }

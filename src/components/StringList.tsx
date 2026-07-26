@@ -20,6 +20,8 @@ interface StringListProps {
   hideAddButton?: boolean;
   /** Optional extra content rendered above an item's input, e.g. a warning badge. */
   itemBadge?: (value: string) => ReactNode;
+  /** Optional extra content rendered below an item's input, e.g. a rewrite-suggestion action. */
+  itemExtra?: (value: string, update: (next: string) => void) => ReactNode;
 }
 
 /**
@@ -40,6 +42,7 @@ export function StringList({
   emptyLabel,
   hideAddButton = false,
   itemBadge,
+  itemExtra,
 }: StringListProps) {
   const inputClass = `w-full ${fieldInputClass}`;
 
@@ -52,7 +55,7 @@ export function StringList({
       emptyLabel={emptyLabel}
       hideAddButton={hideAddButton}
       renderItem={(value, update) => (
-        <div className={itemBadge ? 'space-y-1.5' : undefined}>
+        <div className={itemBadge || itemExtra ? 'space-y-1.5' : undefined}>
           {itemBadge?.(value)}
           {multiline ? (
             <textarea
@@ -73,6 +76,7 @@ export function StringList({
               onBlur={() => onBlurCommit?.(items)}
             />
           )}
+          {itemExtra?.(value, update)}
         </div>
       )}
     />

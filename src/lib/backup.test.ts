@@ -26,12 +26,13 @@ function sampleData(): BackupData {
     ],
     jobPostings: [],
     generations: [],
+    generationSnapshots: [],
     latexTemplates: [],
   };
 }
 
 describe('buildBackup', () => {
-  it('includes the current schema version and all four tables verbatim', () => {
+  it('includes the current schema version and every table verbatim', () => {
     const data = sampleData();
     const backup = buildBackup(data);
     expect(backup.schemaVersion).toBe(SCHEMA_VERSION);
@@ -52,7 +53,13 @@ describe('validateBackup', () => {
   });
 
   it('accepts a backup file with all-empty tables', () => {
-    const backup = buildBackup({ profiles: [], jobPostings: [], generations: [], latexTemplates: [] });
+    const backup = buildBackup({
+      profiles: [],
+      jobPostings: [],
+      generations: [],
+      generationSnapshots: [],
+      latexTemplates: [],
+    });
     expect(validateBackup(backup)).toBe(true);
   });
 

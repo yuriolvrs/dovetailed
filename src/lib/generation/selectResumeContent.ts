@@ -21,22 +21,36 @@ import type {
   ProfileAtom,
   ProjectEntry,
   ResumeContent,
+  ResumeDensity,
   SkillGroup,
   SourceMapEntry,
 } from '../../types';
 import { experienceLabel, projectLabel, skillsLabel } from '../profileAtoms';
 
-/**
- * Per-entry bullet cap and the number of projects kept in the output --
- * derived from a standard one-page LaTeX resume template (Jake's Resume:
- * Education/Experience/Projects/Technical Skills, ~3-5 bullets per role,
- * ~4 per project, two projects shown) rather than an arbitrary guess.
- * In plain terms: how many bullet points and projects we keep so the
- * resume fits on one page.
- */
-export const EXPERIENCE_BULLET_CAP = 5;
-export const PROJECT_BULLET_CAP = 4;
-export const MAX_PROJECTS = 2;
+interface DensityCaps {
+  experienceBulletCap: number;
+  projectBulletCap: number;
+  maxProjects: number;
+}
+
+// 'standard' is derived from a one-page LaTeX resume template (Jake's
+// Resume: Education/Experience/Projects/Technical Skills, ~3-5 bullets per
+// role, ~4 per project, two projects shown). 'compact'/'detailed' scale that
+// up/down for users whose content or preference doesn't fit that template's
+// assumed density -- still a fixed heuristic, not a measured page-fit, but
+// user-adjustable instead of hardcoded to one template.
+// In plain terms: how many bullet points and projects we keep, at three
+// user-selectable levels of detail.
+const DENSITY_CAPS: Record<ResumeDensity, DensityCaps> = {
+  compact: { experienceBulletCap: 3, projectBulletCap: 3, maxProjects: 1 },
+  standard: { experienceBulletCap: 5, projectBulletCap: 4, maxProjects: 2 },
+  detailed: { experienceBulletCap: 7, projectBulletCap: 5, maxProjects: 3 },
+};
+
+/** Kept for tests/callers that assumed the old fixed 'standard' caps. */
+export const EXPERIENCE_BULLET_CAP = DENSITY_CAPS.standard.experienceBulletCap;
+export const PROJECT_BULLET_CAP = DENSITY_CAPS.standard.projectBulletCap;
+export const MAX_PROJECTS = DENSITY_CAPS.standard.maxProjects;
 
 function sectionAtomsByText(atoms: ProfileAtom[], label: string): Map<string, ProfileAtom> {
   const map = new Map<string, ProfileAtom>();
@@ -104,10 +118,11 @@ export function selectResumeContent(
 ): { content: ResumeContent; sourceMap: SourceMapEntry[] } {
   const matchedIds = new Set(analysis.matches.flatMap((m) => m.atomIds));
   const sourceMap: SourceMapEntry[] = [];
+  const caps = DENSITY_CAPS[profile.resumeDensity ?? 'standard'];
 
   const experience: ExperienceEntry[] = profile.experience.map((entry) => ({
     ...entry,
-    bullets: prioritize(entry.bullets, experienceLabel(entry), atoms, matchedIds, EXPERIENCE_BULLET_CAP, sourceMap),
+    bullets: prioritize(entry.bullets, experienceLabel(entry), atoms, matchedIds, caps.experienceBulletCap, sourceMap),
   }));
 
   const rankedProjects = profile.projects
@@ -117,12 +132,12 @@ export function selectResumeContent(
       matchedCount: countMatched(entry.bullets, projectLabel(entry), atoms, matchedIds),
     }))
     .sort((a, b) => b.matchedCount - a.matchedCount || a.index - b.index)
-    .slice(0, MAX_PROJECTS)
+    .slice(0, caps.maxProjects)
     .sort((a, b) => a.index - b.index);
 
   const projects: ProjectEntry[] = rankedProjects.map(({ entry }) => ({
     ...entry,
-    bullets: prioritize(entry.bullets, projectLabel(entry), atoms, matchedIds, PROJECT_BULLET_CAP, sourceMap),
+    bullets: prioritize(entry.bullets, projectLabel(entry), atoms, matchedIds, caps.projectBulletCap, sourceMap),
   }));
 
   const skills: SkillGroup[] = profile.skills.map((group) => ({

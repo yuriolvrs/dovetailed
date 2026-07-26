@@ -25,11 +25,14 @@ export function ProjectsForm({
   value,
   onChange,
   bulletBadge,
+  bulletRewrite,
 }: {
   value: ProjectEntry[];
   onChange: (projects: ProjectEntry[]) => void;
   /** Optional per-bullet extra content (e.g. an "unevidenced" warning badge) -- used by ResumeEditor, unused on the Profile page. */
   bulletBadge?: (bulletText: string) => ReactNode;
+  /** Optional per-bullet "suggest a rewording" action -- used by ResumeEditor, unused on the Profile page. */
+  bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -75,6 +78,7 @@ export function ProjectsForm({
                   addLabel="Add bullet"
                   emptyLabel="No bullets yet."
                   itemBadge={bulletBadge}
+                  itemExtra={bulletRewrite}
                 />
               </div>
               <div>

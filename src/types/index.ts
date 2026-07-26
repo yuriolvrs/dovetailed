@@ -8,7 +8,7 @@
 // "job posting," and a "generated resume" look like as data.
 
 /** Bump when the persisted shape changes; used for export/import migrations. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // ---------------------------------------------------------------------------
 // Profile
@@ -85,7 +85,15 @@ export interface Profile {
    * so they're available as evidence in every future matching pass.
    */
   additionalInfo: string[];
+  /**
+   * How many bullets/projects a generated resume keeps per section --
+   * governs the caps in selectResumeContent.ts. Unset/old profiles default
+   * to 'standard'.
+   */
+  resumeDensity?: ResumeDensity;
 }
+
+export type ResumeDensity = 'compact' | 'standard' | 'detailed';
 
 // ---------------------------------------------------------------------------
 // Profile atoms (indexed profile content for matching)
@@ -199,6 +207,21 @@ export interface Generation {
   jobPostingId: string;
   createdAt: number;
   type: GenerationType;
+  content: ResumeContent | CoverLetterContent;
+  sourceMap: SourceMapEntry[];
+}
+
+/**
+ * A past snapshot of a Generation, saved just before it's about to be
+ * overwritten (regenerate, or restoring a different snapshot) so prior
+ * versions aren't lost. Not itself editable -- restoring one copies its
+ * content back into the current Generation.
+ */
+export interface GenerationSnapshot {
+  id: string;
+  jobPostingId: string;
+  type: GenerationType;
+  createdAt: number;
   content: ResumeContent | CoverLetterContent;
   sourceMap: SourceMapEntry[];
 }

@@ -23,6 +23,7 @@ export function emptyProfile(): Profile {
     education: [],
     writingSamples: [],
     additionalInfo: [],
+    resumeDensity: 'standard',
   };
 }
 
@@ -56,6 +57,7 @@ export async function loadProfile(): Promise<Profile> {
     ...existing,
     skills: normalizeSkills(existing.skills),
     additionalInfo: Array.isArray(existing.additionalInfo) ? existing.additionalInfo : [],
+    resumeDensity: existing.resumeDensity ?? 'standard',
   };
 }
 

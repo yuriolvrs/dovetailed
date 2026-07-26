@@ -8,12 +8,13 @@
 
 import { db } from './db';
 import { SCHEMA_VERSION } from '../types';
-import type { Generation, JobPosting, LatexTemplate, Profile } from '../types';
+import type { Generation, GenerationSnapshot, JobPosting, LatexTemplate, Profile } from '../types';
 
 export interface BackupData {
   profiles: Profile[];
   jobPostings: JobPosting[];
   generations: Generation[];
+  generationSnapshots: GenerationSnapshot[];
   latexTemplates: LatexTemplate[];
 }
 
@@ -62,6 +63,7 @@ export function validateBackup(x: unknown): x is BackupFile {
     isStringArrayOfObjects(data.profiles) &&
     isStringArrayOfObjects(data.jobPostings) &&
     isStringArrayOfObjects(data.generations) &&
+    isStringArrayOfObjects(data.generationSnapshots) &&
     isStringArrayOfObjects(data.latexTemplates)
   );
 }
@@ -103,15 +105,17 @@ export async function exportAllData(): Promise<BackupFile> {
     db.profiles,
     db.jobPostings,
     db.generations,
+    db.generationSnapshots,
     db.latexTemplates,
     async () => {
-      const [profiles, jobPostings, generations, latexTemplates] = await Promise.all([
+      const [profiles, jobPostings, generations, generationSnapshots, latexTemplates] = await Promise.all([
         db.profiles.toArray(),
         db.jobPostings.toArray(),
         db.generations.toArray(),
+        db.generationSnapshots.toArray(),
         db.latexTemplates.toArray(),
       ]);
-      return { profiles, jobPostings, generations, latexTemplates };
+      return { profiles, jobPostings, generations, generationSnapshots, latexTemplates };
     },
   );
   return buildBackup(data);
@@ -128,18 +132,21 @@ export async function importAllData(backup: BackupFile): Promise<void> {
     db.profiles,
     db.jobPostings,
     db.generations,
+    db.generationSnapshots,
     db.latexTemplates,
     async () => {
       await Promise.all([
         db.profiles.clear(),
         db.jobPostings.clear(),
         db.generations.clear(),
+        db.generationSnapshots.clear(),
         db.latexTemplates.clear(),
       ]);
       await Promise.all([
         db.profiles.bulkPut(backup.data.profiles),
         db.jobPostings.bulkPut(backup.data.jobPostings),
         db.generations.bulkPut(backup.data.generations),
+        db.generationSnapshots.bulkPut(backup.data.generationSnapshots),
         db.latexTemplates.bulkPut(backup.data.latexTemplates),
       ]);
     },
@@ -157,12 +164,14 @@ export async function deleteAllData(): Promise<void> {
     db.profiles,
     db.jobPostings,
     db.generations,
+    db.generationSnapshots,
     db.latexTemplates,
     async () => {
       await Promise.all([
         db.profiles.clear(),
         db.jobPostings.clear(),
         db.generations.clear(),
+        db.generationSnapshots.clear(),
         db.latexTemplates.clear(),
       ]);
     },
