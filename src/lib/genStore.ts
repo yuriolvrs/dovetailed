@@ -101,6 +101,24 @@ export async function snapshotGeneration(generation: Generation): Promise<void> 
 }
 
 /**
+ * Which generation types (resume/coverLetter) exist for every posting, in
+ * one bulk read -- used by the Jobs list to show per-card status pills
+ * without an N+1 query per posting.
+ * In plain terms: a quick lookup of "does this job have a resume/cover
+ * letter yet?" for every saved job at once.
+ */
+export async function listGenerationTypesByPosting(): Promise<Map<string, Set<GenerationType>>> {
+  const generations = await db.generations.toArray();
+  const byPosting = new Map<string, Set<GenerationType>>();
+  for (const generation of generations) {
+    const types = byPosting.get(generation.jobPostingId) ?? new Set<GenerationType>();
+    types.add(generation.type);
+    byPosting.set(generation.jobPostingId, types);
+  }
+  return byPosting;
+}
+
+/**
  * Past versions of a posting's generation, newest first.
  * In plain terms: the list of earlier resume versions you can go back to.
  */

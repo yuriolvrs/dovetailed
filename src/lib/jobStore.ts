@@ -55,6 +55,46 @@ export async function deleteJobPosting(id: string): Promise<void> {
   await db.jobPostings.delete(id);
 }
 
+const COMPANY_LINE = /^(?:at|company|employer)\s*[:\s]\s*(.+)$/i;
+const GUESS_SCAN_LINES = 15;
+// A real company name is a handful of words at most -- this rejects
+// sentence-like continuations of "at"/"company" that aren't actually naming
+// a company (e.g. "At least 3 years of experience...", "At Acme, we believe
+// in...").
+const COMPANY_MAX_WORDS = 6;
+
+/**
+ * Best-effort title/company guess from freshly pasted posting text, so the
+ * Add Job Posting modal can pre-fill those fields. Deliberately conservative
+ * -- an empty guess is better than a wrong one, since a wrong guess is more
+ * work to notice and fix than just typing it. Callers must only use a guess
+ * to fill a field that's still empty, never to overwrite user input.
+ * In plain terms: tries to figure out the job title and company from the
+ * pasted text, leaving them blank if it's not confident.
+ */
+export function guessJobTitleAndCompany(rawText: string): { title?: string; company?: string } {
+  const lines = rawText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+
+  const firstLine = lines[0];
+  const title = firstLine && firstLine.length <= 100 && !firstLine.endsWith('.') ? firstLine : undefined;
+
+  let company: string | undefined;
+  for (const line of lines.slice(0, GUESS_SCAN_LINES)) {
+    const match = line.match(COMPANY_LINE);
+    if (match) {
+      const candidate = match[1].trim();
+      if (candidate === '' || candidate.split(/\s+/).length > COMPANY_MAX_WORDS) continue;
+      company = candidate;
+      break;
+    }
+  }
+
+  return { title, company };
+}
+
 // A short display label for a posting: prefers the analysis's role summary,
 // falls back to the first non-empty line of the pasted text, then to a
 // generic placeholder for a blank posting. Truncated so it fits on one line

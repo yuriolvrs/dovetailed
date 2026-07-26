@@ -1,10 +1,16 @@
-// What this file is: the print/export layout for a ResumeContent -- always
-// present in the DOM but hidden on screen (`hidden print:block`) so
-// `window.print()` on the Resume page prints only this, not the editor
-// chrome. No PDF library involved; the browser's own print-to-PDF does the
-// rendering, same as the PRD's "no new dependency needed" default HTML path.
-// In plain terms: the plain, print-friendly version of your resume that
-// shows up only when you print or "Save as PDF."
+// What this file is: the print/export layout for a ResumeContent. Rendered
+// twice on the Generate page: once as the actual print target (`variant`
+// defaults to 'print' -- always in the DOM but hidden on screen via `hidden
+// print:block`, so `window.print()` prints only this, not the editor
+// chrome), and once as a visible, non-interactive live preview next to the
+// editor (`variant="preview"` -- shown on screen, hidden from print so it
+// doesn't produce a duplicate page). Same content-rendering logic either
+// way; only the wrapping chrome differs. No PDF library involved; the
+// browser's own print-to-PDF does the rendering, same as the PRD's "no new
+// dependency needed" default HTML path.
+// In plain terms: the plain, print-friendly layout of your resume -- shown
+// live as a preview while editing, and used as-is when you print or "Save
+// as PDF."
 
 import type { ExperienceEntry, ResumeContent } from '../../types';
 import { formatMonthYear } from '../ui/primitives';
@@ -41,10 +47,22 @@ function groupBySection(entries: ExperienceEntry[]): { section: string; entries:
   return groups;
 }
 
-export function ResumePrintView({ content }: { content: ResumeContent }) {
+export function ResumePrintView({
+  content,
+  variant = 'print',
+}: {
+  content: ResumeContent;
+  /** 'print': hidden on screen, the actual print target. 'preview': visible live preview, excluded from print output. */
+  variant?: 'print' | 'preview';
+}) {
+  const rootClass =
+    variant === 'print'
+      ? 'hidden print:block text-slate-900 text-[11px] leading-snug font-sans'
+      : 'print:hidden text-slate-900 text-[11px] leading-snug font-sans bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] p-8';
+
   return (
-    <div className="hidden print:block text-slate-900 text-[11px] leading-snug font-sans">
-      <style>{'@page { size: letter; margin: 0.55in; }'}</style>
+    <div className={rootClass}>
+      {variant === 'print' && <style>{'@page { size: letter; margin: 0.55in; }'}</style>}
 
       <div className="text-center mb-3">
         <p className="text-2xl font-bold tracking-wide">{content.contact.name}</p>

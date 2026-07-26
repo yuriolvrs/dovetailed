@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, FileText } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText, Sparkles } from 'lucide-react';
 import type { JobPosting, MatchStatus, Profile, ProfileAtom, RequirementMatch } from '../types';
 import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { loadProfile, saveProfile } from '../lib/profileStore';
@@ -21,6 +21,7 @@ import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import { llmErrorMessage } from '../lib/llm';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
+import { JobStageTracker } from '../components/jobs/JobStageTracker';
 import { RemoveItemButton } from '../components/EditableList';
 import { Badge, Btn, Card, ProgressBar, SectionTitle } from '../components/ui/primitives';
 
@@ -49,6 +50,14 @@ const STATUS_LABEL: Record<MatchStatus, string> = {
   gap_no_candidates: 'Gap',
   gap_unverified: 'Gap — possible matches found',
 };
+
+// atom.sourceLabel is "Experience: Title, Company" / "Project: Name" / etc --
+// strips the "Source: " prefix to get just the entry title, so it can be
+// shown next to the source Badge without repeating it.
+function atomSourceTitle(atom: ProfileAtom): string {
+  const separatorIndex = atom.sourceLabel.indexOf(': ');
+  return separatorIndex === -1 ? atom.sourceLabel : atom.sourceLabel.slice(separatorIndex + 2);
+}
 
 type PickerTarget = { mode: 'swap'; atomId: string } | null;
 
@@ -328,11 +337,17 @@ export default function MatchingReviewPage() {
     <div className="pb-16">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-4">
-          <Link to={`/jobs/${posting.id}`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium">
+          <Link to={`/jobs/${posting.id}`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium shrink-0">
             <ArrowLeft size={15} />
             Back to posting
           </Link>
-          {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit score: {fitScore}%</Badge>}
+          <JobStageTracker
+            postingId={posting.id}
+            current="matching"
+            analysisDone={Boolean(posting.analysis)}
+            matchingDone={posting.analysis.matches.length > 0}
+            className=""
+          />
         </div>
         {!confirmingRematch && !confirmingClear ? (
           <div className="flex items-center gap-2">
@@ -340,6 +355,7 @@ export default function MatchingReviewPage() {
               Clear matches
             </Btn>
             <Btn size="sm" variant="secondary" onClick={() => setConfirmingRematch(true)} disabled={rematchStatus === 'loading'}>
+              <Sparkles size={13} />
               Re-run matching
             </Btn>
           </div>
@@ -379,9 +395,12 @@ export default function MatchingReviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 items-start">
         <Card className="p-3 lg:sticky lg:top-20">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-2">
-            Requirements
-          </p>
+          <div className="flex items-center justify-between mb-3 px-2">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+              Requirements
+            </p>
+            {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit score: {fitScore}%</Badge>}
+          </div>
           <div className="space-y-1">
             {requirements.map((requirement) => {
               const match = matchByRequirementId.get(requirement.id);
@@ -510,7 +529,12 @@ export default function MatchingReviewPage() {
                   >
                     <div className="flex items-start gap-2 min-w-0">
                       <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
-                      <span className="text-sm text-slate-700 break-words">{atom.text}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-600 truncate">
+                          {atomSourceTitle(atom)}
+                        </p>
+                        <p className="text-sm text-slate-700 break-words mt-0.5">{atom.text}</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[11px] text-slate-400">
@@ -580,9 +604,9 @@ export default function MatchingReviewPage() {
       </Card>
 
       <div className="flex justify-end mt-5">
-        <Btn onClick={() => navigate(`/jobs/${posting.id}/resume`)}>
+        <Btn onClick={() => navigate(`/jobs/${posting.id}/generate`)}>
           <FileText size={14} />
-          Generate resume
+          Generate
         </Btn>
       </div>
 

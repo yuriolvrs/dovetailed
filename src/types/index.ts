@@ -85,15 +85,7 @@ export interface Profile {
    * so they're available as evidence in every future matching pass.
    */
   additionalInfo: string[];
-  /**
-   * How many bullets/projects a generated resume keeps per section --
-   * governs the caps in selectResumeContent.ts. Unset/old profiles default
-   * to 'standard'.
-   */
-  resumeDensity?: ResumeDensity;
 }
-
-export type ResumeDensity = 'compact' | 'standard' | 'detailed';
 
 // ---------------------------------------------------------------------------
 // Profile atoms (indexed profile content for matching)

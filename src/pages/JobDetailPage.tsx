@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react';
 import type { JobPosting, Profile } from '../types';
 import {
   ARRANGEMENTS,
@@ -28,6 +28,7 @@ import { buildProfileAtoms } from '../lib/profileAtoms';
 import { runMatching } from '../lib/matching/runMatching';
 import { generateStructured, llmErrorMessage } from '../lib/llm';
 import { AnalysisEditor } from '../components/jobs/AnalysisEditor';
+import { JobStageTracker } from '../components/jobs/JobStageTracker';
 import { Btn, Card, FieldInput, FieldSelect, ProgressBar } from '../components/ui/primitives';
 
 export default function JobDetailPage() {
@@ -115,14 +116,6 @@ export default function JobDetailPage() {
     }
   }
 
-  // Matching already ran and its results (plus any manual reject/swap/add-
-  // evidence edits) are persisted -- just navigate, don't recompute. Re-
-  // running is an explicit action available on the Matching screen itself.
-  function goToMatching() {
-    if (!posting || posting === 'missing') return;
-    navigate(`/jobs/${posting.id}/match`);
-  }
-
   async function handleConfirmDelete() {
     if (!id) return;
     await deleteJobPosting(id);
@@ -150,16 +143,31 @@ export default function JobDetailPage() {
 
   return (
     <div className="pb-16">
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          to="/jobs"
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 transition-colors font-medium"
-        >
-          <ArrowLeft size={15} />
-          Back to Jobs
-        </Link>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-4">
+          <Link
+            to="/jobs"
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 transition-colors font-medium shrink-0"
+          >
+            <ArrowLeft size={15} />
+            Back to Jobs
+          </Link>
+          <JobStageTracker
+            postingId={posting.id}
+            current="analysis"
+            analysisDone={Boolean(posting.analysis)}
+            matchingDone={Boolean(posting.analysis && posting.analysis.matches.length > 0)}
+            className=""
+          />
+        </div>
         {!confirmingDelete ? (
-          <Btn size="sm" variant="danger" onClick={() => setConfirmingDelete(true)}>
+          <Btn
+            size="sm"
+            variant="ghost"
+            onClick={() => setConfirmingDelete(true)}
+            className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+          >
+            <Trash2 size={13} />
             Delete posting
           </Btn>
         ) : (
@@ -179,8 +187,8 @@ export default function JobDetailPage() {
         )}
       </div>
 
-      <Card className="p-5 mb-6">
-        <div className="grid grid-cols-2 gap-3">
+      <Card className="p-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <FieldInput
             label="Job Title"
             value={posting.title ?? ''}
@@ -195,8 +203,6 @@ export default function JobDetailPage() {
             onBlur={() => update({ company: posting.company })}
             placeholder="Acme Corp"
           />
-        </div>
-        <div className="grid grid-cols-2 gap-3 mt-3">
           <FieldInput
             label="Location"
             value={posting.location ?? ''}
@@ -232,9 +238,9 @@ export default function JobDetailPage() {
           )}
         </Card>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)]">
           {!hasProfileContent(profile) && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 shrink-0">
               Add your experience or skills on the{' '}
               <Link to="/profile" className="underline hover:text-slate-900">
                 Profile page
@@ -277,8 +283,8 @@ export default function JobDetailPage() {
               {error && <p className="text-xs text-red-600">{error}</p>}
             </Card>
           ) : (
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
+            <Card className="p-5 flex-1 min-h-0 flex flex-col">
+              <div className="flex items-center justify-between mb-4 shrink-0">
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
                   Analysis
                 </p>
@@ -288,38 +294,38 @@ export default function JobDetailPage() {
                     variant="secondary"
                     onClick={handleAnalyze}
                     disabled={status === 'loading' || !hasProfileContent(profile)}
-                    ariaLabel="Re-analyze"
                   >
                     {status === 'loading' ? (
                       <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                     ) : (
                       <Sparkles size={13} />
                     )}
+                    Reanalyze
                   </Btn>
-                  <Btn
-                    size="sm"
-                    onClick={posting.analysis.matches.length > 0 ? goToMatching : handleConfirmMatching}
-                    disabled={
-                      status === 'loading' ||
-                      !hasProfileContent(profile) ||
-                      posting.analysis.requirements.length === 0
-                    }
-                  >
-                    {status === 'loading' && matchProgress
-                      ? 'Matching…'
-                      : posting.analysis.matches.length > 0
-                        ? 'View matches'
-                        : 'Confirm & run matching'}
-                  </Btn>
+                  {posting.analysis.matches.length === 0 && (
+                    <Btn
+                      size="sm"
+                      onClick={handleConfirmMatching}
+                      disabled={
+                        status === 'loading' ||
+                        !hasProfileContent(profile) ||
+                        posting.analysis.requirements.length === 0
+                      }
+                    >
+                      {status === 'loading' && matchProgress ? 'Matching…' : 'Confirm & run matching'}
+                    </Btn>
+                  )}
                 </div>
               </div>
               {matchProgress && (
-                <div className="mb-4">
+                <div className="mb-4 shrink-0">
                   <ProgressBar done={matchProgress.done} total={matchProgress.total} />
                 </div>
               )}
-              {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
-              <AnalysisEditor value={posting.analysis} onChange={(analysis) => update({ analysis })} />
+              {error && <p className="text-xs text-red-600 mb-3 shrink-0">{error}</p>}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-thin pr-1 -mr-1">
+                <AnalysisEditor value={posting.analysis} onChange={(analysis) => update({ analysis })} />
+              </div>
             </Card>
           )}
         </div>

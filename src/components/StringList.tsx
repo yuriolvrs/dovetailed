@@ -22,6 +22,8 @@ interface StringListProps {
   itemBadge?: (value: string) => ReactNode;
   /** Optional extra content rendered below an item's input, e.g. a rewrite-suggestion action. */
   itemExtra?: (value: string, update: (next: string) => void) => ReactNode;
+  /** Optional extra classes for the wrapper around one item, e.g. a match-status border. */
+  itemWrapperClassName?: (value: string) => string;
 }
 
 /**
@@ -43,6 +45,7 @@ export function StringList({
   hideAddButton = false,
   itemBadge,
   itemExtra,
+  itemWrapperClassName,
 }: StringListProps) {
   const inputClass = `w-full ${fieldInputClass}`;
 
@@ -55,7 +58,11 @@ export function StringList({
       emptyLabel={emptyLabel}
       hideAddButton={hideAddButton}
       renderItem={(value, update) => (
-        <div className={itemBadge || itemExtra ? 'space-y-1.5' : undefined}>
+        <div
+          className={[itemBadge || itemExtra ? 'space-y-1.5' : '', itemWrapperClassName?.(value) ?? '']
+            .filter(Boolean)
+            .join(' ')}
+        >
           {itemBadge?.(value)}
           {multiline ? (
             <textarea

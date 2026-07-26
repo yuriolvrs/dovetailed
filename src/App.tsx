@@ -3,13 +3,13 @@
 // In plain terms: the outer frame of the app — the header/navigation, and
 // wherever a page gets shown depending on which tab you're on.
 
-import { NavLink, Navigate, Route, Routes, useMatch } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useMatch } from 'react-router-dom';
 import { Briefcase, FileText, Shield, User } from 'lucide-react';
 import ProfilePage from './pages/ProfilePage.tsx';
 import JobsPage from './pages/JobsPage.tsx';
 import JobDetailPage from './pages/JobDetailPage.tsx';
 import MatchingReviewPage from './pages/MatchingReviewPage.tsx';
-import ResumePage from './pages/ResumePage.tsx';
+import GeneratePage from './pages/GeneratePage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
 import DevLlmPage from './pages/DevLlmPage.tsx';
 
@@ -21,6 +21,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export default function App() {
   const onJobDetail = useMatch('/jobs/:id/*');
+  // The Generate page's side-by-side editor + live preview needs more room
+  // than the app's usual reading-width column.
+  const onGenerate = useMatch('/jobs/:id/generate');
 
   return (
     <div className="min-h-screen bg-[#f5f6f8] text-slate-900">
@@ -53,27 +56,32 @@ export default function App() {
               <Briefcase size={13} />
               Jobs
             </NavLink>
-            <NavLink to="/about" className={navLinkClass}>
-              About &amp; Privacy
-            </NavLink>
           </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 print:p-0 print:max-w-none">
+      <main className={`mx-auto px-4 py-8 print:p-0 print:max-w-none ${onGenerate ? 'max-w-6xl' : 'max-w-4xl'}`}>
         <Routes>
-          <Route path="/" element={<Navigate to="/profile" replace />} />
+          <Route path="/" element={<Navigate to="/jobs" replace />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:id" element={<JobDetailPage />} />
           <Route path="/jobs/:id/match" element={<MatchingReviewPage />} />
-          <Route path="/jobs/:id/resume" element={<ResumePage />} />
+          <Route path="/jobs/:id/generate" element={<GeneratePage />} />
           <Route path="/about" element={<AboutPage />} />
           {/* Unlinked dev-only route for Phase 2's proxy test harness. */}
           <Route path="/dev/llm" element={<DevLlmPage />} />
-          <Route path="*" element={<Navigate to="/profile" replace />} />
+          <Route path="*" element={<Navigate to="/jobs" replace />} />
         </Routes>
       </main>
+
+      <footer className="print:hidden border-t border-slate-200/80 mt-8">
+        <div className="mx-auto max-w-4xl px-4 py-5 flex items-center justify-center">
+          <Link to="/about" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+            About &amp; Privacy
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }

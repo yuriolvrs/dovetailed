@@ -6,7 +6,7 @@
 // logic picks a sensible label.
 
 import { describe, expect, it } from 'vitest';
-import { postingLabel } from './jobStore';
+import { guessJobTitleAndCompany, postingLabel } from './jobStore';
 import type { JobPosting } from '../types';
 
 function posting(overrides: Partial<JobPosting>): JobPosting {
@@ -55,5 +55,43 @@ describe('postingLabel', () => {
     const label = postingLabel(posting({ rawText: longLine }));
     expect(label.length).toBe(81);
     expect(label.endsWith('…')).toBe(true);
+  });
+});
+
+describe('guessJobTitleAndCompany', () => {
+  it('takes the first line as the title when it reads like a title, not a sentence', () => {
+    const { title } = guessJobTitleAndCompany('Senior Frontend Engineer\nAbout the role...');
+    expect(title).toBe('Senior Frontend Engineer');
+  });
+
+  it('does not guess a title from a first line that ends in a period', () => {
+    const { title } = guessJobTitleAndCompany('We are hiring for this role.\nMore details.');
+    expect(title).toBeUndefined();
+  });
+
+  it('finds a company from a "Company:" line', () => {
+    const { company } = guessJobTitleAndCompany('Senior Frontend Engineer\nCompany: Acme Co.\nDetails...');
+    expect(company).toBe('Acme Co.');
+  });
+
+  it('finds a company from an "at X" line', () => {
+    const { company } = guessJobTitleAndCompany('Senior Frontend Engineer\nat Nimbus Labs\nDetails...');
+    expect(company).toBe('Nimbus Labs');
+  });
+
+  it('returns no company when nothing matches', () => {
+    const { company } = guessJobTitleAndCompany('Senior Frontend Engineer\nAbout the role...');
+    expect(company).toBeUndefined();
+  });
+
+  it('returns nothing for blank text', () => {
+    expect(guessJobTitleAndCompany('   \n  ')).toEqual({ title: undefined, company: undefined });
+  });
+
+  it('does not mistake a sentence starting with "At" for a company line', () => {
+    const { company } = guessJobTitleAndCompany(
+      'Senior Frontend Engineer\nAt least 3 years of experience with React required.\nDetails...',
+    );
+    expect(company).toBeUndefined();
   });
 });

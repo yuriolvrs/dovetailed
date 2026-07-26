@@ -7,9 +7,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, Circle, Plus } from 'lucide-react';
-import type { JobPosting } from '../types';
-import { ARRANGEMENTS, listJobPostings, newJobPosting, postingLabel, saveJobPosting } from '../lib/jobStore';
+import { CheckCircle, Circle, Plus, X } from 'lucide-react';
+import type { GenerationType, JobPosting } from '../types';
+import {
+  ARRANGEMENTS,
+  guessJobTitleAndCompany,
+  listJobPostings,
+  newJobPosting,
+  postingLabel,
+  saveJobPosting,
+} from '../lib/jobStore';
+import { listGenerationTypesByPosting } from '../lib/genStore';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import {
   Badge,
@@ -18,12 +26,15 @@ import {
   FieldInput,
   FieldSelect,
   FieldTextarea,
+  Modal,
   SectionTitle,
 } from '../components/ui/primitives';
 
 export default function JobsPage() {
   const navigate = useNavigate();
   const [postings, setPostings] = useState<JobPosting[] | null>(null);
+  const [generationTypes, setGenerationTypes] = useState<Map<string, Set<GenerationType>>>(new Map());
+  const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
   const [location, setLocation] = useState('');
@@ -32,11 +43,30 @@ export default function JobsPage() {
 
   const refresh = useCallback(() => {
     listJobPostings().then(setPostings);
+    listGenerationTypesByPosting().then(setGenerationTypes);
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  function openModal() {
+    setTitle('');
+    setCompany('');
+    setLocation('');
+    setArrangement('');
+    setRawText('');
+    setModalOpen(true);
+  }
+
+  // Best-effort title/company pre-fill once the user has pasted something in
+  // -- only fills fields that are still empty, never overwrites typed input.
+  function handleRawTextBlur() {
+    if (rawText.trim() === '') return;
+    const guess = guessJobTitleAndCompany(rawText);
+    if (title.trim() === '' && guess.title) setTitle(guess.title);
+    if (company.trim() === '' && guess.company) setCompany(guess.company);
+  }
 
   async function handleSave() {
     const posting = newJobPosting(rawText, {
@@ -46,23 +76,40 @@ export default function JobsPage() {
       arrangement: arrangement || undefined,
     });
     await saveJobPosting(posting);
+    setModalOpen(false);
     navigate(`/jobs/${posting.id}`);
   }
 
   return (
     <div className="space-y-6 pb-16">
-      <div className="mb-3">
-        <h1 className="text-lg font-semibold text-slate-900">Jobs</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
-          Paste postings, run analysis, tailor your documents
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-slate-900">Jobs</h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Paste postings, run analysis, tailor your documents
+          </p>
+        </div>
+        <Btn onClick={openModal}>
+          <Plus size={14} />
+          Add Job Posting
+        </Btn>
       </div>
 
-      <Card className="p-6">
-        <SectionTitle sub="Paste the full posting text — all data stays in your browser">
-          Add a Job Posting
-        </SectionTitle>
-        <div className="space-y-3">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-xl max-h-[90vh]">
+        <div className="p-5 border-b border-slate-100 shrink-0 flex items-start justify-between gap-3">
+          <SectionTitle sub="Paste the full posting text — all data stays in your browser">
+            Add a Job Posting
+          </SectionTitle>
+          <button
+            type="button"
+            onClick={() => setModalOpen(false)}
+            aria-label="Close"
+            className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-5 space-y-3 overflow-y-auto">
           <div className="grid grid-cols-2 gap-3">
             <FieldInput
               label="Job Title"
@@ -91,17 +138,24 @@ export default function JobsPage() {
             label="Posting Text"
             value={rawText}
             onChange={setRawText}
+            onBlur={handleRawTextBlur}
             placeholder="Paste the full job posting text here — responsibilities, requirements, qualifications, compensation, etc."
             rows={9}
           />
-          <div className="flex justify-end pt-1">
-            <Btn onClick={handleSave} disabled={rawText.trim() === ''}>
-              <Plus size={14} />
-              Save Posting
-            </Btn>
-          </div>
+          <p className="text-xs text-slate-400">
+            Title/company are auto-filled from the pasted text when detected — edit either freely.
+          </p>
         </div>
-      </Card>
+        <div className="p-5 pt-0 flex justify-end gap-2 shrink-0">
+          <Btn variant="secondary" onClick={() => setModalOpen(false)}>
+            Cancel
+          </Btn>
+          <Btn onClick={handleSave} disabled={rawText.trim() === ''}>
+            <Plus size={14} />
+            Save Posting
+          </Btn>
+        </div>
+      </Modal>
 
       <div>
         <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">
@@ -123,11 +177,12 @@ export default function JobsPage() {
                   ? `${location} (${posting.arrangement})`
                   : location || posting.arrangement || '';
               const fitScore = computeFitScore(posting.analysis);
+              const types = generationTypes.get(posting.id);
 
               return (
                 <Link key={posting.id} to={`/jobs/${posting.id}`} className="block">
                   <Card className="group p-5 hover:border-slate-300 hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] transition-all">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-semibold text-slate-900 truncate">
                         {posting.title?.trim() || postingLabel(posting)}
                       </h3>
@@ -143,6 +198,14 @@ export default function JobsPage() {
                         </Badge>
                       )}
                       {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit: {fitScore}%</Badge>}
+                      <Badge color={types?.has('resume') ? 'green' : 'slate'}>
+                        {types?.has('resume') ? <CheckCircle size={10} /> : <Circle size={10} />}
+                        Resume
+                      </Badge>
+                      <Badge color={types?.has('coverLetter') ? 'green' : 'slate'}>
+                        {types?.has('coverLetter') ? <CheckCircle size={10} /> : <Circle size={10} />}
+                        Cover Letter
+                      </Badge>
                     </div>
                     {company && <p className="text-sm text-slate-700 mt-0.5">{company}</p>}
                     {locationArrangement && (

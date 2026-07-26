@@ -83,28 +83,6 @@ describe('selectResumeContent', () => {
     expect(content.experience[0].bullets).toHaveLength(EXPERIENCE_BULLET_CAP);
   });
 
-  it('uses a smaller cap for "compact" and a larger one for "detailed" resumeDensity', () => {
-    const bullets = Array.from({ length: 10 }, (_, i) => `Bullet ${i}`);
-    const atomsFor = (density: Profile['resumeDensity']) => {
-      const p = profile({ resumeDensity: density, experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
-      const atoms = buildProfileAtoms(p);
-      return selectResumeContent(p, analysis(), atoms).content.experience[0].bullets.length;
-    };
-    const compactCount = atomsFor('compact');
-    const standardCount = atomsFor('standard');
-    const detailedCount = atomsFor('detailed');
-    expect(compactCount).toBeLessThan(standardCount);
-    expect(standardCount).toBeLessThan(detailedCount);
-  });
-
-  it('defaults to "standard" caps when resumeDensity is unset (old profiles)', () => {
-    const bullets = Array.from({ length: EXPERIENCE_BULLET_CAP + 3 }, (_, i) => `Bullet ${i}`);
-    const p = profile({ resumeDensity: undefined, experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
-    const atoms = buildProfileAtoms(p);
-    const { content } = selectResumeContent(p, analysis(), atoms);
-    expect(content.experience[0].bullets).toHaveLength(EXPERIENCE_BULLET_CAP);
-  });
-
   it('caps bullets per project at PROJECT_BULLET_CAP', () => {
     const bullets = Array.from({ length: PROJECT_BULLET_CAP + 3 }, (_, i) => `Bullet ${i}`);
     const p = profile({ projects: [{ name: 'Alpha', description: '', bullets, links: [] }] });
