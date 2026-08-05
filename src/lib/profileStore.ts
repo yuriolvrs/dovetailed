@@ -77,3 +77,42 @@ export function hasProfileContent(profile: Profile): boolean {
     profile.education.length > 0
   );
 }
+
+// Equally-weighted checks for the completeness meter shown on the Profile
+// page -- each corresponds to one of the page's sections, so "missing" can
+// double as a punch list of what to fill in next.
+// In plain terms: the list of profile sections that count toward the
+// "N% complete" meter.
+const COMPLETENESS_CHECKS: { label: string; done: (profile: Profile) => boolean }[] = [
+  { label: 'Name', done: (p) => p.contact.name.trim() !== '' },
+  { label: 'Email', done: (p) => p.contact.email.trim() !== '' },
+  { label: 'Summary', done: (p) => p.summary.trim() !== '' },
+  { label: 'Skills', done: (p) => p.skills.some((group) => group.items.length > 0) },
+  { label: 'Work Experience', done: (p) => p.experience.length > 0 },
+  { label: 'Projects', done: (p) => p.projects.length > 0 },
+  { label: 'Education', done: (p) => p.education.length > 0 },
+];
+
+export interface ProfileCompleteness {
+  percent: number;
+  missing: string[];
+}
+
+/**
+ * How much of the profile is filled in, as a rounded percentage plus the
+ * labels of whichever checks didn't pass.
+ * In plain terms: powers the "Profile X% complete" meter -- how full the
+ * profile is, and what's still missing.
+ */
+export function computeProfileCompleteness(profile: Profile): ProfileCompleteness {
+  const missing: string[] = [];
+  let doneCount = 0;
+  for (const check of COMPLETENESS_CHECKS) {
+    if (check.done(profile)) {
+      doneCount++;
+    } else {
+      missing.push(check.label);
+    }
+  }
+  return { percent: Math.round((doneCount / COMPLETENESS_CHECKS.length) * 100), missing };
+}

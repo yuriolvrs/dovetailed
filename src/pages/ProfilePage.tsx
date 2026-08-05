@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { Profile } from '../types';
-import { loadProfile, saveProfile } from '../lib/profileStore';
+import { computeProfileCompleteness, loadProfile, saveProfile } from '../lib/profileStore';
 import { ContactForm } from '../components/profile/ContactForm';
 import { SkillsForm } from '../components/profile/SkillsForm';
 import { ExperienceForm } from '../components/profile/ExperienceForm';
@@ -15,7 +15,7 @@ import { ProjectsForm } from '../components/profile/ProjectsForm';
 import { EducationForm } from '../components/profile/EducationForm';
 import { WritingSamplesForm } from '../components/profile/WritingSamplesForm';
 import { BackupControls } from '../components/profile/BackupControls';
-import { Card, FieldTextarea, SectionTitle } from '../components/ui/primitives';
+import { Card, FieldTextarea, PageSkeleton, SectionTitle, UnsavedIndicator } from '../components/ui/primitives';
 
 // Left-rail jump-to links for the sections below -- plain in-page anchors,
 // each section carries a matching id + scroll-mt so the sticky header
@@ -35,6 +35,7 @@ const SECTIONS = [
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [summaryDirty, setSummaryDirty] = useState(false);
 
   const refresh = useCallback(() => {
     loadProfile().then(setProfile);
@@ -61,8 +62,10 @@ export default function ProfilePage() {
   }
 
   if (!profile) {
-    return <p className="text-sm text-slate-400">Loading…</p>;
+    return <PageSkeleton cards={4} />;
   }
+
+  const completeness = computeProfileCompleteness(profile);
 
   return (
     <div className="pb-16">
@@ -76,6 +79,25 @@ export default function ProfilePage() {
 
       <div className="flex gap-6 items-start">
         <aside className="hidden lg:flex flex-col gap-1 w-44 shrink-0 sticky top-20">
+          <div className="px-3 pb-3 mb-1 border-b border-slate-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                Complete
+              </span>
+              <span className="text-xs font-semibold text-slate-700">{completeness.percent}%</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-slate-900 transition-[width] duration-300 ease-out"
+                style={{ width: `${completeness.percent}%` }}
+              />
+            </div>
+            {completeness.missing.length > 0 && (
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Missing: {completeness.missing.join(', ')}
+              </p>
+            )}
+          </div>
           {SECTIONS.map((section) => (
             <a
               key={section.id}
@@ -101,11 +123,22 @@ export default function ProfilePage() {
 
           <div id="summary" className="scroll-mt-20">
             <Card className="p-6">
-              <SectionTitle sub="2–4 sentences that open your resume">Summary</SectionTitle>
+              <SectionTitle
+                sub="2–4 sentences that open your resume"
+                right={summaryDirty && <UnsavedIndicator />}
+              >
+                Summary
+              </SectionTitle>
               <FieldTextarea
                 value={profile.summary}
-                onChange={(summary) => updateLive({ summary })}
-                onBlur={() => update({ summary: profile.summary })}
+                onChange={(summary) => {
+                  updateLive({ summary });
+                  setSummaryDirty(true);
+                }}
+                onBlur={() => {
+                  update({ summary: profile.summary });
+                  setSummaryDirty(false);
+                }}
                 placeholder="A short professional summary..."
                 rows={3}
               />

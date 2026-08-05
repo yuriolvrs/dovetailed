@@ -12,8 +12,17 @@
 // live as a preview while editing, and used as-is when you print or "Save
 // as PDF."
 
+import { useEffect, useRef } from 'react';
 import type { ExperienceEntry, ResumeContent } from '../../types';
+import { experienceKey, projectKey, type ResumeFocusTarget } from '../../lib/resumeEntryKeys';
 import { formatMonthYear } from '../ui/primitives';
+
+// Data-attribute value identifying one bullet's spot in the preview, so a
+// focused editor field (see ResumeEditor's onFocusBullet) can be found and
+// highlighted/scrolled to without keeping refs for every bullet.
+function bulletFocusKey(target: ResumeFocusTarget): string {
+  return `${target.section}:${target.entryKey}:${target.bulletIndex}`;
+}
 
 function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
@@ -50,23 +59,42 @@ function groupBySection(entries: ExperienceEntry[]): { section: string; entries:
 export function ResumePrintView({
   content,
   variant = 'print',
+  focusedTarget = null,
 }: {
   content: ResumeContent;
-  /** 'print': hidden on screen, the actual print target. 'preview': visible live preview, excluded from print output. */
-  variant?: 'print' | 'preview';
+  /**
+   * 'print': hidden on screen, the actual print target.
+   * 'preview': visible live preview, excluded from print output.
+   * 'measure': same unpadded layout as 'print' but without the `hidden`
+   * class, so it actually lays out (off-screen) for height measurement --
+   * see fitToOnePage.ts.
+   */
+  variant?: 'print' | 'preview' | 'measure';
+  /** The bullet currently focused in the editor, if any -- highlighted here on the 'preview' variant. */
+  focusedTarget?: ResumeFocusTarget | null;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!focusedTarget || variant !== 'preview' || !rootRef.current) return;
+    const el = rootRef.current.querySelector(`[data-focus-key="${bulletFocusKey(focusedTarget)}"]`);
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [focusedTarget, variant]);
+
   const rootClass =
-    variant === 'print'
-      ? 'hidden print:block text-slate-900 text-[11px] leading-snug font-sans'
-      : 'print:hidden text-slate-900 text-[11px] leading-snug font-sans bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] p-8';
+    variant === 'preview'
+      ? 'print:hidden text-slate-900 text-[15px] leading-snug font-sans bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] p-8'
+      : variant === 'measure'
+        ? 'text-slate-900 text-[15px] leading-snug font-sans'
+        : 'hidden print:block text-slate-900 text-[15px] leading-snug font-sans';
 
   return (
-    <div className={rootClass}>
+    <div ref={rootRef} className={rootClass}>
       {variant === 'print' && <style>{'@page { size: letter; margin: 0.55in; }'}</style>}
 
       <div className="text-center mb-3">
-        <p className="text-2xl font-bold tracking-wide">{content.contact.name}</p>
-        <p className="text-[10px] mt-1">
+        <p className="text-[18px] font-bold tracking-wide">{content.contact.name}</p>
+        <p className="text-[15px] mt-1">
           {[
             content.contact.phone,
             content.contact.email,
@@ -86,25 +114,35 @@ export function ResumePrintView({
 
       {content.education.length > 0 && (
         <section className="mb-3">
-          <p className="text-xs font-bold uppercase border-b border-slate-900 mb-1.5">Education</p>
+          <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">Education</p>
           {content.education.map((entry, i) => (
-            <div key={i} className="flex justify-between mb-1">
-              <div>
-                <p className="font-bold">{entry.school}</p>
-                <p className="italic">
-                  {entry.degree}
-                  {entry.field ? `, ${entry.field}` : ''}
-                </p>
+            <div key={i} className="mb-1">
+              <div className="flex justify-between">
+                <div>
+                  <p className="font-bold">{entry.school}</p>
+                  <p className="italic">
+                    {entry.degree}
+                    {entry.field ? `, ${entry.field}` : ''}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p></p>
+                  <p className="italic">
+                    {dateRange(
+                      formatMonthYear(entry.startMonth, entry.startYear),
+                      entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear),
+                    )}
+                  </p>
+                  {entry.gpa && <p className="italic">GPA: {entry.gpa}</p>}
+                </div>
               </div>
-              <div className="text-right">
-                <p></p>
-                <p className="italic">
-                  {dateRange(
-                    formatMonthYear(entry.startMonth, entry.startYear),
-                    entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear),
-                  )}
-                </p>
-              </div>
+              {entry.details && entry.details.length > 0 && (
+                <ul className="list-disc ml-4 mt-0.5">
+                  {entry.details.map((detail, j) => (
+                    <li key={j}>{detail}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </section>
@@ -112,7 +150,7 @@ export function ResumePrintView({
 
       {groupBySection(content.experience).map(({ section, entries }) => (
         <section key={section} className="mb-3">
-          <p className="text-xs font-bold uppercase border-b border-slate-900 mb-1.5">{section}</p>
+          <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">{section}</p>
           {entries.map((entry, i) => (
             <div key={i} className="mb-2">
               <div className="flex justify-between">
@@ -130,9 +168,19 @@ export function ResumePrintView({
               </div>
               {entry.bullets.length > 0 && (
                 <ul className="list-disc ml-4 mt-0.5">
-                  {entry.bullets.map((bullet, j) => (
-                    <li key={j}>{bullet}</li>
-                  ))}
+                  {entry.bullets.map((bullet, j) => {
+                    const target: ResumeFocusTarget = { section: 'experience', entryKey: experienceKey(entry), bulletIndex: j };
+                    const focused = variant === 'preview' && focusedTarget && bulletFocusKey(focusedTarget) === bulletFocusKey(target);
+                    return (
+                      <li
+                        key={j}
+                        data-focus-key={bulletFocusKey(target)}
+                        className={focused ? 'bg-emerald-100 rounded -mx-1 px-1 transition-colors' : 'transition-colors'}
+                      >
+                        {bullet}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -142,7 +190,7 @@ export function ResumePrintView({
 
       {content.projects.length > 0 && (
         <section className="mb-3">
-          <p className="text-xs font-bold uppercase border-b border-slate-900 mb-1.5">Projects</p>
+          <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">Projects</p>
           {content.projects.map((entry, i) => (
             <div key={i} className="mb-2">
               <p>
@@ -151,9 +199,19 @@ export function ResumePrintView({
               </p>
               {entry.bullets.length > 0 && (
                 <ul className="list-disc ml-4 mt-0.5">
-                  {entry.bullets.map((bullet, j) => (
-                    <li key={j}>{bullet}</li>
-                  ))}
+                  {entry.bullets.map((bullet, j) => {
+                    const target: ResumeFocusTarget = { section: 'project', entryKey: projectKey(entry), bulletIndex: j };
+                    const focused = variant === 'preview' && focusedTarget && bulletFocusKey(focusedTarget) === bulletFocusKey(target);
+                    return (
+                      <li
+                        key={j}
+                        data-focus-key={bulletFocusKey(target)}
+                        className={focused ? 'bg-emerald-100 rounded -mx-1 px-1 transition-colors' : 'transition-colors'}
+                      >
+                        {bullet}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -163,7 +221,7 @@ export function ResumePrintView({
 
       {content.skills.length > 0 && (
         <section>
-          <p className="text-xs font-bold uppercase border-b border-slate-900 mb-1.5">Technical Skills</p>
+          <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">Technical Skills</p>
           {content.skills.map((group, i) => (
             <p key={i}>
               {group.category && <span className="font-bold">{group.category}: </span>}

@@ -26,13 +26,14 @@ import type {
 } from '../../types';
 import { experienceLabel, projectLabel, skillsLabel } from '../profileAtoms';
 
-// Derived from a one-page LaTeX resume template (Jake's Resume:
-// Education/Experience/Projects/Technical Skills, ~3-5 bullets per role, ~4
-// per project, two projects shown) -- a fixed heuristic, not a measured
-// page-fit.
-// In plain terms: how many bullet points and projects we keep per section.
-export const EXPERIENCE_BULLET_CAP = 5;
-export const PROJECT_BULLET_CAP = 4;
+// Base bullet count kept per experience/project entry -- a matched bullet is
+// never cut (so an entry with more than this many matches keeps them all);
+// this only bounds how many *unmatched* bullets fill out the rest. Not a
+// measured page-fit by itself -- see fitToPage.ts for the real one-page
+// check that runs on top of this.
+// In plain terms: how many bullet points we keep per job/project by default,
+// though a job with lots of matched bullets can show more than this.
+export const BULLET_CAP_BASE = 3;
 export const MAX_PROJECTS = 2;
 
 function sectionAtomsByText(atoms: ProfileAtom[], label: string): Map<string, ProfileAtom> {
@@ -63,7 +64,11 @@ function prioritize(
     return { item, i, matched: Boolean(atom && matchedIds.has(atom.id)), atomId: atom?.id };
   });
 
-  const ordered = [...withFlags].sort((a, b) => Number(b.matched) - Number(a.matched) || a.i - b.i).slice(0, cap);
+  const matchedCount = withFlags.filter((entry) => entry.matched).length;
+  const effectiveCap = Math.max(cap, matchedCount);
+  const ordered = [...withFlags]
+    .sort((a, b) => Number(b.matched) - Number(a.matched) || a.i - b.i)
+    .slice(0, effectiveCap);
 
   for (const entry of ordered) {
     if (entry.matched && entry.atomId) {
@@ -104,7 +109,7 @@ export function selectResumeContent(
 
   const experience: ExperienceEntry[] = profile.experience.map((entry) => ({
     ...entry,
-    bullets: prioritize(entry.bullets, experienceLabel(entry), atoms, matchedIds, EXPERIENCE_BULLET_CAP, sourceMap),
+    bullets: prioritize(entry.bullets, experienceLabel(entry), atoms, matchedIds, BULLET_CAP_BASE, sourceMap),
   }));
 
   const rankedProjects = profile.projects
@@ -119,7 +124,7 @@ export function selectResumeContent(
 
   const projects: ProjectEntry[] = rankedProjects.map(({ entry }) => ({
     ...entry,
-    bullets: prioritize(entry.bullets, projectLabel(entry), atoms, matchedIds, PROJECT_BULLET_CAP, sourceMap),
+    bullets: prioritize(entry.bullets, projectLabel(entry), atoms, matchedIds, BULLET_CAP_BASE, sourceMap),
   }));
 
   const skills: SkillGroup[] = profile.skills.map((group) => ({

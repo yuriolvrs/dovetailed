@@ -22,8 +22,9 @@ import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import { llmErrorMessage } from '../lib/llm';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
 import { JobStageTracker } from '../components/jobs/JobStageTracker';
+import { useToast } from '../components/ui/Toast';
 import { RemoveItemButton } from '../components/EditableList';
-import { Badge, Btn, Card, ProgressBar, SectionTitle } from '../components/ui/primitives';
+import { Badge, Btn, Card, PageSkeleton, ProgressBar, SectionTitle } from '../components/ui/primitives';
 
 const SOURCE_BADGE_LABEL: Record<ProfileAtom['source'], string> = {
   skills: 'Skills',
@@ -64,6 +65,7 @@ type PickerTarget = { mode: 'swap'; atomId: string } | null;
 export default function MatchingReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { showUndo } = useToast();
 
   const [posting, setPosting] = useState<JobPosting | null | 'missing'>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -227,10 +229,16 @@ export default function MatchingReviewPage() {
   // clean slate for manually attaching evidence via "Add evidence" instead.
   async function handleClearMatches() {
     if (!posting || posting === 'missing' || !posting.analysis) return;
+    const previousMatches = posting.analysis.matches;
     const next = { ...posting, analysis: { ...posting.analysis, matches: [] } };
     await saveJobPosting(next);
     setPosting(next);
     setConfirmingClear(false);
+    showUndo('Matches cleared.', async () => {
+      const restored = { ...next, analysis: { ...next.analysis!, matches: previousMatches } };
+      await saveJobPosting(restored);
+      setPosting(restored);
+    });
   }
 
   if (posting === 'missing') {
@@ -246,16 +254,23 @@ export default function MatchingReviewPage() {
   }
 
   if (!posting || !profile) {
-    return <p className="text-sm text-slate-400">Loading…</p>;
+    return <PageSkeleton cards={3} />;
   }
 
   if (!posting.analysis || posting.analysis.requirements.length === 0) {
     return (
       <section className="space-y-3">
+        <JobStageTracker
+          postingId={posting.id}
+          current="matching"
+          analysisDone={false}
+          matchingDone={false}
+          className=""
+        />
         <p className="text-sm text-slate-500">
           This posting hasn't been analyzed yet.{' '}
           <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900">
-            Go run analysis and matching first.
+            Go run analysis first.
           </Link>
         </p>
       </section>

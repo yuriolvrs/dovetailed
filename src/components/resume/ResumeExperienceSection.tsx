@@ -15,6 +15,7 @@ import type { ExperienceEntry } from '../../types';
 import { StringList } from '../StringList';
 import { DateRangeFields } from '../profile/DateRangeFields';
 import { ResumeAccordionRow } from './ResumeAccordionRow';
+import { BulletPicker } from '../BulletPicker';
 import { Badge, Btn, Card, FieldInput, fieldLabelClass, formatMonthYear } from '../ui/primitives';
 
 function newExperienceEntry(): ExperienceEntry {
@@ -33,12 +34,23 @@ export function ResumeExperienceSection({
   onChange,
   bulletMatch,
   bulletRewrite,
+  profileBulletsFor,
+  excludedEntries,
+  onAddEntry,
+  onFocusBullet,
 }: {
   value: ExperienceEntry[];
   onChange: (experience: ExperienceEntry[]) => void;
   /** Requirement text this bullet is matched to, or null if unmatched. */
   bulletMatch: (bulletText: string) => string | null;
   bulletRewrite: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
+  /** All bullets on the matching source profile entry (not just the ones currently included), for the "add back" picker. */
+  profileBulletsFor: (entry: ExperienceEntry) => string[];
+  /** Profile entries left out of this resume (removed here, or never auto-selected), for the "add back" picker. */
+  excludedEntries: ExperienceEntry[];
+  onAddEntry: (entry: ExperienceEntry) => void;
+  /** Reports a bullet gaining focus (index) or losing it (null), so the live preview can highlight it. */
+  onFocusBullet: (entry: ExperienceEntry, bulletIndex: number | null) => void;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(value.length > 0 ? 0 : null);
 
@@ -131,6 +143,16 @@ export function ResumeExperienceSection({
               onChange={(section) => update(index, { ...entry, section })}
             />
 
+            <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={entry.prunable ?? false}
+                onChange={(e) => update(index, { ...entry, prunable: e.target.checked })}
+                className="rounded border-slate-300 text-blue-600"
+              />
+              Drop this first if the resume runs past one page
+            </label>
+
             <div className="grid grid-cols-2 gap-3">
               <FieldInput
                 label="Company"
@@ -164,29 +186,54 @@ export function ResumeExperienceSection({
                 multiline
                 addLabel="Add bullet"
                 emptyLabel="No bullets yet."
-                itemWrapperClassName={(bulletText) =>
-                  bulletMatch(bulletText)
-                    ? 'border-l-[3px] border-emerald-400 bg-emerald-50/50 rounded-lg pl-3 pr-2 py-2'
-                    : 'border-l-[3px] border-amber-300 bg-amber-50/50 rounded-lg pl-3 pr-2 py-2'
-                }
+                reorderable
                 itemBadge={(bulletText) => {
                   const requirement = bulletMatch(bulletText);
                   return requirement ? (
-                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold text-emerald-700">
+                    <Badge color="green">
                       <Check size={11} />
-                      <span>Matches requirement:</span>
-                      <Badge color="green">{requirement}</Badge>
-                    </div>
+                      Matches: {requirement}
+                    </Badge>
                   ) : (
-                    <div className="text-[11px] font-semibold text-amber-700">○ Not matched to any requirement yet</div>
+                    <Badge color="amber">Not matched yet</Badge>
                   );
                 }}
                 itemExtra={bulletRewrite}
+                onItemFocus={(bulletIndex) => onFocusBullet(entry, bulletIndex)}
+                onItemBlur={() => onFocusBullet(entry, null)}
               />
+              <div className="mt-2">
+                <BulletPicker
+                  allBullets={profileBulletsFor(entry)}
+                  included={entry.bullets}
+                  onAdd={(bullet) => update(index, { ...entry, bullets: [...entry.bullets, bullet] })}
+                  bulletMatch={bulletMatch}
+                />
+              </div>
             </div>
           </ResumeAccordionRow>
         );
       })}
+
+      {excludedEntries.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Not included</p>
+          {excludedEntries.map((entry, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onAddEntry(entry)}
+              className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+            >
+              <Plus size={13} className="shrink-0 text-slate-400" />
+              <span className="flex-1 text-sm text-slate-500">
+                {entry.title || 'Untitled role'}
+                {entry.company && <span className="text-slate-400"> · {entry.company}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

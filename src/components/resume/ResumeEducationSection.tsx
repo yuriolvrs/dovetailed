@@ -127,6 +127,14 @@ export function ResumeEducationSection({
             currentLabel="Currently studying here"
           />
 
+          <FieldInput
+            label="GPA"
+            placeholder="3.8"
+            value={entry.gpa ?? ''}
+            onChange={(gpa) => update(index, { ...entry, gpa })}
+            className="max-w-[140px]"
+          />
+
           <div>
             <span className={`mb-1 block ${fieldLabelClass}`}>Details</span>
             <StringList

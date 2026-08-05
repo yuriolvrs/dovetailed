@@ -7,13 +7,7 @@
 // ever selects and reorders your real content, never invents anything.
 
 import { describe, expect, it } from 'vitest';
-import {
-  EXPERIENCE_BULLET_CAP,
-  isResumeContentVerbatim,
-  MAX_PROJECTS,
-  PROJECT_BULLET_CAP,
-  selectResumeContent,
-} from './selectResumeContent';
+import { BULLET_CAP_BASE, isResumeContentVerbatim, MAX_PROJECTS, selectResumeContent } from './selectResumeContent';
 import type { JobAnalysis, Profile, ProfileAtom, ResumeContent } from '../../types';
 import { emptyProfile } from '../profileStore';
 import { buildProfileAtoms } from '../profileAtoms';
@@ -75,20 +69,45 @@ describe('selectResumeContent', () => {
     expect(content.experience).toHaveLength(2);
   });
 
-  it('caps bullets per experience entry at EXPERIENCE_BULLET_CAP', () => {
-    const bullets = Array.from({ length: EXPERIENCE_BULLET_CAP + 3 }, (_, i) => `Bullet ${i}`);
+  it('caps unmatched bullets per experience entry at BULLET_CAP_BASE when nothing is matched', () => {
+    const bullets = Array.from({ length: BULLET_CAP_BASE + 3 }, (_, i) => `Bullet ${i}`);
     const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
     const atoms = buildProfileAtoms(p);
     const { content } = selectResumeContent(p, analysis(), atoms);
-    expect(content.experience[0].bullets).toHaveLength(EXPERIENCE_BULLET_CAP);
+    expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
   });
 
-  it('caps bullets per project at PROJECT_BULLET_CAP', () => {
-    const bullets = Array.from({ length: PROJECT_BULLET_CAP + 3 }, (_, i) => `Bullet ${i}`);
+  it('caps unmatched bullets per project at BULLET_CAP_BASE when nothing is matched', () => {
+    const bullets = Array.from({ length: BULLET_CAP_BASE + 3 }, (_, i) => `Bullet ${i}`);
     const p = profile({ projects: [{ name: 'Alpha', description: '', bullets, links: [] }] });
     const atoms = buildProfileAtoms(p);
     const { content } = selectResumeContent(p, analysis(), atoms);
-    expect(content.projects[0].bullets).toHaveLength(PROJECT_BULLET_CAP);
+    expect(content.projects[0].bullets).toHaveLength(BULLET_CAP_BASE);
+  });
+
+  it('keeps a single matched bullet plus up to BULLET_CAP_BASE total when only one of many bullets is matched', () => {
+    const bullets = ['Matched bullet', 'B1', 'B2', 'B3', 'B4', 'B5'];
+    const p = profile({ experience: [{ company: 'Acme', title: 'Account Officer', current: true, bullets }] });
+    const atoms = buildProfileAtoms(p);
+    const matchedAtom = atoms.find((a) => a.text === 'Matched bullet')!;
+    const a = analysis({ matches: [{ requirementId: 'r1', status: 'full', atomIds: [matchedAtom.id] }] });
+
+    const { content } = selectResumeContent(p, a, atoms);
+
+    expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
+    expect(content.experience[0].bullets[0]).toBe('Matched bullet');
+  });
+
+  it('keeps every matched bullet uncapped when matched count exceeds BULLET_CAP_BASE, adding no unmatched ones', () => {
+    const bullets = ['M1', 'M2', 'M3', 'M4', 'Unmatched'];
+    const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
+    const atoms = buildProfileAtoms(p);
+    const matchedIds = ['M1', 'M2', 'M3', 'M4'].map((text) => atoms.find((a) => a.text === text)!.id);
+    const a = analysis({ matches: [{ requirementId: 'r1', status: 'full', atomIds: matchedIds }] });
+
+    const { content } = selectResumeContent(p, a, atoms);
+
+    expect(content.experience[0].bullets).toEqual(['M1', 'M2', 'M3', 'M4']);
   });
 
   it(`caps included projects at MAX_PROJECTS (${MAX_PROJECTS}), preferring the ones with more matched bullets`, () => {

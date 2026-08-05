@@ -54,6 +54,7 @@ export function ExperienceForm({
           newItem={newExperienceEntry}
           emptyLabel="No experience entries yet."
           hideAddButton
+          reorderable
           renderItem={(entry, update) => (
             <div className="space-y-3">
               <FieldInput
@@ -62,6 +63,16 @@ export function ExperienceForm({
                 value={entry.section ?? ''}
                 onChange={(section) => update({ ...entry, section })}
               />
+
+              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={entry.prunable ?? false}
+                  onChange={(e) => update({ ...entry, prunable: e.target.checked })}
+                  className="rounded border-slate-300 text-blue-600"
+                />
+                Drop this first if a generated resume runs past one page
+              </label>
 
               <div className="grid grid-cols-2 gap-3">
                 <FieldInput
@@ -96,6 +107,7 @@ export function ExperienceForm({
                   multiline
                   addLabel="Add bullet"
                   emptyLabel="No bullets yet."
+                  reorderable
                   itemBadge={bulletBadge}
                   itemExtra={bulletRewrite}
                 />

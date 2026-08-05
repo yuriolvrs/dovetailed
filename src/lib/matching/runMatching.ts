@@ -69,7 +69,12 @@ async function matchOneRequirement(
 
   const candidateIds = new Set(candidates.map((c) => c.atom.id));
   const prompt = buildMatchRequirementPrompt(requirement.text, toCandidateList(candidates));
-  const verification = await generateStructured(prompt, isMatchVerification, { temperature: 0.1, maxTokens: 300, signal });
+  // 300 was enough for the previous model, but openai/gpt-oss-120b's own
+  // chain-of-thought (billed as "reasoning" tokens, still deducted from
+  // max_tokens) alone can exceed that -- confirmed live, it was cutting the
+  // JSON off mid-response (finish_reason "length") before any usable content
+  // came out.
+  const verification = await generateStructured(prompt, isMatchVerification, { temperature: 0.1, maxTokens: 1200, signal });
 
   const confirmedIds = verification.atomIds.filter((id) => candidateIds.has(id));
   if (confirmedIds.length === 0) {

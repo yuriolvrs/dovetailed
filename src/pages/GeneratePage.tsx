@@ -12,25 +12,30 @@
 // overwrite is snapshotted into history first (genStore.ts), so a "History"
 // panel lets the user restore an earlier version instead of losing it for
 // good. Export is a plain window.print() against the hidden ResumePrintView
-// layout -- no PDF library needed. Cover Letter: not built yet (Phase 5) --
-// the tab shows a placeholder.
-// In plain terms: the screen where you build a tailored resume (and, later,
-// cover letter) for a job, edit it with a live preview alongside, roll back
-// to an earlier version if needed, and export it to PDF.
+// layout -- no PDF library needed. Cover Letter: its whole flow (generate/
+// edit/history/export) lives in CoverLetterSection, a self-contained
+// component this page just mounts for that tab -- see its own header for why
+// it, unlike the resume, does call the LLM.
+// In plain terms: the screen where you build a tailored resume and cover
+// letter for a job, edit either with a live preview alongside, roll back to
+// an earlier version if needed, and export to PDF.
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Download, History, Mail, Sparkles } from 'lucide-react';
-import type { Generation, GenerationSnapshot, JobPosting, Profile, ResumeContent } from '../types';
+import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, Profile, ResumeContent } from '../types';
+import type { ResumeFocusTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
 import { loadProfile } from '../lib/profileStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../lib/genStore';
 import { isResumeContentVerbatim, selectResumeContent } from '../lib/generation/selectResumeContent';
+import { fitToOnePage } from '../lib/generation/fitToOnePage';
 import { JobStageTracker } from '../components/jobs/JobStageTracker';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
-import { Btn, Card } from '../components/ui/primitives';
+import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
+import { Btn, Card, PageSkeleton } from '../components/ui/primitives';
 
 type Tab = 'resume' | 'coverLetter';
 
@@ -56,9 +61,18 @@ export default function GeneratePage() {
   // intentionally changing the wording -- that shouldn't lock them out of
   // their own editor.
   const [stale, setStale] = useState(false);
+  // Whole experience entries the last generate/regenerate dropped to fit one
+  // page (see fitToOnePage.ts) -- shown as a dismissible "restore" prompt.
+  // Not persisted: it's a note about what generation just did, not part of
+  // the saved resume, and manually re-adding one clears the note.
+  const [pageFitRemoved, setPageFitRemoved] = useState<ExperienceEntry[]>([]);
+  // Which bullet is focused in the editor right now, so the live preview
+  // alongside it can highlight the matching spot.
+  const [focusedTarget, setFocusedTarget] = useState<ResumeFocusTarget | null>(null);
 
   const refresh = useCallback(() => {
     if (!id) return;
+    setPageFitRemoved([]);
     loadJobPosting(id).then((p) => setPosting(p ?? 'missing'));
     listSnapshots(id, 'resume').then(setSnapshots);
     Promise.all([loadProfile(), loadGeneration(id, 'resume')]).then(([p, g]) => {
@@ -94,13 +108,26 @@ export default function GeneratePage() {
       await snapshotGeneration(generation);
     }
     const atoms = buildProfileAtoms(profile);
-    const { content, sourceMap } = selectResumeContent(profile, posting.analysis, atoms);
-    const next = newGeneration(id, 'resume', content, sourceMap);
+    const selected = selectResumeContent(profile, posting.analysis, atoms);
+    const { content, removedExperience } = await fitToOnePage(selected.content, selected.sourceMap);
+    const next = newGeneration(id, 'resume', content, selected.sourceMap);
     await saveGeneration(next);
     setGeneration(next);
     setStale(false);
+    setPageFitRemoved(removedExperience);
     setConfirmingRegenerate(false);
     listSnapshots(id, 'resume').then(setSnapshots);
+  }
+
+  function restorePageFitRemoved(entry: ExperienceEntry) {
+    setGeneration((prev) => {
+      if (!prev || prev === 'none') return prev;
+      const content = prev.content as ResumeContent;
+      const next = { ...prev, content: { ...content, experience: [...content.experience, entry] } };
+      void saveGeneration(next);
+      return next;
+    });
+    setPageFitRemoved((prev) => prev.filter((e) => e !== entry));
   }
 
   async function handleRestore(snapshot: GenerationSnapshot) {
@@ -138,16 +165,43 @@ export default function GeneratePage() {
   }
 
   if (!posting || !profile || generation === null) {
-    return <p className="text-sm text-slate-400">Loading…</p>;
+    return <PageSkeleton cards={3} />;
   }
 
-  if (!posting.analysis || posting.analysis.matches.length === 0) {
+  if (!posting.analysis || posting.analysis.requirements.length === 0) {
     return (
       <section className="space-y-3">
+        <JobStageTracker
+          postingId={posting.id}
+          current="generate"
+          analysisDone={false}
+          matchingDone={false}
+          className=""
+        />
+        <p className="text-sm text-slate-500">
+          This posting hasn't been analyzed yet.{' '}
+          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900">
+            Go run analysis first.
+          </Link>
+        </p>
+      </section>
+    );
+  }
+
+  if (posting.analysis.matches.length === 0) {
+    return (
+      <section className="space-y-3">
+        <JobStageTracker
+          postingId={posting.id}
+          current="generate"
+          analysisDone={true}
+          matchingDone={false}
+          className=""
+        />
         <p className="text-sm text-slate-500">
           This posting hasn't been matched yet.{' '}
-          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900">
-            Go run analysis and matching first.
+          <Link to={`/jobs/${posting.id}/match`} className="underline hover:text-slate-900">
+            Go run matching first.
           </Link>
         </p>
       </section>
@@ -221,15 +275,7 @@ export default function GeneratePage() {
       </div>
 
       {tab === 'coverLetter' ? (
-        <Card className="p-10 flex flex-col items-center text-center gap-2 print:hidden">
-          <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-2">
-            <Mail size={22} className="text-slate-400" />
-          </div>
-          <h3 className="text-base font-semibold text-slate-900">Cover letter generation is coming soon</h3>
-          <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
-            This will build a tailored cover letter from the same matched requirements as your resume.
-          </p>
-        </Card>
+        <CoverLetterSection posting={posting} profile={profile} />
       ) : (
         <>
           {showHistory && snapshots.length > 0 && (
@@ -304,15 +350,44 @@ export default function GeneratePage() {
             </Card>
           ) : (
             <>
+              {pageFitRemoved.length > 0 && (
+                <Card className="p-4 mb-5 print:hidden">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
+                    Removed to fit one page
+                  </p>
+                  <div className="space-y-1.5">
+                    {pageFitRemoved.map((entry, i) => (
+                      <div
+                        key={i}
+                        className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                      >
+                        <span className="text-sm text-slate-700">
+                          {entry.title}
+                          {entry.company && <span className="text-slate-400"> · {entry.company}</span>}
+                        </span>
+                        <Btn size="sm" variant="secondary" onClick={() => restorePageFitRemoved(entry)}>
+                          Restore
+                        </Btn>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start print:hidden">
                 <ResumeEditor
                   value={generation.content as ResumeContent}
                   sourceMap={generation.sourceMap}
                   analysis={posting.analysis}
+                  profile={profile}
                   onChange={updateContent}
+                  onFocusBullet={setFocusedTarget}
                 />
                 <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
-                  <ResumePrintView content={generation.content as ResumeContent} variant="preview" />
+                  <ResumePrintView
+                    content={generation.content as ResumeContent}
+                    variant="preview"
+                    focusedTarget={focusedTarget}
+                  />
                 </div>
               </div>
               <ResumePrintView content={generation.content as ResumeContent} />

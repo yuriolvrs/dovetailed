@@ -21,7 +21,8 @@
 
 import { useMemo } from 'react';
 import { Check } from 'lucide-react';
-import type { JobAnalysis, ResumeContent, SourceMapEntry } from '../../types';
+import type { ExperienceEntry, JobAnalysis, Profile, ProjectEntry, ResumeContent, SourceMapEntry } from '../../types';
+import { experienceKey, projectKey, type ResumeFocusTarget } from '../../lib/resumeEntryKeys';
 import { SkillsForm } from '../profile/SkillsForm';
 import { ProjectsForm } from '../profile/ProjectsForm';
 import { Badge } from '../ui/primitives';
@@ -50,14 +51,54 @@ export function ResumeEditor({
   value,
   sourceMap,
   analysis,
+  profile,
   onChange,
+  onFocusBullet,
 }: {
   value: ResumeContent;
   sourceMap: SourceMapEntry[];
   /** This posting's requirements + matches, used to name which requirement a matched bullet satisfies. */
   analysis: JobAnalysis;
+  /** The full source profile, used only to offer back bullets the automatic selection left out (see BulletPicker). */
+  profile: Profile;
   onChange: (content: ResumeContent) => void;
+  /** Reports which bullet field has focus (or null on blur), so the live preview can highlight it. */
+  onFocusBullet: (target: ResumeFocusTarget | null) => void;
 }) {
+  const profileExperienceByKey = useMemo(
+    () => new Map(profile.experience.map((e) => [experienceKey(e), e])),
+    [profile.experience],
+  );
+  const profileProjectByKey = useMemo(
+    () => new Map(profile.projects.map((p) => [projectKey(p), p])),
+    [profile.projects],
+  );
+
+  function profileBulletsForExperience(entry: ExperienceEntry): string[] {
+    return profileExperienceByKey.get(experienceKey(entry))?.bullets ?? entry.bullets;
+  }
+
+  function profileBulletsForProject(entry: ProjectEntry): string[] {
+    return profileProjectByKey.get(projectKey(entry))?.bullets ?? entry.bullets;
+  }
+
+  // Profile entries not currently in this resume (removed by the user here,
+  // or never auto-selected), offered back via each section's "Not included"
+  // picker -- removing an entry from a resume never deletes it from the
+  // profile, so it must stay reachable.
+  const includedExperienceKeys = useMemo(
+    () => new Set(value.experience.map(experienceKey)),
+    [value.experience],
+  );
+  const excludedExperience = useMemo(
+    () => profile.experience.filter((e) => !includedExperienceKeys.has(experienceKey(e))),
+    [profile.experience, includedExperienceKeys],
+  );
+  const includedProjectKeys = useMemo(() => new Set(value.projects.map(projectKey)), [value.projects]);
+  const excludedProjects = useMemo(
+    () => profile.projects.filter((p) => !includedProjectKeys.has(projectKey(p))),
+    [profile.projects, includedProjectKeys],
+  );
   const atomIdsByNormalizedText = useMemo(
     () => new Map(sourceMap.map((e) => [normalizeForMatch(e.generatedText), e.atomIds])),
     [sourceMap],
@@ -116,6 +157,12 @@ export function ResumeEditor({
         onChange={(experience) => onChange({ ...value, experience })}
         bulletMatch={bulletMatch}
         bulletRewrite={bulletRewrite}
+        profileBulletsFor={profileBulletsForExperience}
+        excludedEntries={excludedExperience}
+        onAddEntry={(entry) => onChange({ ...value, experience: [...value.experience, entry] })}
+        onFocusBullet={(entry, bulletIndex) =>
+          onFocusBullet(bulletIndex === null ? null : { section: 'experience', entryKey: experienceKey(entry), bulletIndex })
+        }
       />
 
       <ProjectsForm
@@ -123,6 +170,13 @@ export function ResumeEditor({
         onChange={(projects) => onChange({ ...value, projects })}
         bulletBadge={bulletBadge}
         bulletRewrite={bulletRewrite}
+        bulletMatch={bulletMatch}
+        profileBulletsFor={profileBulletsForProject}
+        excludedEntries={excludedProjects}
+        onAddEntry={(entry) => onChange({ ...value, projects: [...value.projects, entry] })}
+        onFocusBullet={(entry, bulletIndex) =>
+          onFocusBullet(bulletIndex === null ? null : { section: 'project', entryKey: projectKey(entry), bulletIndex })
+        }
       />
 
       <SkillsForm value={value.skills} onChange={(skills) => onChange({ ...value, skills })} />

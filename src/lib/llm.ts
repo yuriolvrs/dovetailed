@@ -31,6 +31,31 @@ interface ChatCompletionResponse {
 const RATE_LIMIT_MAX_RETRIES = 4;
 const RATE_LIMIT_FALLBACK_DELAYS_MS = [2000, 5000, 10000, 15000];
 
+// The small model this app uses occasionally mis-emits multi-byte UTF-8 for
+// special punctuation (non-breaking hyphens, smart quotes, en/em dashes):
+// the intended character's bytes arrive as separate Latin-1-range characters
+// (code points U+0080-U+00FF) instead of one correct code point, e.g. a
+// non-breaking hyphen in "cross-functional" shows up as one garbled visible
+// letter followed by invisible control characters. Re-encoding each run of
+// Latin-1-range characters back to raw bytes and re-decoding as UTF-8
+// recovers the original character; runs that are not actually mis-decoded
+// UTF-8 (e.g. a genuine standalone accented letter) fail the strict decode
+// and are left untouched. Plain ASCII text never enters this path at all.
+// In plain terms: repairs the garbled special characters this AI model
+// sometimes produces.
+const LATIN1_RANGE_RUN = new RegExp('[\u0080-\u00FF]+', 'g');
+
+function fixMojibake(text: string): string {
+  return text.replace(LATIN1_RANGE_RUN, (run) => {
+    const bytes = Uint8Array.from([...run].map((c) => c.charCodeAt(0)));
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+      return run;
+    }
+  });
+}
+
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -87,7 +112,7 @@ export async function generate(prompt: string, options: GenerateOptions = {}): P
     if (!content) {
       throw new Error('LLM proxy response had no content.');
     }
-    return content;
+    return fixMojibake(content);
   }
 }
 

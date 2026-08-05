@@ -34,7 +34,10 @@ export function BulletRewriteSuggest({
     setError(null);
     try {
       const prompt = buildSuggestBulletRewritePrompt(bulletText);
-      const result = await generateStructured(prompt, isRewriteSuggestions, { temperature: 0.4, maxTokens: 300 });
+      // See runMatching.ts's comment on the same change: openai/gpt-oss-120b's
+      // own reasoning can exceed 300 tokens by itself, cutting off the
+      // response before any usable content.
+      const result = await generateStructured(prompt, isRewriteSuggestions, { temperature: 0.4, maxTokens: 900 });
       setSuggestions(filterSafeSuggestions(bulletText, result.suggestions));
       setStatus('shown');
     } catch (err) {

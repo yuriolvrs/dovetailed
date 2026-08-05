@@ -40,6 +40,8 @@ export interface ExperienceEntry {
   current: boolean;
   location?: string;
   bullets: string[];
+  /** When true, this entry is dropped first (oldest first) if a generated resume runs past one page. */
+  prunable?: boolean;
 }
 
 export interface ProjectEntry {
@@ -59,6 +61,7 @@ export interface EducationEntry {
   endYear?: string;
   /** When true, still studying here; end date is ignored/cleared. */
   current: boolean;
+  gpa?: string;
   details?: string[];
 }
 

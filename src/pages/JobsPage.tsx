@@ -28,6 +28,7 @@ import {
   FieldTextarea,
   Modal,
   SectionTitle,
+  Skeleton,
 } from '../components/ui/primitives';
 
 export default function JobsPage() {
@@ -162,7 +163,11 @@ export default function JobsPage() {
           Saved Postings{postings !== null && ` — ${postings.length}`}
         </p>
         {postings === null ? (
-          <p className="text-sm text-slate-400">Loading…</p>
+          <div className="space-y-3">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
         ) : postings.length === 0 ? (
           <div className="py-20 text-center text-sm text-slate-300 border-2 border-dashed border-slate-200 rounded-2xl bg-white">
             No postings saved yet

@@ -5,9 +5,32 @@
 // In plain terms: a simpler version of the list component, just for lists
 // of plain text.
 
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef } from 'react';
+import type { ReactNode, TextareaHTMLAttributes } from 'react';
 import { EditableList } from './EditableList';
 import { fieldInputClass } from './ui/primitives';
+
+// A textarea that grows to fit its content instead of scrolling internally,
+// so a long bullet/paragraph is fully visible without the user having to
+// resize or scroll each field individually.
+// In plain terms: a text box that expands as you type instead of hiding the
+// rest of what you wrote behind a scrollbar.
+function AutoGrowTextarea({
+  value,
+  className,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return <textarea ref={ref} value={value} className={`${className} resize-none overflow-hidden`} {...props} />;
+}
 
 interface StringListProps {
   items: string[];
@@ -18,12 +41,16 @@ interface StringListProps {
   addLabel?: string;
   emptyLabel?: string;
   hideAddButton?: boolean;
+  /** Shows a drag handle on each item so bullets can be reordered by dragging. */
+  reorderable?: boolean;
   /** Optional extra content rendered above an item's input, e.g. a warning badge. */
   itemBadge?: (value: string) => ReactNode;
   /** Optional extra content rendered below an item's input, e.g. a rewrite-suggestion action. */
   itemExtra?: (value: string, update: (next: string) => void) => ReactNode;
-  /** Optional extra classes for the wrapper around one item, e.g. a match-status border. */
-  itemWrapperClassName?: (value: string) => string;
+  /** Fires with an item's index when its field gains focus, e.g. to highlight the matching spot in a live preview. */
+  onItemFocus?: (index: number) => void;
+  /** Fires when an item's field loses focus. */
+  onItemBlur?: () => void;
 }
 
 /**
@@ -43,9 +70,11 @@ export function StringList({
   addLabel = 'Add',
   emptyLabel,
   hideAddButton = false,
+  reorderable = false,
   itemBadge,
   itemExtra,
-  itemWrapperClassName,
+  onItemFocus,
+  onItemBlur,
 }: StringListProps) {
   const inputClass = `w-full ${fieldInputClass}`;
 
@@ -57,21 +86,21 @@ export function StringList({
       addLabel={addLabel}
       emptyLabel={emptyLabel}
       hideAddButton={hideAddButton}
-      renderItem={(value, update) => (
-        <div
-          className={[itemBadge || itemExtra ? 'space-y-1.5' : '', itemWrapperClassName?.(value) ?? '']
-            .filter(Boolean)
-            .join(' ')}
-        >
+      reorderable={reorderable}
+      renderItem={(value, update, index) => (
+        <div className={itemBadge || itemExtra ? 'space-y-1.5' : ''}>
           {itemBadge?.(value)}
           {multiline ? (
-            <textarea
+            <AutoGrowTextarea
               className={inputClass}
-              rows={3}
               value={value}
               placeholder={placeholder}
               onChange={(e) => update(e.target.value)}
-              onBlur={() => onBlurCommit?.(items)}
+              onFocus={() => onItemFocus?.(index)}
+              onBlur={() => {
+                onBlurCommit?.(items);
+                onItemBlur?.();
+              }}
             />
           ) : (
             <input
@@ -80,7 +109,11 @@ export function StringList({
               value={value}
               placeholder={placeholder}
               onChange={(e) => update(e.target.value)}
-              onBlur={() => onBlurCommit?.(items)}
+              onFocus={() => onItemFocus?.(index)}
+              onBlur={() => {
+                onBlurCommit?.(items);
+                onItemBlur?.();
+              }}
             />
           )}
           {itemExtra?.(value, update)}

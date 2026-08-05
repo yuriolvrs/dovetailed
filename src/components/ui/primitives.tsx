@@ -19,11 +19,22 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   );
 }
 
-export function SectionTitle({ children, sub }: { children: ReactNode; sub?: string }) {
+export function SectionTitle({
+  children,
+  sub,
+  right,
+}: {
+  children: ReactNode;
+  sub?: string;
+  right?: ReactNode;
+}) {
   return (
-    <div className="mb-5">
-      <h2 className="text-sm font-semibold text-slate-800">{children}</h2>
-      {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+    <div className="mb-5 flex items-start justify-between gap-2">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-800">{children}</h2>
+        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+      </div>
+      {right}
     </div>
   );
 }
@@ -208,6 +219,32 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
+// Pulsing gray placeholder block -- the building block for loading
+// skeletons that roughly match a section's real shape instead of a plain
+// "Loading…" line.
+// In plain terms: one gray animated bar shown while real content loads.
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-slate-100 ${className}`} />;
+}
+
+// Full-page loading placeholder: a title-width bar and a narrower subtitle
+// bar, then `cards` card-shaped blocks -- used by pages that load a single
+// record (profile, one job posting, one generation) before rendering.
+// In plain terms: the skeleton shown while a whole page's data is loading.
+export function PageSkeleton({ cards = 2 }: { cards?: number }) {
+  return (
+    <div className="pb-16">
+      <Skeleton className="h-5 w-40 mb-2" />
+      <Skeleton className="h-3.5 w-72 mb-6" />
+      <div className="space-y-4">
+        {Array.from({ length: cards }).map((_, i) => (
+          <Skeleton key={i} className="h-28 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const badgeColors = {
   slate: 'bg-slate-100 text-slate-500',
   green: 'bg-emerald-50 text-emerald-700',
@@ -237,6 +274,20 @@ export const fieldInputClass =
 
 export const fieldLabelClass = 'text-[11px] font-semibold text-slate-400 uppercase tracking-widest';
 
+// Small amber dot + "Unsaved" label -- shown next to a field's label while
+// its on-screen value differs from what's actually persisted, for fields
+// that save on blur rather than on every keystroke.
+// In plain terms: the little "Unsaved" indicator that appears while you're
+// still typing in a field that only saves once you click away.
+export function UnsavedIndicator() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 normal-case tracking-normal">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+      Unsaved
+    </span>
+  );
+}
+
 export function FieldInput({
   label,
   value,
@@ -245,6 +296,7 @@ export function FieldInput({
   placeholder,
   type = 'text',
   className = '',
+  unsaved = false,
 }: {
   label?: string;
   value: string;
@@ -253,13 +305,17 @@ export function FieldInput({
   placeholder?: string;
   type?: string;
   className?: string;
+  unsaved?: boolean;
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-          {label}
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+            {label}
+          </label>
+          {unsaved && <UnsavedIndicator />}
+        </div>
       )}
       <input
         type={type}
@@ -281,6 +337,7 @@ export function FieldTextarea({
   placeholder,
   rows = 4,
   className = '',
+  unsaved = false,
 }: {
   label?: string;
   value: string;
@@ -289,13 +346,17 @@ export function FieldTextarea({
   placeholder?: string;
   rows?: number;
   className?: string;
+  unsaved?: boolean;
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
-        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-          {label}
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+            {label}
+          </label>
+          {unsaved && <UnsavedIndicator />}
+        </div>
       )}
       <textarea
         value={value}

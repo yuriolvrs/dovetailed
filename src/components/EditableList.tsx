@@ -6,8 +6,9 @@
 // In plain terms: a reusable building block for any list where you can add
 // or remove entries — used all over the Profile page.
 
-import type { ReactNode } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import type { DragEvent, ReactNode } from 'react';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
 import { Btn } from './ui/primitives';
 
 interface EditableListProps<T> {
@@ -19,6 +20,8 @@ interface EditableListProps<T> {
   emptyLabel?: string;
   /** Hide the trailing Add button -- for sections whose Add lives in a header instead. */
   hideAddButton?: boolean;
+  /** Shows a drag handle on each row so items can be reordered by dragging. */
+  reorderable?: boolean;
 }
 
 // Small trash-icon button for removing a row -- shared so every "remove this
@@ -55,7 +58,11 @@ export function EditableList<T>({
   addLabel = 'Add',
   emptyLabel = 'Nothing here yet.',
   hideAddButton = false,
+  reorderable = false,
 }: EditableListProps<T>) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
   function updateAt(index: number, next: T) {
     onChange(items.map((item, i) => (i === index ? next : item)));
   }
@@ -68,6 +75,36 @@ export function EditableList<T>({
     onChange([...items, newItem()]);
   }
 
+  function handleDragStart(e: DragEvent, index: number) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    setDragIndex(index);
+  }
+
+  function handleDragOver(e: DragEvent, index: number) {
+    e.preventDefault();
+    if (dragIndex !== null && index !== overIndex) setOverIndex(index);
+  }
+
+  function handleDrop(index: number) {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null);
+      setOverIndex(null);
+      return;
+    }
+    const next = items.slice();
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(index, 0, moved);
+    onChange(next);
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
   return (
     <div className="space-y-3">
       {items.length === 0 && (
@@ -78,8 +115,27 @@ export function EditableList<T>({
       {items.map((item, index) => (
         <div
           key={index}
-          className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-100 p-4"
+          onDragOver={reorderable ? (e) => handleDragOver(e, index) : undefined}
+          onDrop={reorderable ? () => handleDrop(index) : undefined}
+          className={[
+            'flex items-start gap-2 rounded-xl border bg-slate-100 p-4 transition-[opacity,border-color]',
+            overIndex === index && dragIndex !== null && dragIndex !== index
+              ? 'border-slate-400'
+              : 'border-slate-200',
+            dragIndex === index ? 'opacity-50' : '',
+          ].join(' ')}
         >
+          {reorderable && (
+            <span
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragEnd={handleDragEnd}
+              className="shrink-0 mt-0.5 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing transition-colors"
+              aria-label="Drag to reorder"
+            >
+              <GripVertical size={14} />
+            </span>
+          )}
           <div className="flex-1">{renderItem(item, (next) => updateAt(index, next), index)}</div>
           <RemoveItemButton onClick={() => removeAt(index)} />
         </div>

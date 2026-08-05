@@ -24,23 +24,32 @@ import {
   MAX_POSTING_CHARS,
   toJobAnalysis,
 } from '../prompts/analyzePosting';
-import { buildProfileAtoms } from '../lib/profileAtoms';
-import { runMatching } from '../lib/matching/runMatching';
 import { generateStructured, llmErrorMessage } from '../lib/llm';
 import { AnalysisEditor } from '../components/jobs/AnalysisEditor';
 import { JobStageTracker } from '../components/jobs/JobStageTracker';
-import { Btn, Card, FieldInput, FieldSelect, ProgressBar } from '../components/ui/primitives';
+import { useToast } from '../components/ui/Toast';
+import {
+  Btn,
+  Card,
+  FieldInput,
+  FieldSelect,
+  PageSkeleton,
+  UnsavedIndicator,
+} from '../components/ui/primitives';
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { showUndo } = useToast();
 
   const [posting, setPosting] = useState<JobPosting | null | 'missing'>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [matchProgress, setMatchProgress] = useState<{ done: number; total: number } | null>(null);
+  // Which of the blur-saved free-text fields currently differ from what's
+  // persisted, so their labels can show an "Unsaved" indicator until blur.
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -71,6 +80,19 @@ export default function JobDetailPage() {
     setPosting((prev) => (prev && prev !== 'missing' ? { ...prev, ...patch } : prev));
   }
 
+  function markDirty(field: string) {
+    setDirtyFields((prev) => new Set(prev).add(field));
+  }
+
+  function markClean(field: string) {
+    setDirtyFields((prev) => {
+      if (!prev.has(field)) return prev;
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  }
+
   async function handleAnalyze() {
     if (!posting || posting === 'missing' || !profile) return;
     setError(null);
@@ -79,7 +101,10 @@ export default function JobDetailPage() {
       const prompt = buildAnalyzePostingPrompt(posting.rawText);
       const extracted = await generateStructured(prompt, isExtractedAnalysis, {
         temperature: 0.2,
-        maxTokens: 1500,
+        // Confirmed live against openai/gpt-oss-120b: 1500 usually survives
+        // but with thin margin (reasoning tokens alone can run ~700+ for a
+        // meaty posting) -- widened for headroom on harder postings.
+        maxTokens: 2500,
       });
       update({ analysis: toJobAnalysis(extracted) });
       setStatus('idle');
@@ -89,37 +114,15 @@ export default function JobDetailPage() {
     }
   }
 
-  async function handleConfirmMatching() {
-    if (!posting || posting === 'missing' || !posting.analysis || !profile) return;
-    setError(null);
-    setStatus('loading');
-    setMatchProgress({ done: 0, total: posting.analysis.requirements.length });
-    try {
-      const atoms = buildProfileAtoms(profile);
-      const matches = await runMatching(posting.analysis.requirements, atoms, (done, total) =>
-        setMatchProgress({ done, total }),
-      );
-      const analysis = { ...posting.analysis, matches };
-      const next = { ...posting, analysis };
-      // Await the write (rather than the fire-and-forget update() used for
-      // autosave elsewhere) -- we navigate immediately after, and the next
-      // page reads this posting fresh from Dexie, so the write must land first.
-      await saveJobPosting(next);
-      setPosting(next);
-      setStatus('idle');
-      navigate(`/jobs/${posting.id}/match`);
-    } catch (err) {
-      setError(llmErrorMessage(err, 'Matching'));
-      setStatus('error');
-    } finally {
-      setMatchProgress(null);
-    }
-  }
-
   async function handleConfirmDelete() {
-    if (!id) return;
+    if (!id || !posting || posting === 'missing') return;
+    const deleted = posting;
     await deleteJobPosting(id);
     navigate('/jobs');
+    showUndo('Posting deleted.', async () => {
+      await saveJobPosting(deleted);
+      navigate(`/jobs/${id}`);
+    });
   }
 
   if (posting === 'missing') {
@@ -138,7 +141,7 @@ export default function JobDetailPage() {
   }
 
   if (!posting || !profile) {
-    return <p className="text-sm text-slate-400">Loading…</p>;
+    return <PageSkeleton cards={2} />;
   }
 
   return (
@@ -192,23 +195,44 @@ export default function JobDetailPage() {
           <FieldInput
             label="Job Title"
             value={posting.title ?? ''}
-            onChange={(title) => updateLive({ title })}
-            onBlur={() => update({ title: posting.title })}
+            onChange={(title) => {
+              updateLive({ title });
+              markDirty('title');
+            }}
+            onBlur={() => {
+              update({ title: posting.title });
+              markClean('title');
+            }}
             placeholder="Senior Frontend Engineer"
+            unsaved={dirtyFields.has('title')}
           />
           <FieldInput
             label="Company"
             value={posting.company ?? ''}
-            onChange={(company) => updateLive({ company })}
-            onBlur={() => update({ company: posting.company })}
+            onChange={(company) => {
+              updateLive({ company });
+              markDirty('company');
+            }}
+            onBlur={() => {
+              update({ company: posting.company });
+              markClean('company');
+            }}
             placeholder="Acme Corp"
+            unsaved={dirtyFields.has('company')}
           />
           <FieldInput
             label="Location"
             value={posting.location ?? ''}
-            onChange={(location) => updateLive({ location })}
-            onBlur={() => update({ location: posting.location })}
+            onChange={(location) => {
+              updateLive({ location });
+              markDirty('location');
+            }}
+            onBlur={() => {
+              update({ location: posting.location });
+              markClean('location');
+            }}
             placeholder="San Francisco, CA"
+            unsaved={dirtyFields.has('location')}
           />
           <FieldSelect
             label="Arrangement"
@@ -222,14 +246,23 @@ export default function JobDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-5 items-start">
         <Card className="p-5 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)] flex flex-col">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-4 shrink-0">
-            Posting Text
-          </p>
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+              Posting Text
+            </p>
+            {dirtyFields.has('rawText') && <UnsavedIndicator />}
+          </div>
           <textarea
             className="w-full flex-1 min-h-[16rem] text-sm text-slate-600 leading-relaxed bg-transparent resize-none outline-none border border-transparent rounded-xl focus:border-blue-300 focus:bg-blue-50/20 px-2 py-2 transition-all overflow-y-auto"
             value={posting.rawText}
-            onChange={(e) => updateLive({ rawText: e.target.value })}
-            onBlur={() => update({ rawText: posting.rawText })}
+            onChange={(e) => {
+              updateLive({ rawText: e.target.value });
+              markDirty('rawText');
+            }}
+            onBlur={() => {
+              update({ rawText: posting.rawText });
+              markClean('rawText');
+            }}
           />
           {posting.rawText.length > MAX_POSTING_CHARS && (
             <p className="text-xs text-slate-400 mt-2 shrink-0">
@@ -288,40 +321,20 @@ export default function JobDetailPage() {
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
                   Analysis
                 </p>
-                <div className="flex items-center gap-2">
-                  <Btn
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleAnalyze}
-                    disabled={status === 'loading' || !hasProfileContent(profile)}
-                  >
-                    {status === 'loading' ? (
-                      <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                    ) : (
-                      <Sparkles size={13} />
-                    )}
-                    Reanalyze
-                  </Btn>
-                  {posting.analysis.matches.length === 0 && (
-                    <Btn
-                      size="sm"
-                      onClick={handleConfirmMatching}
-                      disabled={
-                        status === 'loading' ||
-                        !hasProfileContent(profile) ||
-                        posting.analysis.requirements.length === 0
-                      }
-                    >
-                      {status === 'loading' && matchProgress ? 'Matching…' : 'Confirm & run matching'}
-                    </Btn>
+                <Btn
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleAnalyze}
+                  disabled={status === 'loading' || !hasProfileContent(profile)}
+                >
+                  {status === 'loading' ? (
+                    <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles size={13} />
                   )}
-                </div>
+                  Reanalyze
+                </Btn>
               </div>
-              {matchProgress && (
-                <div className="mb-4 shrink-0">
-                  <ProgressBar done={matchProgress.done} total={matchProgress.total} />
-                </div>
-              )}
               {error && <p className="text-xs text-red-600 mb-3 shrink-0">{error}</p>}
               <div className="flex-1 min-h-0 overflow-y-auto scroll-thin pr-1 -mr-1">
                 <AnalysisEditor value={posting.analysis} onChange={(analysis) => update({ analysis })} />

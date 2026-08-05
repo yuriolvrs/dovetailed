@@ -45,6 +45,25 @@ describe('generate', () => {
     expect(body.messages).toEqual([{ role: 'user', content: 'say hi' }]);
   });
 
+  it('repairs mis-decoded UTF-8 punctuation in the content (Groq mojibake)', async () => {
+    // Simulates the model emitting a non-breaking hyphen (U+2011, UTF-8
+    // bytes E2 80 91) that arrives mis-decoded as three Latin-1 code points.
+    const corrupted = 'cross' + String.fromCharCode(0xe2, 0x80, 0x91) + 'functional';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chatResponse(corrupted)));
+
+    const result = await generate('say hi');
+
+    expect(result).toBe('cross‑functional');
+  });
+
+  it('leaves genuine accented characters untouched', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chatResponse('café')));
+
+    const result = await generate('say hi');
+
+    expect(result).toBe('café');
+  });
+
   it('throws when the proxy responds with a non-ok status', async () => {
     vi.stubGlobal(
       'fetch',
