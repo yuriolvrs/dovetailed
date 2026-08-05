@@ -63,7 +63,7 @@ The worker has its own `npm run test` in `worker/`.
 
 ## Deployment
 
-Not yet deployed. Deploying requires `wrangler login`, setting the `LLM_API_KEY` secret (`npx wrangler secret put LLM_API_KEY` from `worker/`), `npx wrangler deploy`, and adding the deployed frontend origin to `ALLOWED_ORIGINS` in `worker/wrangler.toml`.
+Deployed at https://pimp-my-resume.pages.dev (Cloudflare Pages), backed by a Cloudflare Worker proxy. To redeploy: `wrangler login`, set the `LLM_API_KEY` secret (`npx wrangler secret put LLM_API_KEY` from `worker/`), `npx wrangler deploy` (from `worker/`), then `npm run build` (with `VITE_PROXY_URL` set to the deployed Worker URL) and `npx wrangler pages deploy dist --project-name=pimp-my-resume` from the repo root. Keep `ALLOWED_ORIGINS` in `worker/wrangler.toml` in sync with the deployed frontend origin.
 
 ## License
 
