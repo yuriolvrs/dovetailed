@@ -1,4 +1,4 @@
-// What this file is: a shared stage-tracker strip (Analysis / Matching /
+// What this file is: a shared stage-stepper (Analysis / Matching /
 // Generate) shown at the top of the Job Detail, Matching review, and
 // Generate pages, so the user always sees where they are in one posting's
 // flow and can jump directly to any stage they've already reached. Generate
@@ -7,15 +7,17 @@
 // requirements. Fetches its own "does a resume exist yet" flag (the one
 // piece its callers don't already have in state) via genStore, so it can be
 // dropped into any of the three pages with no extra data-plumbing.
-// In plain terms: the row of steps (Analysis, Matching, Generate) shown
+// In plain terms: the numbered steps (Analysis, Matching, Generate) shown
 // above a job's detail screens, so you can see and jump between stages.
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { loadGeneration } from '../../lib/genStore';
 
 type StageKey = 'analysis' | 'matching' | 'generate';
+
+const STAGE_ORDER: StageKey[] = ['analysis', 'matching', 'generate'];
 
 const STAGE_LABEL: Record<StageKey, string> = {
   analysis: 'Analysis',
@@ -28,13 +30,12 @@ export function JobStageTracker({
   current,
   analysisDone,
   matchingDone,
-  className = 'mb-4',
+  className = '',
 }: {
   postingId: string;
   current: StageKey;
   analysisDone: boolean;
   matchingDone: boolean;
-  /** Overrides the tracker's own default bottom margin -- pass '' when a caller lays it out inline with other header elements instead of stacking it above them. */
   className?: string;
 }) {
   const [generateDone, setGenerateDone] = useState(false);
@@ -43,40 +44,60 @@ export function JobStageTracker({
     loadGeneration(postingId, 'resume').then((g) => setGenerateDone(Boolean(g)));
   }, [postingId]);
 
-  const stages: { key: StageKey; done: boolean; href: string | null }[] = [
-    { key: 'analysis', done: analysisDone, href: `/jobs/${postingId}` },
-    { key: 'matching', done: matchingDone, href: analysisDone ? `/jobs/${postingId}/match` : null },
-    { key: 'generate', done: generateDone, href: matchingDone ? `/jobs/${postingId}/generate` : null },
-  ];
+  const doneMap: Record<StageKey, boolean> = {
+    analysis: analysisDone,
+    matching: matchingDone,
+    generate: generateDone,
+  };
+  const hrefMap: Record<StageKey, string | null> = {
+    analysis: `/jobs/${postingId}`,
+    matching: analysisDone ? `/jobs/${postingId}/match` : null,
+    generate: matchingDone ? `/jobs/${postingId}/generate` : null,
+  };
 
   return (
-    <div className={`flex items-center gap-1.5 print:hidden ${className}`}>
-      {stages.map((stage) => {
-        const isCurrent = stage.key === current;
-        const base = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors';
-        if (isCurrent) {
-          return (
-            <span key={stage.key} className={`${base} bg-slate-900 text-white`}>
-              {STAGE_LABEL[stage.key]}
-            </span>
-          );
-        }
-        if (stage.href) {
-          return (
-            <Link
-              key={stage.key}
-              to={stage.href}
-              className={`${base} bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900`}
-            >
-              {stage.done && <Check size={11} />}
-              {STAGE_LABEL[stage.key]}
-            </Link>
-          );
-        }
-        return (
-          <span key={stage.key} className={`${base} bg-slate-50 text-slate-300 cursor-not-allowed`}>
-            {STAGE_LABEL[stage.key]}
+    <div className={`flex items-center print:hidden ${className}`}>
+      {STAGE_ORDER.map((key, index) => {
+        const isCurrent = key === current;
+        const isDone = doneMap[key];
+        const href = hrefMap[key];
+        const reachable = isCurrent || href !== null;
+
+        const circleClass = `flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-semibold shrink-0 transition-colors ${
+          isCurrent || isDone
+            ? 'bg-slate-900 text-white'
+            : reachable
+              ? 'bg-white border border-slate-300 text-slate-500'
+              : 'bg-slate-50 text-slate-300'
+        }`;
+        const labelClass = `text-xs font-medium whitespace-nowrap ${
+          isCurrent ? 'text-slate-900' : reachable ? 'text-slate-500' : 'text-slate-300'
+        }`;
+
+        const content = (
+          <span className="flex items-center gap-1.5">
+            <span className={circleClass}>{isDone && !isCurrent ? <Check size={12} /> : index + 1}</span>
+            <span className={labelClass}>{STAGE_LABEL[key]}</span>
           </span>
+        );
+
+        return (
+          <Fragment key={key}>
+            {index > 0 && (
+              <span
+                className={`w-6 sm:w-10 h-px mx-2 shrink-0 transition-colors ${
+                  doneMap[STAGE_ORDER[index - 1]] ? 'bg-slate-900' : 'bg-slate-200'
+                }`}
+              />
+            )}
+            {!isCurrent && href ? (
+              <Link to={href} className="hover:opacity-70 transition-opacity">
+                {content}
+              </Link>
+            ) : (
+              <span className={!reachable ? 'cursor-not-allowed' : ''}>{content}</span>
+            )}
+          </Fragment>
         );
       })}
     </div>

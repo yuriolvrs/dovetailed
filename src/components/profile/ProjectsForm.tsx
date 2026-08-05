@@ -3,10 +3,11 @@
 // In plain terms: the form where you list personal or work projects you've
 // built.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Plus } from 'lucide-react';
 import type { ContactLink, ProjectEntry } from '../../types';
+import { projectKey } from '../../lib/resumeEntryKeys';
 import { EditableList } from '../EditableList';
 import { StringList } from '../StringList';
 import { BulletPicker } from '../BulletPicker';
@@ -16,6 +17,7 @@ import {
   CollapsibleSectionHeader,
   FieldInput,
   FieldTextarea,
+  ResetButton,
   fieldLabelClass,
 } from '../ui/primitives';
 
@@ -33,6 +35,8 @@ export function ProjectsForm({
   excludedEntries,
   onAddEntry,
   onFocusBullet,
+  onReset,
+  navRequest,
 }: {
   value: ProjectEntry[];
   onChange: (projects: ProjectEntry[]) => void;
@@ -49,11 +53,42 @@ export function ProjectsForm({
   onAddEntry?: (entry: ProjectEntry) => void;
   /** Reports a bullet gaining focus (index) or losing it (null) -- used by ResumeEditor to highlight the live preview, unused on the Profile page. */
   onFocusBullet?: (entry: ProjectEntry, bulletIndex: number | null) => void;
+  /** Re-imports this section's projects from the profile, discarding edits made here -- used by ResumeEditor, unused on the Profile page. */
+  onReset?: () => void;
+  /** A click on this entry (or one of its bullets) in the live preview, requesting it open and scroll into view -- used by ResumeEditor, unused on the Profile page. */
+  navRequest?: { entryKey: string; bulletIndex?: number; nonce: number } | null;
 }) {
   const [open, setOpen] = useState(true);
+  const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!navRequest) return;
+    const index = value.findIndex((entry) => projectKey(entry) === navRequest.entryKey);
+    if (index === -1) return;
+    setOpen(true);
+    setHighlightIndex(index);
+    const highlightTimer = setTimeout(() => setHighlightIndex(null), 1500);
+    const scrollTimer = setTimeout(() => {
+      const row = containerRef.current?.querySelector(`[data-index="${index}"]`);
+      const bulletTarget =
+        navRequest.bulletIndex !== undefined ? row?.querySelector(`[data-index="${navRequest.bulletIndex}"]`) : null;
+      (bulletTarget ?? row)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 50);
+    // Also unconditionally clears the highlight on cleanup -- otherwise
+    // when navRequest flips to null/a different entry, this effect reruns,
+    // its cleanup cancels the pending "un-highlight" timeout, and the
+    // highlight is left stuck on forever.
+    return () => {
+      clearTimeout(highlightTimer);
+      clearTimeout(scrollTimer);
+      setHighlightIndex(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navRequest?.nonce]);
 
   return (
-    <Card className="p-6">
+    <Card className="p-6" ref={containerRef}>
       <CollapsibleSectionHeader
         title="Projects"
         sub={`${value.length} project${value.length !== 1 ? 's' : ''}`}
@@ -61,6 +96,7 @@ export function ProjectsForm({
         onToggle={() => setOpen((o) => !o)}
         onAdd={() => onChange([...value, newProjectEntry()])}
         addLabel="Add"
+        extraActions={onReset && <ResetButton onReset={onReset} />}
       />
       <Collapsible open={open}>
         <EditableList<ProjectEntry>
@@ -70,8 +106,10 @@ export function ProjectsForm({
           emptyLabel="No projects yet."
           hideAddButton
           reorderable
-          renderItem={(entry, update) => (
-            <div className="space-y-2">
+          renderItem={(entry, update, index) => (
+            <div
+              className={`space-y-2 rounded-xl transition-colors ${highlightIndex === index ? 'bg-amber-50 -m-2 p-2' : ''}`}
+            >
               <FieldInput
                 label="Project Name"
                 placeholder="OpenResume"

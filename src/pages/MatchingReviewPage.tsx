@@ -21,7 +21,7 @@ import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import { llmErrorMessage } from '../lib/llm';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
-import { JobStageTracker } from '../components/jobs/JobStageTracker';
+import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { useToast } from '../components/ui/Toast';
 import { RemoveItemButton } from '../components/EditableList';
 import { Badge, Btn, Card, PageSkeleton, ProgressBar, SectionTitle } from '../components/ui/primitives';
@@ -259,13 +259,14 @@ export default function MatchingReviewPage() {
 
   if (!posting.analysis || posting.analysis.requirements.length === 0) {
     return (
-      <section className="space-y-3">
-        <JobStageTracker
+      <section>
+        <JobDetailHeader
+          backHref={`/jobs/${posting.id}`}
+          backLabel="Back to posting"
           postingId={posting.id}
           current="matching"
           analysisDone={false}
           matchingDone={false}
-          className=""
         />
         <p className="text-sm text-slate-500">
           This posting hasn't been analyzed yet.{' '}
@@ -350,52 +351,47 @@ export default function MatchingReviewPage() {
 
   return (
     <div className="pb-16">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-4">
-          <Link to={`/jobs/${posting.id}`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium shrink-0">
-            <ArrowLeft size={15} />
-            Back to posting
-          </Link>
-          <JobStageTracker
-            postingId={posting.id}
-            current="matching"
-            analysisDone={Boolean(posting.analysis)}
-            matchingDone={posting.analysis.matches.length > 0}
-            className=""
-          />
-        </div>
-        {!confirmingRematch && !confirmingClear ? (
-          <div className="flex items-center gap-2">
-            <Btn size="sm" variant="danger" onClick={() => setConfirmingClear(true)}>
-              Clear matches
-            </Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setConfirmingRematch(true)} disabled={rematchStatus === 'loading'}>
-              <Sparkles size={13} />
-              Re-run matching
-            </Btn>
-          </div>
-        ) : confirmingClear ? (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-600">This clears every requirement's evidence. Clear matches?</span>
-            <Btn size="sm" variant="danger" onClick={handleClearMatches}>
-              Yes, clear
-            </Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setConfirmingClear(false)}>
-              Cancel
-            </Btn>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-600">This will overwrite any manual edits. Re-run matching?</span>
-            <Btn size="sm" onClick={handleRematch} disabled={rematchStatus === 'loading'}>
-              {rematchStatus === 'loading' ? 'Matching…' : 'Yes, re-run'}
-            </Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setConfirmingRematch(false)} disabled={rematchStatus === 'loading'}>
-              Cancel
-            </Btn>
-          </div>
-        )}
-      </div>
+      <JobDetailHeader
+        backHref={`/jobs/${posting.id}`}
+        backLabel="Back to posting"
+        postingId={posting.id}
+        current="matching"
+        analysisDone={Boolean(posting.analysis)}
+        matchingDone={posting.analysis.matches.length > 0}
+        actions={
+          !confirmingRematch && !confirmingClear ? (
+            <>
+              <Btn size="sm" variant="danger" onClick={() => setConfirmingClear(true)}>
+                Clear matches
+              </Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setConfirmingRematch(true)} disabled={rematchStatus === 'loading'}>
+                <Sparkles size={13} />
+                Re-run matching
+              </Btn>
+            </>
+          ) : confirmingClear ? (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-600">This clears every requirement's evidence. Clear matches?</span>
+              <Btn size="sm" variant="danger" onClick={handleClearMatches}>
+                Yes, clear
+              </Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setConfirmingClear(false)}>
+                Cancel
+              </Btn>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-600">This will overwrite any manual edits. Re-run matching?</span>
+              <Btn size="sm" onClick={handleRematch} disabled={rematchStatus === 'loading'}>
+                {rematchStatus === 'loading' ? 'Matching…' : 'Yes, re-run'}
+              </Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setConfirmingRematch(false)} disabled={rematchStatus === 'loading'}>
+                Cancel
+              </Btn>
+            </div>
+          )
+        }
+      />
       {rematchProgress && (
         <div className="mb-4 max-w-xs ml-auto flex items-center gap-3">
           <div className="flex-1">
@@ -408,7 +404,7 @@ export default function MatchingReviewPage() {
       )}
       {rematchError && <p className="text-xs text-red-600 mb-4">{rematchError}</p>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
         <Card className="p-3 lg:sticky lg:top-20">
           <div className="flex items-center justify-between mb-3 px-2">
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">

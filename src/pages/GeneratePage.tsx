@@ -22,16 +22,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Download, History, Mail, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Download, FileText, History, Mail, Sparkles } from 'lucide-react';
 import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, Profile, ResumeContent } from '../types';
-import type { ResumeFocusTarget } from '../lib/resumeEntryKeys';
+import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
 import { loadProfile } from '../lib/profileStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../lib/genStore';
 import { isResumeContentVerbatim, selectResumeContent } from '../lib/generation/selectResumeContent';
 import { fitToOnePage } from '../lib/generation/fitToOnePage';
-import { JobStageTracker } from '../components/jobs/JobStageTracker';
+import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
@@ -69,6 +69,16 @@ export default function GeneratePage() {
   // Which bullet is focused in the editor right now, so the live preview
   // alongside it can highlight the matching spot.
   const [focusedTarget, setFocusedTarget] = useState<ResumeFocusTarget | null>(null);
+  // A one-shot "scroll to and open this field" request fired by clicking
+  // something in the live preview -- the nonce lets the same target be
+  // re-requested by clicking it again (a plain target object wouldn't
+  // change, so an effect keyed on it wouldn't re-fire).
+  const [navRequest, setNavRequest] = useState<{ target: ResumeNavTarget; nonce: number } | null>(null);
+  // DOM node inside the shared header's actions slot that CoverLetterSection
+  // portals its own action buttons into, so they land in the exact same
+  // header position as the resume tab's actions instead of appearing lower
+  // down the page when switching tabs.
+  const [coverLetterActionsEl, setCoverLetterActionsEl] = useState<HTMLDivElement | null>(null);
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -170,13 +180,14 @@ export default function GeneratePage() {
 
   if (!posting.analysis || posting.analysis.requirements.length === 0) {
     return (
-      <section className="space-y-3">
-        <JobStageTracker
+      <section>
+        <JobDetailHeader
+          backHref={`/jobs/${posting.id}`}
+          backLabel="Back to posting"
           postingId={posting.id}
           current="generate"
           analysisDone={false}
           matchingDone={false}
-          className=""
         />
         <p className="text-sm text-slate-500">
           This posting hasn't been analyzed yet.{' '}
@@ -190,13 +201,14 @@ export default function GeneratePage() {
 
   if (posting.analysis.matches.length === 0) {
     return (
-      <section className="space-y-3">
-        <JobStageTracker
+      <section>
+        <JobDetailHeader
+          backHref={`/jobs/${posting.id}/match`}
+          backLabel="Back to matches"
           postingId={posting.id}
           current="generate"
           analysisDone={true}
           matchingDone={false}
-          className=""
         />
         <p className="text-sm text-slate-500">
           This posting hasn't been matched yet.{' '}
@@ -212,70 +224,81 @@ export default function GeneratePage() {
 
   return (
     <div className="pb-16">
-      <div className="flex items-center justify-between mb-5 print:hidden">
-        <div className="flex items-center gap-4">
-          <Link
-            to={`/jobs/${posting.id}/match`}
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium shrink-0"
-          >
-            <ArrowLeft size={15} />
-            Back to matches
-          </Link>
-          <JobStageTracker
-            postingId={posting.id}
-            current="generate"
-            analysisDone={Boolean(posting.analysis)}
-            matchingDone={posting.analysis.matches.length > 0}
-            className=""
-          />
-        </div>
-        {tab === 'resume' && hasResume && (
-          <div className="flex items-center gap-2">
-            {!confirmingRegenerate ? (
-              <>
-                {snapshots.length > 0 && (
-                  <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
-                    <History size={13} />
-                    History ({snapshots.length})
-                  </Btn>
-                )}
-                <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(true)}>
-                  <Sparkles size={13} />
-                  Regenerate
-                </Btn>
-                <Btn size="sm" onClick={() => window.print()}>
-                  <Download size={13} />
-                  Export PDF
-                </Btn>
-              </>
-            ) : (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-600">This will overwrite your edits. Regenerate?</span>
-                <Btn size="sm" onClick={handleGenerate}>
-                  Yes, regenerate
-                </Btn>
-                <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(false)}>
-                  Cancel
-                </Btn>
-              </div>
-            )}
+      <JobDetailHeader
+        backHref={`/jobs/${posting.id}/match`}
+        backLabel="Back to matches"
+        postingId={posting.id}
+        current="generate"
+        analysisDone={Boolean(posting.analysis)}
+        matchingDone={posting.analysis.matches.length > 0}
+        subtabs={
+          <div className="flex border-b border-slate-200 print:hidden">
+            <button
+              type="button"
+              onClick={() => setTab('resume')}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
+                tab === 'resume'
+                  ? 'border-slate-900 text-slate-900'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <FileText size={14} />
+              Resume
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('coverLetter')}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
+                tab === 'coverLetter'
+                  ? 'border-slate-900 text-slate-900'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Mail size={14} />
+              Cover Letter
+            </button>
           </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-1.5 mb-5 print:hidden">
-        <Btn size="sm" variant={tab === 'resume' ? 'primary' : 'secondary'} onClick={() => setTab('resume')}>
-          <Sparkles size={13} />
-          Resume
-        </Btn>
-        <Btn size="sm" variant={tab === 'coverLetter' ? 'primary' : 'secondary'} onClick={() => setTab('coverLetter')}>
-          <Mail size={13} />
-          Cover Letter
-        </Btn>
-      </div>
+        }
+        actions={
+          tab === 'resume' ? (
+            hasResume ? (
+              !confirmingRegenerate ? (
+                <>
+                  {snapshots.length > 0 && (
+                    <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
+                      <History size={13} />
+                      History ({snapshots.length})
+                    </Btn>
+                  )}
+                  <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(true)}>
+                    <Sparkles size={13} />
+                    Regenerate
+                  </Btn>
+                  <Btn size="sm" onClick={() => window.print()}>
+                    <Download size={13} />
+                    Export PDF
+                  </Btn>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-600">This will overwrite your edits. Regenerate?</span>
+                  <Btn size="sm" onClick={handleGenerate}>
+                    Yes, regenerate
+                  </Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(false)}>
+                    Cancel
+                  </Btn>
+                </div>
+              )
+            ) : null
+          ) : (
+            <div ref={setCoverLetterActionsEl} className="flex items-center gap-2" />
+          )
+        }
+      />
 
       {tab === 'coverLetter' ? (
-        <CoverLetterSection posting={posting} profile={profile} />
+        <CoverLetterSection posting={posting} profile={profile} actionsPortalTarget={coverLetterActionsEl} />
       ) : (
         <>
           {showHistory && snapshots.length > 0 && (
@@ -381,12 +404,14 @@ export default function GeneratePage() {
                   profile={profile}
                   onChange={updateContent}
                   onFocusBullet={setFocusedTarget}
+                  navRequest={navRequest}
                 />
                 <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
                   <ResumePrintView
                     content={generation.content as ResumeContent}
                     variant="preview"
                     focusedTarget={focusedTarget}
+                    onNavigate={(target) => setNavRequest({ target, nonce: Date.now() })}
                   />
                 </div>
               </div>

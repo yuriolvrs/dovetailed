@@ -2,8 +2,12 @@
 // Generate step's Work Experience and Education accordion lists -- a
 // one-line collapsed summary with ▲/▼ reorder buttons and a remove button,
 // expanding into whatever form fields the caller renders as children.
+// Optional dataNavKey/highlighted let a parent scroll to and briefly flash
+// this row when it's the target of a preview-click navigation (see
+// ResumeNavTarget, ResumeEducationSection, ResumeExperienceSection).
 // In plain terms: the "click to expand a job/school entry" row, with the
-// up/down arrows that reorder it and the trash icon that deletes it.
+// up/down arrows that reorder it and the trash icon that deletes it; can
+// also be scrolled to and flashed when opened via a preview click.
 
 import type { ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -21,6 +25,8 @@ export function ResumeAccordionRow({
   title,
   subtitle,
   children,
+  dataNavKey,
+  highlighted = false,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -33,9 +39,13 @@ export function ResumeAccordionRow({
   title: ReactNode;
   subtitle?: ReactNode;
   children: ReactNode;
+  /** Identifies this row for a preview-click navigation to scroll to (see resumeEntryKeys.ts). */
+  dataNavKey?: string;
+  /** Briefly flashes this row's background -- set true right after a preview click opens/scrolls to it. */
+  highlighted?: boolean;
 }) {
   return (
-    <div className="border-b border-slate-100 last:border-b-0">
+    <div data-nav-key={dataNavKey} className={`border-b border-slate-100 last:border-b-0 transition-colors ${highlighted ? 'bg-amber-50' : ''}`}>
       <div className="flex items-center gap-2 py-3 px-1">
         <div className="flex flex-col gap-0.5 shrink-0">
           <button

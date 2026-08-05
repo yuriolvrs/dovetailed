@@ -5,19 +5,24 @@
 // In plain terms: the basic look-and-feel pieces (buttons, cards, form
 // fields) that the rest of the app is built out of.
 
-import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { ChevronDown, Plus, X } from 'lucide-react';
+import { forwardRef, useEffect, useState } from 'react';
+import type { DragEvent, ReactNode } from 'react';
+import { ChevronDown, Plus, RotateCcw, X } from 'lucide-react';
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
+// forwardRef so a section can scroll its own Card into view (e.g. a
+// preview-click navigation -- see ResumeNavTarget) without every caller
+// having to wrap it in an extra div just to attach a ref.
+export const Card = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(
+  ({ children, className = '' }, ref) => (
     <div
+      ref={ref}
       className={`bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] ${className}`}
     >
       {children}
     </div>
-  );
-}
+  ),
+);
+Card.displayName = 'Card';
 
 export function SectionTitle({
   children,
@@ -51,13 +56,17 @@ export function CollapsibleSectionHeader({
   onToggle,
   onAdd,
   addLabel = 'Add',
+  extraActions,
 }: {
   title: string;
   sub?: string;
   open: boolean;
   onToggle: () => void;
-  onAdd: () => void;
+  /** Omit for sections with nothing to add (e.g. Contact Information) -- the Add button is hidden and only the chevron shows. */
+  onAdd?: () => void;
   addLabel?: string;
+  /** Extra buttons rendered before the Add button, e.g. Skills' "AI Categorize". */
+  extraActions?: ReactNode;
 }) {
   return (
     <div className="flex items-start justify-between mb-5">
@@ -66,10 +75,13 @@ export function CollapsibleSectionHeader({
         {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
       </div>
       <div className="flex items-center gap-2">
-        <Btn size="sm" variant="secondary" onClick={onAdd}>
-          <Plus size={13} />
-          {addLabel}
-        </Btn>
+        {extraActions}
+        {onAdd && (
+          <Btn size="sm" variant="secondary" onClick={onAdd}>
+            <Plus size={13} />
+            {addLabel}
+          </Btn>
+        )}
         <button
           type="button"
           onClick={onToggle}
@@ -191,6 +203,44 @@ export function Btn({
     >
       {children}
     </button>
+  );
+}
+
+// A "Reset" action that discards unsaved edits, so it asks for a second
+// click before firing -- same inline two-step confirm as BackupControls'
+// "Delete All Data", just scoped to one button instead of a whole section.
+// In plain terms: the reset button used on a resume section's header; you
+// have to click it twice (with a Cancel escape hatch) before it actually
+// discards your edits to that section.
+export function ResetButton({ onReset, label = 'Reset' }: { onReset: () => void; label?: string }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-400">Discard edits?</span>
+        <Btn
+          size="sm"
+          onClick={() => {
+            onReset();
+            setConfirming(false);
+          }}
+          className="bg-red-600 hover:bg-red-500 focus:ring-red-600/30"
+        >
+          Yes
+        </Btn>
+        <Btn size="sm" variant="secondary" onClick={() => setConfirming(false)}>
+          Cancel
+        </Btn>
+      </div>
+    );
+  }
+
+  return (
+    <Btn size="sm" variant="secondary" onClick={() => setConfirming(true)} ariaLabel={label}>
+      <RotateCcw size={13} />
+      {label}
+    </Btn>
   );
 }
 
@@ -443,18 +493,40 @@ export function formatMonthYear(month?: string, year?: string): string {
 // remove a chip.
 // In plain terms: the "type a word, press Enter to add a chip" input used
 // for things like skills and keywords.
+// Custom drag MIME type used by TagInput -- checking for its presence in
+// dragover (via e.dataTransfer.types, which is readable before drop, unlike
+// getData) is how a TagInput tells a compatible drag from an unrelated one
+// (e.g. dragging a file over the page).
+const TAG_DRAG_MIME = 'application/x-tag';
+
+interface TagDragPayload {
+  groupId: string;
+  index: number;
+  tag: string;
+}
+
 export function TagInput({
   value,
   onChange,
   placeholder = 'Add…',
   emptyLabel = 'Nothing added yet',
+  dragGroupId,
+  onExternalTagDrop,
 }: {
   value: string[];
   onChange: (tags: string[]) => void;
   placeholder?: string;
   emptyLabel?: string;
+  /** Identifies this list for cross-list drag-and-drop (e.g. a skill category's index) -- tags dropped from a list with a different id are handled via onExternalTagDrop instead of the internal reorder. */
+  dragGroupId?: string;
+  /** Called when a tag dragged from a different dragGroupId list is dropped here at the given index; the parent owns removing it from the source list and inserting it here. */
+  onExternalTagDrop?: (payload: TagDragPayload, atIndex: number) => void;
 }) {
   const [draft, setDraft] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   function add() {
     const tag = draft.trim();
@@ -464,30 +536,127 @@ export function TagInput({
     setDraft('');
   }
 
-  function remove(tag: string) {
-    onChange(value.filter((t) => t !== tag));
+  function removeAt(index: number) {
+    onChange(value.filter((_, i) => i !== index));
+  }
+
+  function startEdit(index: number) {
+    setEditingIndex(index);
+    setEditDraft(value[index]);
+  }
+
+  function commitEdit() {
+    if (editingIndex === null) return;
+    const text = editDraft.trim();
+    if (text) {
+      onChange(value.map((t, i) => (i === editingIndex ? text : t)));
+    } else {
+      onChange(value.filter((_, i) => i !== editingIndex));
+    }
+    setEditingIndex(null);
+  }
+
+  function handleDragStart(e: DragEvent, index: number) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData(TAG_DRAG_MIME, JSON.stringify({ groupId: dragGroupId ?? '', index, tag: value[index] }));
+    setDragIndex(index);
+  }
+
+  function handleDragOver(e: DragEvent, index: number) {
+    if (!e.dataTransfer.types.includes(TAG_DRAG_MIME)) return;
+    e.preventDefault();
+    if (index !== overIndex) setOverIndex(index);
+  }
+
+  function handleContainerDragOver(e: DragEvent) {
+    if (!e.dataTransfer.types.includes(TAG_DRAG_MIME)) return;
+    e.preventDefault();
+    if (overIndex !== value.length) setOverIndex(value.length);
+  }
+
+  function handleDrop(e: DragEvent, atIndex: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragIndex(null);
+    setOverIndex(null);
+    let payload: TagDragPayload;
+    try {
+      payload = JSON.parse(e.dataTransfer.getData(TAG_DRAG_MIME));
+    } catch {
+      return;
+    }
+
+    if (payload.groupId === (dragGroupId ?? '')) {
+      if (payload.index === atIndex) return;
+      const next = value.slice();
+      const [moved] = next.splice(payload.index, 1);
+      next.splice(atIndex, 0, moved);
+      onChange(next);
+    } else {
+      onExternalTagDrop?.(payload, atIndex);
+    }
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null);
+    setOverIndex(null);
   }
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 min-h-9 mb-4">
+      <div
+        className="flex flex-wrap gap-2 min-h-9 mb-4"
+        onDragOver={handleContainerDragOver}
+        onDrop={(e) => handleDrop(e, value.length)}
+      >
         {value.length === 0 && <p className="text-xs text-slate-300 self-center">{emptyLabel}</p>}
-        {value.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-medium"
-          >
-            {tag}
-            <button
-              type="button"
-              onClick={() => remove(tag)}
-              className="text-slate-400 hover:text-slate-700 transition-colors ml-0.5"
-              aria-label={`Remove ${tag}`}
+        {value.map((tag, index) =>
+          editingIndex === index ? (
+            <input
+              key={index}
+              autoFocus
+              value={editDraft}
+              onChange={(e) => setEditDraft(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitEdit();
+                } else if (e.key === 'Escape') {
+                  setEditingIndex(null);
+                }
+              }}
+              className="px-3 py-1.5 bg-white border border-slate-300 rounded-full text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              style={{ width: `calc(${Math.max(editDraft.length, 4)}ch + 2rem)` }}
+            />
+          ) : (
+            <span
+              key={index}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              onDoubleClick={() => startEdit(index)}
+              className={[
+                'inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-medium cursor-grab active:cursor-grabbing transition-[opacity,border-color] border',
+                overIndex === index ? 'border-slate-400' : 'border-transparent',
+                dragIndex === index ? 'opacity-50' : '',
+              ].join(' ')}
+              title="Drag to reorder, double-click to edit"
             >
-              <X size={10} />
-            </button>
-          </span>
-        ))}
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeAt(index)}
+                className="text-slate-400 hover:text-slate-700 transition-colors ml-0.5"
+                aria-label={`Remove ${tag}`}
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ),
+        )}
       </div>
       <div className="flex gap-2">
         <input

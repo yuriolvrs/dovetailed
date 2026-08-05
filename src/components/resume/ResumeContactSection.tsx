@@ -1,49 +1,60 @@
 // What this file is: the Generate step's Contact Information card --
 // collapsible like the Work Experience/Education accordions, collapsed to a
 // one-line "name · location" summary so it doesn't dominate the sticky left
-// panel once it's already filled in.
+// panel once it's already filled in. Clicking the contact block in the live
+// preview (ResumePrintView's onNavigate) opens and scrolls to this card via
+// navRequest.
 // In plain terms: the contact-info box in the resume editor, collapsed to a
-// single line until you click to edit it.
+// single line until you click to edit it, or automatically opened and
+// scrolled into view when you click the contact block in the preview.
 
-import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { Contact } from '../../types';
 import { EditableList } from '../EditableList';
-import { Card, FieldInput } from '../ui/primitives';
+import { Card, Collapsible, CollapsibleSectionHeader, FieldInput } from '../ui/primitives';
 
 export function ResumeContactSection({
   value,
   onChange,
+  navRequest,
 }: {
   value: Contact;
   onChange: (contact: Contact) => void;
+  /** A click on the contact block in the live preview, requesting this card open and scroll into view. */
+  navRequest?: { nonce: number } | null;
 }) {
   const summary = [value.name, value.location].filter(Boolean).join(' · ');
   const [open, setOpen] = useState(() => summary === '');
+  const [highlighted, setHighlighted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!navRequest) return;
+    setOpen(true);
+    setHighlighted(true);
+    containerRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const timer = setTimeout(() => setHighlighted(false), 1500);
+    // Also unconditionally clears the highlight on cleanup -- otherwise
+    // when navRequest flips to null (the user clicked a different section
+    // in the preview), this effect reruns, its cleanup cancels the pending
+    // "un-highlight" timeout, and the highlight is left stuck on forever.
+    return () => {
+      clearTimeout(timer);
+      setHighlighted(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navRequest?.nonce]);
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-3 px-6 py-4 text-left"
-      >
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-800">Contact Information</h2>
-          {!open && (
-            <p className="text-xs text-slate-400 mt-0.5 truncate">
-              {summary || 'No contact details yet'}
-            </p>
-          )}
-        </div>
-        <ChevronDown
-          size={14}
-          className={`shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="px-6 pb-6">
+    <Card ref={containerRef} className={`p-6 transition-colors ${highlighted ? 'ring-2 ring-amber-300' : ''}`}>
+      <CollapsibleSectionHeader
+        title="Contact Information"
+        sub={!open ? summary || 'No contact details yet' : undefined}
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+      />
+      <Collapsible open={open}>
+        <div>
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div className="col-span-2">
               <FieldInput label="Name" value={value.name} onChange={(name) => onChange({ ...value, name })} />
@@ -94,7 +105,7 @@ export function ResumeContactSection({
             />
           </div>
         </div>
-      )}
+      </Collapsible>
     </Card>
   );
 }

@@ -115,6 +115,7 @@ export function EditableList<T>({
       {items.map((item, index) => (
         <div
           key={index}
+          data-index={index}
           onDragOver={reorderable ? (e) => handleDragOver(e, index) : undefined}
           onDrop={reorderable ? () => handleDrop(index) : undefined}
           className={[

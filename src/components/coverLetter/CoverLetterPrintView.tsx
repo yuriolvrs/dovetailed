@@ -3,22 +3,32 @@
 // ResumePrintView: once as the actual print target (`variant` defaults to
 // 'print' -- hidden on screen via `hidden print:block`), and once as a
 // visible, non-interactive live preview next to the editor (`variant="preview"`).
+// On the 'preview' variant, the greeting, each paragraph, and the closing
+// are also clickable -- clicking calls onNavigate with a
+// CoverLetterNavTarget, which CoverLetterSection uses to scroll the editor
+// to and flash that same field.
 // In plain terms: the plain, print-friendly layout of your cover letter --
-// shown live as a preview while editing, and used as-is when you print or
-// "Save as PDF."
+// shown live as a preview while editing (click any line to jump to it in
+// the editor), and used as-is when you print or "Save as PDF."
 
 import { useEffect, useRef } from 'react';
 import type { Contact, CoverLetterContent } from '../../types';
+import type { CoverLetterNavTarget } from './coverLetterNav';
 
 function today(): string {
   return new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
+
+// Shared styling for a clickable preview line -- only applied on the
+// 'preview' variant.
+const navClickableClass = 'cursor-pointer rounded transition-colors hover:bg-slate-50 -mx-1 px-1';
 
 export function CoverLetterPrintView({
   content,
   contact,
   variant = 'print',
   focusedParagraph = null,
+  onNavigate,
 }: {
   content: CoverLetterContent;
   contact: Contact;
@@ -26,6 +36,8 @@ export function CoverLetterPrintView({
   variant?: 'print' | 'preview';
   /** The paragraph currently focused in the editor, if any -- highlighted here on the 'preview' variant. */
   focusedParagraph?: number | null;
+  /** Fired when a field is clicked on the 'preview' variant, so the editor can scroll to and open the matching field. */
+  onNavigate?: (target: CoverLetterNavTarget) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +71,14 @@ export function CoverLetterPrintView({
 
       <p className="mb-4">{today()}</p>
 
-      {content.greeting.trim() !== '' && <p className="mb-4">{content.greeting}</p>}
+      {content.greeting.trim() !== '' && (
+        <p
+          className={`mb-4 ${variant === 'preview' && onNavigate ? navClickableClass : ''}`}
+          onClick={variant === 'preview' ? () => onNavigate?.({ section: 'greeting' }) : undefined}
+        >
+          {content.greeting}
+        </p>
+      )}
 
       {content.paragraphs.map((p, i) => {
         if (p.trim() === '') return null;
@@ -69,7 +88,12 @@ export function CoverLetterPrintView({
             key={i}
             data-focus-key={`paragraph:${i}`}
             style={variant === 'print' ? { breakInside: 'avoid' } : undefined}
-            className={focused ? 'mb-4 bg-emerald-100 rounded px-1 -mx-1 transition-colors' : 'mb-4 transition-colors'}
+            onClick={variant === 'preview' ? () => onNavigate?.({ section: 'paragraph', index: i }) : undefined}
+            className={[
+              'mb-4',
+              focused ? 'bg-emerald-100' : '',
+              variant === 'preview' && onNavigate ? navClickableClass : 'transition-colors',
+            ].join(' ')}
           >
             {p}
           </p>
@@ -77,7 +101,11 @@ export function CoverLetterPrintView({
       })}
 
       {content.closing.trim() !== '' && (
-        <p style={variant === 'print' ? { breakInside: 'avoid' } : undefined}>
+        <p
+          style={variant === 'print' ? { breakInside: 'avoid' } : undefined}
+          className={variant === 'preview' && onNavigate ? navClickableClass : ''}
+          onClick={variant === 'preview' ? () => onNavigate?.({ section: 'closing' }) : undefined}
+        >
           {content.closing}
           <br />
           {contact.name}

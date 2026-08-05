@@ -76,12 +76,12 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
 
       <div className="flex flex-wrap gap-2">
         <Btn size="sm" variant="secondary" onClick={handleExport}>
-          <Download size={13} />
-          Export JSON
+          <Upload size={13} />
+          Export Data
         </Btn>
         <Btn size="sm" variant="secondary" onClick={handleImportClick}>
-          <Upload size={13} />
-          Import JSON
+          <Download size={13} />
+          Import Data
         </Btn>
         <input
           ref={fileInputRef}

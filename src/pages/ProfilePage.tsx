@@ -25,10 +25,10 @@ import { Card, FieldTextarea, PageSkeleton, SectionTitle, UnsavedIndicator } fro
 const SECTIONS = [
   { id: 'contact', label: 'Contact Info' },
   { id: 'summary', label: 'Summary' },
-  { id: 'skills', label: 'Skills' },
+  { id: 'education', label: 'Education' },
   { id: 'experience', label: 'Work Experience' },
   { id: 'projects', label: 'Projects' },
-  { id: 'education', label: 'Education' },
+  { id: 'skills', label: 'Skills' },
   { id: 'writing-samples', label: 'Writing Samples' },
   { id: 'data', label: 'Data' },
 ] as const;
@@ -145,8 +145,8 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          <div id="skills" className="scroll-mt-20">
-            <SkillsForm value={profile.skills} onChange={(skills) => update({ skills })} />
+          <div id="education" className="scroll-mt-20">
+            <EducationForm value={profile.education} onChange={(education) => update({ education })} />
           </div>
           <div id="experience" className="scroll-mt-20">
             <ExperienceForm value={profile.experience} onChange={(experience) => update({ experience })} />
@@ -154,8 +154,8 @@ export default function ProfilePage() {
           <div id="projects" className="scroll-mt-20">
             <ProjectsForm value={profile.projects} onChange={(projects) => update({ projects })} />
           </div>
-          <div id="education" className="scroll-mt-20">
-            <EducationForm value={profile.education} onChange={(education) => update({ education })} />
+          <div id="skills" className="scroll-mt-20">
+            <SkillsForm value={profile.skills} onChange={(skills) => update({ skills })} />
           </div>
           <div id="writing-samples" className="scroll-mt-20">
             <WritingSamplesForm

@@ -20,10 +20,11 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   ].join(' ');
 
 export default function App() {
+  // Also drives the wider main column below -- the Analysis/Matching/
+  // Generate flow's side-by-side panes need more room than the app's usual
+  // reading-width column, widened uniformly across all three so the page
+  // doesn't change width as you move between them.
   const onJobDetail = useMatch('/jobs/:id/*');
-  // The Generate page's side-by-side editor + live preview needs more room
-  // than the app's usual reading-width column.
-  const onGenerate = useMatch('/jobs/:id/generate');
 
   return (
     <ToastProvider>
@@ -61,7 +62,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`mx-auto px-4 py-8 print:p-0 print:max-w-none ${onGenerate ? 'max-w-6xl' : 'max-w-4xl'}`}>
+        <main className={`mx-auto px-4 pt-8 pb-3 print:p-0 print:max-w-none ${onJobDetail ? 'max-w-6xl' : 'max-w-4xl'}`}>
           <Routes>
             <Route path="/" element={<Navigate to="/jobs" replace />} />
             <Route path="/profile" element={<ProfilePage />} />
@@ -74,8 +75,8 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className="print:hidden border-t border-slate-200/80 mt-8">
-          <div className="mx-auto max-w-4xl px-4 py-5 flex items-center justify-center">
+        <footer className="print:hidden border-t border-slate-200/80">
+          <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-center">
             <Link to="/about" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
               About &amp; Privacy
             </Link>

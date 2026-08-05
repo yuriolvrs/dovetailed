@@ -22,7 +22,7 @@
 import { useMemo } from 'react';
 import { Check } from 'lucide-react';
 import type { ExperienceEntry, JobAnalysis, Profile, ProjectEntry, ResumeContent, SourceMapEntry } from '../../types';
-import { experienceKey, projectKey, type ResumeFocusTarget } from '../../lib/resumeEntryKeys';
+import { experienceKey, projectKey, type ResumeFocusTarget, type ResumeNavTarget } from '../../lib/resumeEntryKeys';
 import { SkillsForm } from '../profile/SkillsForm';
 import { ProjectsForm } from '../profile/ProjectsForm';
 import { Badge } from '../ui/primitives';
@@ -54,6 +54,7 @@ export function ResumeEditor({
   profile,
   onChange,
   onFocusBullet,
+  navRequest,
 }: {
   value: ResumeContent;
   sourceMap: SourceMapEntry[];
@@ -64,6 +65,8 @@ export function ResumeEditor({
   onChange: (content: ResumeContent) => void;
   /** Reports which bullet field has focus (or null on blur), so the live preview can highlight it. */
   onFocusBullet: (target: ResumeFocusTarget | null) => void;
+  /** A field clicked in the live preview, to scroll to and open here -- see ResumePrintView's onNavigate. */
+  navRequest?: { target: ResumeNavTarget; nonce: number } | null;
 }) {
   const profileExperienceByKey = useMemo(
     () => new Map(profile.experience.map((e) => [experienceKey(e), e])),
@@ -146,11 +149,36 @@ export function ResumeEditor({
     return <BulletRewriteSuggest bulletText={bulletText} onApply={applySuggestion} />;
   }
 
+  // Slices navRequest down to each section's own shape, so a section only
+  // ever sees a request meant for it (and re-renders when its own nonce
+  // changes, not on every unrelated preview click).
+  const target = navRequest?.target;
+  const contactNav = target?.section === 'contact' ? { nonce: navRequest!.nonce } : null;
+  const educationNav = target?.section === 'education' ? { entryKey: target.entryKey, nonce: navRequest!.nonce } : null;
+  const experienceNav =
+    target?.section === 'experience'
+      ? { entryKey: target.entryKey, bulletIndex: target.bulletIndex, nonce: navRequest!.nonce }
+      : null;
+  const projectNav =
+    target?.section === 'project'
+      ? { entryKey: target.entryKey, bulletIndex: target.bulletIndex, nonce: navRequest!.nonce }
+      : null;
+  const skillsNav = target?.section === 'skills' ? { groupIndex: target.groupIndex, nonce: navRequest!.nonce } : null;
+
   return (
     <div className="space-y-4">
-      <ResumeContactSection value={value.contact} onChange={(contact) => onChange({ ...value, contact })} />
+      <ResumeContactSection
+        value={value.contact}
+        onChange={(contact) => onChange({ ...value, contact })}
+        navRequest={contactNav}
+      />
 
-      <ResumeEducationSection value={value.education} onChange={(education) => onChange({ ...value, education })} />
+      <ResumeEducationSection
+        value={value.education}
+        onChange={(education) => onChange({ ...value, education })}
+        onReset={() => onChange({ ...value, education: profile.education })}
+        navRequest={educationNav}
+      />
 
       <ResumeExperienceSection
         value={value.experience}
@@ -163,6 +191,8 @@ export function ResumeEditor({
         onFocusBullet={(entry, bulletIndex) =>
           onFocusBullet(bulletIndex === null ? null : { section: 'experience', entryKey: experienceKey(entry), bulletIndex })
         }
+        onReset={() => onChange({ ...value, experience: profile.experience })}
+        navRequest={experienceNav}
       />
 
       <ProjectsForm
@@ -177,9 +207,16 @@ export function ResumeEditor({
         onFocusBullet={(entry, bulletIndex) =>
           onFocusBullet(bulletIndex === null ? null : { section: 'project', entryKey: projectKey(entry), bulletIndex })
         }
+        onReset={() => onChange({ ...value, projects: profile.projects })}
+        navRequest={projectNav}
       />
 
-      <SkillsForm value={value.skills} onChange={(skills) => onChange({ ...value, skills })} />
+      <SkillsForm
+        value={value.skills}
+        onChange={(skills) => onChange({ ...value, skills })}
+        onReset={() => onChange({ ...value, skills: profile.skills })}
+        navRequest={skillsNav}
+      />
     </div>
   );
 }

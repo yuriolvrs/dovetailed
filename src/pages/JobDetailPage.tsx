@@ -26,7 +26,7 @@ import {
 } from '../prompts/analyzePosting';
 import { generateStructured, llmErrorMessage } from '../lib/llm';
 import { AnalysisEditor } from '../components/jobs/AnalysisEditor';
-import { JobStageTracker } from '../components/jobs/JobStageTracker';
+import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { useToast } from '../components/ui/Toast';
 import {
   Btn,
@@ -146,49 +146,41 @@ export default function JobDetailPage() {
 
   return (
     <div className="pb-16">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/jobs"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 transition-colors font-medium shrink-0"
-          >
-            <ArrowLeft size={15} />
-            Back to Jobs
-          </Link>
-          <JobStageTracker
-            postingId={posting.id}
-            current="analysis"
-            analysisDone={Boolean(posting.analysis)}
-            matchingDone={Boolean(posting.analysis && posting.analysis.matches.length > 0)}
-            className=""
-          />
-        </div>
-        {!confirmingDelete ? (
-          <Btn
-            size="sm"
-            variant="ghost"
-            onClick={() => setConfirmingDelete(true)}
-            className="text-slate-400 hover:text-red-600 hover:bg-red-50"
-          >
-            <Trash2 size={13} />
-            Delete posting
-          </Btn>
-        ) : (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-600">Delete this posting?</span>
+      <JobDetailHeader
+        backHref="/jobs"
+        backLabel="Back to Jobs"
+        postingId={posting.id}
+        current="analysis"
+        analysisDone={Boolean(posting.analysis)}
+        matchingDone={Boolean(posting.analysis && posting.analysis.matches.length > 0)}
+        actions={
+          !confirmingDelete ? (
             <Btn
               size="sm"
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-500 focus:ring-red-600/30"
+              variant="ghost"
+              onClick={() => setConfirmingDelete(true)}
+              className="text-slate-400 hover:text-red-600 hover:bg-red-50"
             >
-              Yes, delete
+              <Trash2 size={13} />
+              Delete posting
             </Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
-              Cancel
-            </Btn>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-600">Delete this posting?</span>
+              <Btn
+                size="sm"
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-500 focus:ring-red-600/30"
+              >
+                Yes, delete
+              </Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
+                Cancel
+              </Btn>
+            </div>
+          )
+        }
+      />
 
       <Card className="p-4 mb-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

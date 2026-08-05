@@ -11,6 +11,7 @@
 // export it.
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Download, History, Sparkles } from 'lucide-react';
 import type { CoverLetterContent, Generation, GenerationSnapshot, JobPosting, Profile } from '../../types';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
@@ -20,8 +21,20 @@ import { llmErrorMessage } from '../../lib/llm';
 import { Btn, Card, Skeleton } from '../ui/primitives';
 import { CoverLetterEditor } from './CoverLetterEditor';
 import { CoverLetterPrintView } from './CoverLetterPrintView';
+import type { CoverLetterNavTarget } from './coverLetterNav';
 
-export function CoverLetterSection({ posting, profile }: { posting: JobPosting; profile: Profile }) {
+export function CoverLetterSection({
+  posting,
+  profile,
+  actionsPortalTarget,
+}: {
+  posting: JobPosting;
+  profile: Profile;
+  /** DOM node in the shared page header's actions slot -- action buttons
+   * portal into it so they land in the same header position the resume
+   * tab's actions use, instead of appearing in their own row lower down. */
+  actionsPortalTarget: HTMLDivElement | null;
+}) {
   const [generation, setGeneration] = useState<Generation | null | 'none'>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +47,11 @@ export function CoverLetterSection({ posting, profile }: { posting: JobPosting; 
   // Which paragraph is focused in the editor right now, so the live preview
   // alongside it can highlight the matching spot.
   const [focusedParagraph, setFocusedParagraph] = useState<number | null>(null);
+  // A one-shot "scroll to and flash this field" request fired by clicking
+  // something in the live preview -- the nonce lets the same target be
+  // re-requested by clicking it again (same reasoning as GeneratePage's
+  // resume navRequest).
+  const [navRequest, setNavRequest] = useState<{ target: CoverLetterNavTarget; nonce: number } | null>(null);
 
   const refresh = useCallback(() => {
     loadGeneration(posting.id, 'coverLetter').then((g) => setGeneration(g ?? 'none'));
@@ -100,50 +118,50 @@ export function CoverLetterSection({ posting, profile }: { posting: JobPosting; 
 
   return (
     <>
-      {hasLetter && (
-        <div className="flex flex-col items-end gap-2 mb-5 print:hidden">
-          <div className="flex items-center justify-end gap-2">
-            {!confirmingRegenerate ? (
-              <>
-                {snapshots.length > 0 && (
-                  <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
-                    <History size={13} />
-                    History ({snapshots.length})
-                  </Btn>
-                )}
-                <Btn
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setConfirmingRegenerate(true)}
-                  disabled={status === 'loading'}
-                >
-                  <Sparkles size={13} />
-                  {status === 'loading' ? 'Writing…' : 'Regenerate'}
+      {hasLetter &&
+        actionsPortalTarget &&
+        createPortal(
+          !confirmingRegenerate ? (
+            <>
+              {snapshots.length > 0 && (
+                <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
+                  <History size={13} />
+                  History ({snapshots.length})
                 </Btn>
-                <Btn size="sm" onClick={() => window.print()}>
-                  <Download size={13} />
-                  Export PDF
-                </Btn>
-              </>
-            ) : (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-600">This will overwrite your edits. Regenerate?</span>
-                <Btn size="sm" onClick={handleGenerate} disabled={status === 'loading'}>
-                  {status === 'loading' ? 'Writing…' : 'Yes, regenerate'}
-                </Btn>
-                <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(false)}>
-                  Cancel
-                </Btn>
-              </div>
-            )}
-          </div>
-          {status === 'error' && error && (
-            <p className="text-xs text-red-600 flex items-center gap-1.5">
-              <AlertTriangle size={13} className="shrink-0" />
-              {error}
-            </p>
-          )}
-        </div>
+              )}
+              <Btn
+                size="sm"
+                variant="secondary"
+                onClick={() => setConfirmingRegenerate(true)}
+                disabled={status === 'loading'}
+              >
+                <Sparkles size={13} />
+                {status === 'loading' ? 'Writing…' : 'Regenerate'}
+              </Btn>
+              <Btn size="sm" onClick={() => window.print()}>
+                <Download size={13} />
+                Export PDF
+              </Btn>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-600">This will overwrite your edits. Regenerate?</span>
+              <Btn size="sm" onClick={handleGenerate} disabled={status === 'loading'}>
+                {status === 'loading' ? 'Writing…' : 'Yes, regenerate'}
+              </Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(false)}>
+                Cancel
+              </Btn>
+            </div>
+          ),
+          actionsPortalTarget,
+        )}
+
+      {hasLetter && status === 'error' && error && (
+        <p className="text-xs text-red-600 flex items-center gap-1.5 mb-5 print:hidden">
+          <AlertTriangle size={13} className="shrink-0" />
+          {error}
+        </p>
       )}
 
       {showHistory && snapshots.length > 0 && (
@@ -221,6 +239,7 @@ export function CoverLetterSection({ posting, profile }: { posting: JobPosting; 
               sourceMap={generation.sourceMap}
               onChange={updateContent}
               onFocusParagraph={setFocusedParagraph}
+              navRequest={navRequest}
             />
             <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
               <CoverLetterPrintView
@@ -228,6 +247,7 @@ export function CoverLetterSection({ posting, profile }: { posting: JobPosting; 
                 contact={profile.contact}
                 variant="preview"
                 focusedParagraph={focusedParagraph}
+                onNavigate={(target) => setNavRequest({ target, nonce: Date.now() })}
               />
             </div>
           </div>
