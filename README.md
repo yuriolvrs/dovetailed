@@ -1,6 +1,6 @@
 # Pimp My Resume
 
-A privacy-first job application assistant. Store your profile (skills, experience, education) once in your browser, paste a job posting, and get an LLM-backed analysis of how you match — with tailored resume/cover letter generation coming next.
+A privacy-first job application assistant. Store your profile (skills, experience, education) once in your browser, paste a job posting, and get an LLM-backed analysis of how you match, a tailored resume and cover letter, and an exportable filled-in LaTeX (or print-to-PDF) document — grounded strictly in your real profile, nothing invented.
 
 ## Why
 
@@ -16,21 +16,21 @@ Most "AI resume tailoring" tools ask you to upload your resume to their servers.
 
 ## Status
 
-Actively in development, not yet deployed. See [PRD.md](./PRD.md) for the full spec and [PROGRESS.md](./PROGRESS.md) for what's built and verified so far.
+Deployed and live at https://pimp-my-resume.pages.dev. See [PRD.md](./PRD.md) for the full spec and [PROGRESS.md](./PROGRESS.md) for what's built and verified so far.
 
 - [x] Phase 1 — Foundation (types, Dexie storage, routing, profile screens, JSON export/import/delete-all)
 - [x] Phase 2 — Proxy & LLM layer (Cloudflare Worker, provider-agnostic `llm.ts`)
 - [x] Phase 3 — Job posting analysis (paste posting → LLM-extracted requirements/keywords/matches/gaps, editable)
-- [ ] Phase 4 — Resume generation
-- [ ] Phase 5 — Cover letter generation
-- [ ] Phase 6 — LaTeX export pipeline
-- [ ] Phase 7 — Polish
+- [x] Phase 4 — Resume generation (evidence-grounded selection from your profile, no LLM rewriting, field editing, print-to-PDF export)
+- [x] Phase 5 — Cover letter generation (evidence-grounded, optional writing-style mimicry, field editing, version history)
+- [x] Phase 6 — LaTeX export pipeline (paste a template once, one-time AI conversion to placeholders, deterministic fill on every export)
+- [x] Phase 7 — Polish (empty states, LLM error/rate-limit handling, generation history per job, this README)
 
 ## Tech stack
 
 - **Frontend:** Vite + React + TypeScript (strict), React Router, Tailwind CSS
 - **Local storage:** Dexie.js over IndexedDB
-- **Proxy:** Cloudflare Worker (TypeScript), stateless, forwards to the LLM provider (currently Groq)
+- **Proxy:** Cloudflare Worker (TypeScript), stateless, forwards to the LLM provider (currently Groq, `openai/gpt-oss-120b`)
 - **Testing:** Vitest, LLM calls mocked
 
 ## Getting started

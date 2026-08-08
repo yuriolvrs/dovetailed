@@ -44,14 +44,13 @@ describe('computeProfileCompleteness', () => {
   it('is 0% for a brand-new empty profile, missing every check', () => {
     const { percent, missing } = computeProfileCompleteness(emptyProfile());
     expect(percent).toBe(0);
-    expect(missing).toEqual(['Name', 'Email', 'Summary', 'Skills', 'Work Experience', 'Projects', 'Education']);
+    expect(missing).toEqual(['Name', 'Email', 'Skills', 'Work Experience', 'Projects', 'Education']);
   });
 
   it('is 100% once every check passes', () => {
     const profile = {
       ...emptyProfile(),
       contact: { name: 'Alex', email: 'alex@example.com', links: [] },
-      summary: 'Engineer.',
       skills: [{ category: 'Skills', items: ['TypeScript'] }],
       experience: [
         {
@@ -73,11 +72,10 @@ describe('computeProfileCompleteness', () => {
     const profile = {
       ...emptyProfile(),
       contact: { name: 'Alex', email: '', links: [] },
-      summary: 'Engineer.',
     };
     const { percent, missing } = computeProfileCompleteness(profile);
-    // 2 of 7 checks pass (Name, Summary) -> 2/7 rounds to 29%.
-    expect(percent).toBe(29);
+    // 1 of 6 checks pass (Name) -> 1/6 rounds to 17%.
+    expect(percent).toBe(17);
     expect(missing).toEqual(['Email', 'Skills', 'Work Experience', 'Projects', 'Education']);
   });
 });

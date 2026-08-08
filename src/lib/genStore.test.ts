@@ -19,7 +19,6 @@ function resumeGeneration(skills: unknown): Generation {
     type: 'resume',
     content: {
       contact: { name: '', email: '', links: [] },
-      summary: '',
       skills: skills as never,
       experience: [],
       projects: [],

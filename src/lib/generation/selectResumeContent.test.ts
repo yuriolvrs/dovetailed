@@ -21,15 +21,13 @@ function analysis(overrides: Partial<JobAnalysis> = {}): JobAnalysis {
 }
 
 describe('selectResumeContent', () => {
-  it('copies contact/summary/education verbatim', () => {
+  it('copies contact/education verbatim', () => {
     const p = profile({
       contact: { name: 'Jane Doe', email: 'jane@x.com', links: [] },
-      summary: 'A summary.',
       education: [{ school: 'MIT', degree: 'B.S.', current: false }],
     });
     const { content } = selectResumeContent(p, analysis(), []);
     expect(content.contact).toEqual(p.contact);
-    expect(content.summary).toBe('A summary.');
     expect(content.education).toEqual(p.education);
   });
 

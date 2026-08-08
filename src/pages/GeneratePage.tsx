@@ -22,20 +22,36 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Download, FileText, History, Mail, Sparkles } from 'lucide-react';
-import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, Profile, ResumeContent } from '../types';
+import { AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Mail, Sparkles } from 'lucide-react';
+import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
 import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
 import { loadProfile } from '../lib/profileStore';
+import { loadTemplate } from '../lib/templateStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../lib/genStore';
 import { isResumeContentVerbatim, selectResumeContent } from '../lib/generation/selectResumeContent';
 import { fitToOnePage } from '../lib/generation/fitToOnePage';
+import { buildLatexContext } from '../lib/latex/templateContext';
+import { fillLatexTemplate } from '../lib/latex/fillTemplate';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
 import { Btn, Card, PageSkeleton } from '../components/ui/primitives';
+
+// Triggers a browser download of plain text content -- no server round-trip,
+// consistent with this app's "everything stays local" invariant.
+// In plain terms: saves a text string as a downloadable file.
+function downloadTextFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 type Tab = 'resume' | 'coverLetter';
 
@@ -79,12 +95,17 @@ export default function GeneratePage() {
   // header position as the resume tab's actions instead of appearing lower
   // down the page when switching tabs.
   const [coverLetterActionsEl, setCoverLetterActionsEl] = useState<HTMLDivElement | null>(null);
+  // The user's saved LaTeX template (set up once in the profile page's
+  // TexTemplateSection), if any -- gates whether "Export .tex" appears at all.
+  const [template, setTemplate] = useState<LatexTemplate | null>(null);
+  const [texExportError, setTexExportError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     if (!id) return;
     setPageFitRemoved([]);
     loadJobPosting(id).then((p) => setPosting(p ?? 'missing'));
     listSnapshots(id, 'resume').then(setSnapshots);
+    loadTemplate().then((t) => setTemplate(t ?? null));
     Promise.all([loadProfile(), loadGeneration(id, 'resume')]).then(([p, g]) => {
       setProfile(p);
       const gen = g ?? 'none';
@@ -151,6 +172,24 @@ export default function GeneratePage() {
     setStale(false);
     setConfirmingRestoreId(null);
     listSnapshots(id, 'resume').then(setSnapshots);
+  }
+
+  // Deterministic -- no LLM call. Fills the saved placeholder template with
+  // the current resume content and downloads the result for the user to
+  // compile themselves (e.g. Overleaf), per PRD §9.
+  // In plain terms: builds the actual .tex file from your resume and your
+  // saved template, and downloads it.
+  function handleExportTex() {
+    if (!template || generation === 'none' || generation === null) return;
+    setTexExportError(null);
+    try {
+      const context = buildLatexContext(generation.content as ResumeContent);
+      const filled = fillLatexTemplate(template.compiledTemplate, context);
+      const name = (generation.content as ResumeContent).contact.name.trim() || 'resume';
+      downloadTextFile(`${name.replace(/\s+/g, '_')}.tex`, filled, 'application/x-tex');
+    } catch (err) {
+      setTexExportError(err instanceof Error ? err.message : 'Could not fill the LaTeX template.');
+    }
   }
 
   function updateContent(content: Generation['content']) {
@@ -274,6 +313,12 @@ export default function GeneratePage() {
                     <Sparkles size={13} />
                     Regenerate
                   </Btn>
+                  {template && (
+                    <Btn size="sm" variant="secondary" onClick={handleExportTex}>
+                      <FileCode size={13} />
+                      Export .tex
+                    </Btn>
+                  )}
                   <Btn size="sm" onClick={() => window.print()}>
                     <Download size={13} />
                     Export PDF
@@ -373,6 +418,11 @@ export default function GeneratePage() {
             </Card>
           ) : (
             <>
+              {texExportError && (
+                <Card className="p-4 mb-5 print:hidden">
+                  <p className="text-sm text-red-600">{texExportError}</p>
+                </Card>
+              )}
               {pageFitRemoved.length > 0 && (
                 <Card className="p-4 mb-5 print:hidden">
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">

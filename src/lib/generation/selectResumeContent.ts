@@ -90,7 +90,7 @@ function countMatched(items: string[], label: string, atoms: ProfileAtom[], matc
 /**
  * Selects and orders resume content for one job posting -- purely from
  * already-real profile text and the matching pass's evidence links, no
- * generation involved. Contact/summary/education are copied verbatim
+ * generation involved. Contact/education are copied verbatim
  * (nothing to select there); skill items and experience/project bullets are
  * reordered and capped per section; projects are ranked by matched-bullet
  * count and capped to MAX_PROJECTS. Every experience entry is always kept
@@ -134,7 +134,6 @@ export function selectResumeContent(
 
   const content: ResumeContent = {
     contact: profile.contact,
-    summary: profile.summary,
     skills,
     experience,
     projects,

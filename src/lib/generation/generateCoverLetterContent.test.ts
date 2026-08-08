@@ -23,7 +23,6 @@ function profile(overrides: Partial<Profile> = {}): Profile {
   return {
     id: 'p1',
     contact: { name: 'Jane Doe', email: '', links: [] },
-    summary: '',
     skills: [],
     experience: [],
     projects: [],

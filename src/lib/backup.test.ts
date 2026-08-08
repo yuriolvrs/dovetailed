@@ -15,7 +15,6 @@ function sampleData(): BackupData {
       {
         id: 'default',
         contact: { name: 'Ada Lovelace', email: 'ada@example.com', links: [] },
-        summary: 'Mathematician and writer.',
         skills: [],
         experience: [],
         projects: [],

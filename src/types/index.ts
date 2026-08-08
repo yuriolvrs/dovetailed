@@ -75,7 +75,6 @@ export interface Profile {
   /** Single local profile in v1; fixed id keeps the row addressable. */
   id: string;
   contact: Contact;
-  summary: string;
   skills: SkillGroup[];
   experience: ExperienceEntry[];
   projects: ProjectEntry[];
@@ -167,7 +166,6 @@ export type GenerationType = 'resume' | 'coverLetter';
  */
 export interface ResumeContent {
   contact: Contact;
-  summary: string;
   skills: SkillGroup[];
   experience: ExperienceEntry[];
   projects: ProjectEntry[];

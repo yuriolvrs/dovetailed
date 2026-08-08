@@ -121,12 +121,6 @@ export function ResumePrintView({
         </p>
       </div>
 
-      {content.summary.trim() !== '' && (
-        <section className="mb-3">
-          <p>{content.summary}</p>
-        </section>
-      )}
-
       {content.education.length > 0 && (
         <section className="mb-3">
           <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">Education</p>

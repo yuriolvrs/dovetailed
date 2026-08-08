@@ -16,7 +16,6 @@ export function emptyProfile(): Profile {
   return {
     id: DEFAULT_PROFILE_ID,
     contact: { name: '', email: '', links: [] },
-    summary: '',
     skills: [],
     experience: [],
     projects: [],
@@ -70,7 +69,6 @@ export async function saveProfile(profile: Profile): Promise<void> {
 // analyzing a job against it.
 export function hasProfileContent(profile: Profile): boolean {
   return (
-    profile.summary.trim() !== '' ||
     profile.skills.some((group) => group.items.length > 0) ||
     profile.experience.length > 0 ||
     profile.projects.length > 0 ||
@@ -86,7 +84,6 @@ export function hasProfileContent(profile: Profile): boolean {
 const COMPLETENESS_CHECKS: { label: string; done: (profile: Profile) => boolean }[] = [
   { label: 'Name', done: (p) => p.contact.name.trim() !== '' },
   { label: 'Email', done: (p) => p.contact.email.trim() !== '' },
-  { label: 'Summary', done: (p) => p.summary.trim() !== '' },
   { label: 'Skills', done: (p) => p.skills.some((group) => group.items.length > 0) },
   { label: 'Work Experience', done: (p) => p.experience.length > 0 },
   { label: 'Projects', done: (p) => p.projects.length > 0 },

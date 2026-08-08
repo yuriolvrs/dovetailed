@@ -14,8 +14,9 @@ import { ExperienceForm } from '../components/profile/ExperienceForm';
 import { ProjectsForm } from '../components/profile/ProjectsForm';
 import { EducationForm } from '../components/profile/EducationForm';
 import { WritingSamplesForm } from '../components/profile/WritingSamplesForm';
+import { TexTemplateSection } from '../components/profile/TexTemplateSection';
 import { BackupControls } from '../components/profile/BackupControls';
-import { Card, FieldTextarea, PageSkeleton, SectionTitle, UnsavedIndicator } from '../components/ui/primitives';
+import { PageSkeleton } from '../components/ui/primitives';
 
 // Left-rail jump-to links for the sections below -- plain in-page anchors,
 // each section carries a matching id + scroll-mt so the sticky header
@@ -24,18 +25,17 @@ import { Card, FieldTextarea, PageSkeleton, SectionTitle, UnsavedIndicator } fro
 // that part of the page when clicked.
 const SECTIONS = [
   { id: 'contact', label: 'Contact Info' },
-  { id: 'summary', label: 'Summary' },
   { id: 'education', label: 'Education' },
   { id: 'experience', label: 'Work Experience' },
   { id: 'projects', label: 'Projects' },
   { id: 'skills', label: 'Skills' },
   { id: 'writing-samples', label: 'Writing Samples' },
+  { id: 'tex-template', label: '.tex Template' },
   { id: 'data', label: 'Data' },
 ] as const;
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [summaryDirty, setSummaryDirty] = useState(false);
 
   const refresh = useCallback(() => {
     loadProfile().then(setProfile);
@@ -55,8 +55,8 @@ export default function ProfilePage() {
     });
   }
 
-  // For summary/writing samples: update on-screen state on every keystroke,
-  // but only persist to Dexie on blur, to avoid a write per character typed.
+  // For writing samples: update on-screen state on every keystroke, but only
+  // persist to Dexie on blur, to avoid a write per character typed.
   function updateLive(patch: Partial<Profile>) {
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
   }
@@ -107,42 +107,11 @@ export default function ProfilePage() {
               {section.label}
             </a>
           ))}
-          <hr className="my-2 border-slate-200" />
-          <span
-            title="Coming in a future phase"
-            className="px-3 py-1.5 rounded-lg text-sm text-slate-300 cursor-not-allowed"
-          >
-            Resume Template
-          </span>
         </aside>
 
         <div className="flex-1 min-w-0 space-y-4">
           <div id="contact" className="scroll-mt-20">
             <ContactForm value={profile.contact} onChange={(contact) => update({ contact })} />
-          </div>
-
-          <div id="summary" className="scroll-mt-20">
-            <Card className="p-6">
-              <SectionTitle
-                sub="2–4 sentences that open your resume"
-                right={summaryDirty && <UnsavedIndicator />}
-              >
-                Summary
-              </SectionTitle>
-              <FieldTextarea
-                value={profile.summary}
-                onChange={(summary) => {
-                  updateLive({ summary });
-                  setSummaryDirty(true);
-                }}
-                onBlur={() => {
-                  update({ summary: profile.summary });
-                  setSummaryDirty(false);
-                }}
-                placeholder="A short professional summary..."
-                rows={3}
-              />
-            </Card>
           </div>
 
           <div id="education" className="scroll-mt-20">
@@ -163,6 +132,10 @@ export default function ProfilePage() {
               onChange={(writingSamples) => updateLive({ writingSamples })}
               onCommit={(writingSamples) => update({ writingSamples })}
             />
+          </div>
+
+          <div id="tex-template" className="scroll-mt-20">
+            <TexTemplateSection />
           </div>
 
           <div id="data" className="scroll-mt-20">

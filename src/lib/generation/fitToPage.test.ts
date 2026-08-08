@@ -21,7 +21,6 @@ function proj(overrides: Partial<ProjectEntry>): ProjectEntry {
 function content(experience: ExperienceEntry[], projects: ProjectEntry[] = []): ResumeContent {
   return {
     contact: { name: '', email: '', links: [] },
-    summary: '',
     skills: [],
     experience,
     projects,

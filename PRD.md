@@ -24,7 +24,7 @@ A privacy-first web app that helps a job seeker tailor their resume and cover le
 
 ## 4. User stories (v1)
 
-1. As a user, I enter my profile once (contact info, summary, skills, work experience, projects, education, writing samples) and it persists locally.
+1. As a user, I enter my profile once (contact info, skills, work experience, projects, education, writing samples) and it persists locally.
 2. As a user, I paste a job posting as text and get an analysis: role summary, key requirements, keywords, and which of my profile items match or are missing.
 3. As a user, I generate a tailored resume: the app selects and rewrites bullets from my profile to emphasize fit, without inventing anything.
 4. As a user, I generate a tailored cover letter that optionally mimics my writing style based on my stored writing samples.
@@ -48,7 +48,6 @@ All documents are views over typed JSON. Define these as TypeScript types in one
 ```
 Profile {
   contact: { name, email, phone?, location?, links[] }
-  summary: string
   skills: { category: string, items: string[] }[]
   experience: { company, title, start, end?, location?, bullets: string[] }[]
   projects: { name, description, bullets: string[], links[] }[]

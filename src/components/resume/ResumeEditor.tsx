@@ -4,11 +4,9 @@
 // a ResumeContent snapshot has identical field shapes. Sections are ordered
 // to match the printed layout (contact, education, experience, projects,
 // skills -- see ResumePrintView) so the editor and the live preview next to
-// it read top-to-bottom in the same order. Summary isn't editable here --
-// it's edited on the Profile page and just carried through verbatim; this
-// page is about selecting/ordering content for one job, not rewriting your
-// standing summary. Every bullet shown is copied verbatim from the profile
-// (selection, not generation -- see selectResumeContent.ts), so there's
+// it read top-to-bottom in the same order. Every bullet shown is copied
+// verbatim from the profile (selection, not generation -- see
+// selectResumeContent.ts), so there's
 // nothing to warn about fabrication-wise; a small "Matched to this job"
 // badge just shows which bullets were prioritized because they're linked to
 // a requirement. Experience/project bullets also get an opt-in "Suggest
