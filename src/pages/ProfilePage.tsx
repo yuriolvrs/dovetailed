@@ -15,6 +15,7 @@ import { ProjectsForm } from '../components/profile/ProjectsForm';
 import { EducationForm } from '../components/profile/EducationForm';
 import { WritingSamplesForm } from '../components/profile/WritingSamplesForm';
 import { TexTemplateSection } from '../components/profile/TexTemplateSection';
+import { ImportResumeSection } from '../components/profile/ImportResumeSection';
 import { BackupControls } from '../components/profile/BackupControls';
 import { PageSkeleton } from '../components/ui/primitives';
 
@@ -24,6 +25,7 @@ import { PageSkeleton } from '../components/ui/primitives';
 // In plain terms: the list of section names on the left that scroll you to
 // that part of the page when clicked.
 const SECTIONS = [
+  { id: 'import', label: 'Import from Resume' },
   { id: 'contact', label: 'Contact Info' },
   { id: 'education', label: 'Education' },
   { id: 'experience', label: 'Work Experience' },
@@ -110,6 +112,16 @@ export default function ProfilePage() {
         </aside>
 
         <div className="flex-1 min-w-0 space-y-4">
+          <div id="import" className="scroll-mt-20">
+            <ImportResumeSection
+              profile={profile}
+              onImported={(next) => {
+                setProfile(next);
+                void saveProfile(next);
+              }}
+            />
+          </div>
+
           <div id="contact" className="scroll-mt-20">
             <ContactForm value={profile.contact} onChange={(contact) => update({ contact })} />
           </div>
