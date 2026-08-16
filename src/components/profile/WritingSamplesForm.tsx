@@ -6,6 +6,8 @@
 
 import { useState } from 'react';
 import { StringList } from '../StringList';
+import { FileDropzone } from '../ui/FileDropzone';
+import { useFileText } from '../../lib/files/useFileText';
 import { Card, Collapsible, CollapsibleSectionHeader } from '../ui/primitives';
 
 export function WritingSamplesForm({
@@ -18,6 +20,7 @@ export function WritingSamplesForm({
   onCommit: (writingSamples: string[]) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const file = useFileText('Reading that file');
 
   return (
     <Card className="p-6">
@@ -30,6 +33,17 @@ export function WritingSamplesForm({
         addLabel="Add"
       />
       <Collapsible open={open}>
+        <div className="mb-3">
+          <FileDropzone
+            compact
+            busy={file.busy}
+            label="Attach a past cover letter or writing sample"
+            // Committed straight away: an attached sample is a finished value,
+            // not a field the user is mid-way through typing.
+            onFile={(f) => file.read(f, (text) => onCommit([...value, text]))}
+          />
+          {file.error && <p className="text-xs text-red-600 mt-2">{file.error}</p>}
+        </div>
         <StringList
           items={value}
           onChange={onChange}

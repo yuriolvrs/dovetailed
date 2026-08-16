@@ -25,6 +25,8 @@ import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { useToast } from '../components/ui/Toast';
 import { RemoveItemButton } from '../components/EditableList';
 import { Badge, Btn, Card, PageSkeleton, ProgressBar, SectionTitle } from '../components/ui/primitives';
+import { FileDropzone } from '../components/ui/FileDropzone';
+import { useFileText } from '../lib/files/useFileText';
 
 const SOURCE_BADGE_LABEL: Record<ProfileAtom['source'], string> = {
   skills: 'Skills',
@@ -72,6 +74,7 @@ export default function MatchingReviewPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [additionalInfoModalOpen, setAdditionalInfoModalOpen] = useState(false);
+  const infoDoc = useFileText('Reading that document');
   const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
   const [confirmingRematch, setConfirmingRematch] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -611,6 +614,21 @@ export default function MatchingReviewPage() {
               </div>
             </>
           )}
+          {/* Attaching a document (a performance review, a project write-up)
+              adds its text as one accomplishment, editable like any other. */}
+          <div className="mt-3">
+            <FileDropzone
+              compact
+              busy={infoDoc.busy}
+              label="Attach a document instead"
+              onFile={(f) =>
+                infoDoc.read(f, (text) =>
+                  updateProfile({ additionalInfo: [...profile.additionalInfo, text] }),
+                )
+              }
+            />
+            {infoDoc.error && <p className="text-xs text-red-600 mt-2">{infoDoc.error}</p>}
+          </div>
         </div>
       </Card>
 

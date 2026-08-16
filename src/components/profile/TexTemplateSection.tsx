@@ -17,6 +17,8 @@ import { DEFAULT_RAW_TEX } from '../../lib/latex/defaultTemplate';
 import { buildConvertLatexTemplatePrompt, estimateConversionMaxTokens, isLatexConversionResult } from '../../prompts/convertLatexTemplate';
 import { generateStructured, llmErrorMessage } from '../../lib/llm';
 import { fillLatexTemplate, repairBareCommandBraces, TemplateSyntaxError } from '../../lib/latex/fillTemplate';
+import { useFileText } from '../../lib/files/useFileText';
+import { FileDropzone } from '../ui/FileDropzone';
 import { Btn, Card, FieldTextarea, Skeleton, SectionTitle } from '../ui/primitives';
 
 export function TexTemplateSection() {
@@ -34,6 +36,7 @@ export function TexTemplateSection() {
   // again (re-convert or a hand-edit) so it never claims a since-changed
   // draft is saved.
   const [justSaved, setJustSaved] = useState(false);
+  const texFile = useFileText('Reading that .tex file');
 
   useEffect(() => {
     loadTemplate().then((t) => {
@@ -145,6 +148,16 @@ export function TexTemplateSection() {
         </div>
       )}
 
+      {/* A .tex file is plain text, so this is a local read -- no OCR, no
+          LLM, nothing leaves the browser until Convert is clicked. */}
+      <FileDropzone
+        compact
+        accept=".tex,.txt"
+        busy={texFile.busy}
+        label="Attach a .tex file, or paste below"
+        onFile={(f) => texFile.read(f, setRawTex)}
+      />
+      {texFile.error && <p className="text-sm text-red-600">{texFile.error}</p>}
       <FieldTextarea
         label="Raw .tex template"
         value={rawTex}
