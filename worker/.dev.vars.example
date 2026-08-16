@@ -5,3 +5,4 @@
 # the proxy against a real LLM.
 
 LLM_API_KEY=your-groq-api-key-here
+MISTRAL_API_KEY=your-mistral-api-key-here

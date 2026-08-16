@@ -1,10 +1,13 @@
-// What this file is: the one module that knows how to talk to the LLM
-// proxy (CLAUDE.md: no provider-specific code elsewhere). generate() sends
-// a prompt to the Worker and returns the raw text; generateStructured()
-// adds JSON parsing with one retry on failure (PRD §7). Never holds an API
-// key -- that lives only in the Worker.
-// In plain terms: the app's one doorway to asking the AI something.
+// What this file is: the one module that knows how to talk to the proxy
+// (CLAUDE.md: no provider-specific code elsewhere). generate() sends a prompt
+// to the Worker and returns the raw text; generateStructured() adds JSON
+// parsing with one retry on failure (PRD §7); extractText() sends an attached
+// file to the document reader and returns its text. Never holds an API key --
+// those live only in the Worker.
+// In plain terms: the app's one doorway to asking the AI something or having
+// it read a file.
 
+import { classifyFile, readAttachment, SUPPORTED_FILE_HINT } from './files/readFile';
 import { JsonParseError, parseJson } from './json';
 
 export interface GenerateOptions {
@@ -85,35 +88,94 @@ function retryDelayMs(body: string, attempt: number): number {
   return RATE_LIMIT_FALLBACK_DELAYS_MS[attempt] ?? RATE_LIMIT_FALLBACK_DELAYS_MS.at(-1)!;
 }
 
-export async function generate(prompt: string, options: GenerateOptions = {}): Promise<string> {
+// Shared POST-with-backoff used by both proxy endpoints, so /extract gets the
+// same 429 handling /generate has always had instead of duplicating it.
+// In plain terms: sends a request to the proxy and waits-and-retries if we're
+// being rate-limited.
+async function postWithRetry(
+  path: string,
+  body: unknown,
+  signal: AbortSignal | undefined,
+  label: string,
+): Promise<unknown> {
   for (let attempt = 0; ; attempt++) {
-    const response = await fetch(`${proxyUrl()}/generate`, {
+    const response = await fetch(`${proxyUrl()}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: prompt }],
-        temperature: options.temperature,
-        max_tokens: options.maxTokens,
-      }),
-      signal: options.signal,
+      body: JSON.stringify(body),
+      signal,
     });
 
     if (response.status === 429 && attempt < RATE_LIMIT_MAX_RETRIES) {
-      await sleep(retryDelayMs(await response.text(), attempt), options.signal);
+      await sleep(retryDelayMs(await response.text(), attempt), signal);
       continue;
     }
 
     if (!response.ok) {
-      throw new Error(`LLM proxy request failed: ${response.status} ${await response.text()}`);
+      throw new Error(`${label} request failed: ${response.status} ${await response.text()}`);
     }
 
-    const data = (await response.json()) as ChatCompletionResponse;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('LLM proxy response had no content.');
-    }
-    return fixMojibake(content);
+    return response.json();
   }
+}
+
+export async function generate(prompt: string, options: GenerateOptions = {}): Promise<string> {
+  const data = (await postWithRetry(
+    '/generate',
+    {
+      messages: [{ role: 'user', content: prompt }],
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+    },
+    options.signal,
+    'LLM proxy',
+  )) as ChatCompletionResponse;
+
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('LLM proxy response had no content.');
+  }
+  return fixMojibake(content);
+}
+
+// The document reader returns one markdown block per page; joining them in
+// index order reconstructs the document's text. Shape verified against
+// https://docs.mistral.ai/capabilities/OCR/basic_ocr/.
+interface OcrResponse {
+  pages?: { index?: number; markdown?: string }[];
+}
+
+/**
+ * Reads an attached file into plain text. Text files (.txt/.md/.tex) are read
+ * locally and never sent anywhere; everything else goes through the proxy to
+ * the document reader. The file is sent inline and is never stored -- not by
+ * the proxy, not by the provider, and not by this app.
+ * In plain terms: turns an attached file into text, without the file being
+ * kept anywhere.
+ */
+export async function extractText(file: File, options: GenerateOptions = {}): Promise<string> {
+  if (classifyFile(file.name, file.type) === 'text') {
+    return fixMojibake(await file.text());
+  }
+
+  const { mimeType, base64 } = await readAttachment(file);
+  const data = (await postWithRetry(
+    '/extract',
+    { mimeType, base64 },
+    options.signal,
+    'Document reader',
+  )) as OcrResponse;
+
+  const pages = [...(data.pages ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  const text = pages
+    .map((page) => page.markdown ?? '')
+    .join('\n\n')
+    .trim();
+
+  if (!text) {
+    throw new Error('The document reader found no text in that file.');
+  }
+  return fixMojibake(text);
 }
 
 // Every screen that runs an LLM call needs the same three-way message
@@ -125,7 +187,17 @@ export function llmErrorMessage(err: unknown, label: string): string {
   if (err instanceof JsonParseError) {
     return `${label} failed: the model returned an unusable response. Try again — the model this app uses is small and occasionally produces malformed output.`;
   }
-  if (err instanceof Error) return `${label} failed: ${err.message}`;
+  if (err instanceof Error) {
+    // The proxy answers 415 for a file type the document reader doesn't
+    // accept; surfacing the raw status here would be meaningless to the user.
+    if (err.message.includes('Document reader request failed: 415')) {
+      return `${label} failed: that file type can't be read. Attach a ${SUPPORTED_FILE_HINT} file.`;
+    }
+    if (err.message.includes('Document reader request failed: 413')) {
+      return `${label} failed: that file is too large to read.`;
+    }
+    return `${label} failed: ${err.message}`;
+  }
   return `${label} failed: unknown error.`;
 }
 

@@ -19,6 +19,8 @@ import {
 } from '../lib/jobStore';
 import { listGenerationTypesByPosting } from '../lib/genStore';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
+import { extractText, llmErrorMessage } from '../lib/llm';
+import { FileDropzone } from '../components/ui/FileDropzone';
 import {
   Badge,
   Btn,
@@ -41,6 +43,8 @@ export default function JobsPage() {
   const [location, setLocation] = useState('');
   const [arrangement, setArrangement] = useState('');
   const [rawText, setRawText] = useState('');
+  const [reading, setReading] = useState(false);
+  const [readError, setReadError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     listJobPostings().then(setPostings);
@@ -57,16 +61,39 @@ export default function JobsPage() {
     setLocation('');
     setArrangement('');
     setRawText('');
+    setReadError(null);
     setModalOpen(true);
   }
 
   // Best-effort title/company pre-fill once the user has pasted something in
   // -- only fills fields that are still empty, never overwrites typed input.
-  function handleRawTextBlur() {
-    if (rawText.trim() === '') return;
-    const guess = guessJobTitleAndCompany(rawText);
+  function prefillFrom(text: string) {
+    if (text.trim() === '') return;
+    const guess = guessJobTitleAndCompany(text);
     if (title.trim() === '' && guess.title) setTitle(guess.title);
     if (company.trim() === '' && guess.company) setCompany(guess.company);
+  }
+
+  function handleRawTextBlur() {
+    prefillFrom(rawText);
+  }
+
+  // An attached posting (PDF printout, screenshot, .docx) is read to text and
+  // appended rather than replacing anything already typed or pasted, then
+  // feeds the same title/company guess a paste would.
+  async function handleFile(file: File) {
+    setReading(true);
+    setReadError(null);
+    try {
+      const text = await extractText(file);
+      const combined = rawText.trim() ? `${rawText.trim()}\n\n${text}` : text;
+      setRawText(combined);
+      prefillFrom(combined);
+    } catch (err) {
+      setReadError(llmErrorMessage(err, 'Reading that file'));
+    } finally {
+      setReading(false);
+    }
   }
 
   async function handleSave() {
@@ -98,7 +125,7 @@ export default function JobsPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-xl max-h-[90vh]">
         <div className="p-5 border-b border-slate-100 shrink-0 flex items-start justify-between gap-3">
-          <SectionTitle sub="Paste the full posting text — all data stays in your browser">
+          <SectionTitle sub="Paste or attach the full posting — nothing is stored on a server">
             Add a Job Posting
           </SectionTitle>
           <button
@@ -135,6 +162,13 @@ export default function JobsPage() {
               placeholder="Select…"
             />
           </div>
+          <FileDropzone
+            onFile={handleFile}
+            busy={reading}
+            busyLabel="Reading the posting…"
+            label="Attach a posting file, or click to browse"
+          />
+          {readError && <p className="text-xs text-red-600">{readError}</p>}
           <FieldTextarea
             label="Posting Text"
             value={rawText}
@@ -144,7 +178,7 @@ export default function JobsPage() {
             rows={9}
           />
           <p className="text-xs text-slate-400">
-            Title/company are auto-filled from the pasted text when detected — edit either freely.
+            Title/company are auto-filled from the posting text when detected — edit either freely.
           </p>
         </div>
         <div className="p-5 pt-0 flex justify-end gap-2 shrink-0">

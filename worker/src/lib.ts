@@ -30,6 +30,67 @@ export function isOversized(bodyText: string, maxBytes: number): boolean {
   return new TextEncoder().encode(bodyText).length > maxBytes;
 }
 
+// The OCR provider splits its input by kind: PDF/DOCX/PPTX go in a
+// `document_url` field and images in an `image_url` field, both as base64
+// data URIs rather than uploads -- uploading would persist the file on the
+// provider's side, which the privacy contract forbids (PRD §10). Verified
+// against https://docs.mistral.ai/capabilities/OCR/basic_ocr/ -- re-verify
+// if the provider changes.
+// In plain terms: the file types the document reader accepts, split into
+// "documents" and "images" because the API wants them in different fields.
+export const OCR_DOCUMENT_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+] as const;
+
+export const OCR_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/avif'] as const;
+
+export type OcrDocument =
+  | { type: 'document_url'; document_url: string }
+  | { type: 'image_url'; image_url: string };
+
+/**
+ * Builds the `document` field of an OCR request from a file's MIME type and
+ * base64 payload, or returns null if the type isn't one the reader accepts.
+ * In plain terms: wraps an uploaded file in the shape the document reader
+ * expects, or says "I can't read this kind of file".
+ */
+export function buildOcrDocument(mimeType: string, base64: string): OcrDocument | null {
+  const dataUri = `data:${mimeType};base64,${base64}`;
+  if ((OCR_DOCUMENT_MIME_TYPES as readonly string[]).includes(mimeType)) {
+    return { type: 'document_url', document_url: dataUri };
+  }
+  if ((OCR_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) {
+    return { type: 'image_url', image_url: dataUri };
+  }
+  return null;
+}
+
+export interface ExtractRequest {
+  mimeType: string;
+  base64: string;
+}
+
+/**
+ * Structural check on the client's /extract body. The client sends only a
+ * MIME type and a base64 payload, so it can neither choose the model nor
+ * smuggle extra provider parameters -- the same "the proxy decides" rule
+ * /generate already enforces.
+ * In plain terms: makes sure the request really is just "here's a file",
+ * nothing more.
+ */
+export function isExtractRequest(body: unknown): body is ExtractRequest {
+  if (typeof body !== 'object' || body === null) return false;
+  const candidate = body as Record<string, unknown>;
+  return (
+    typeof candidate.mimeType === 'string' &&
+    candidate.mimeType.length > 0 &&
+    typeof candidate.base64 === 'string' &&
+    candidate.base64.length > 0
+  );
+}
+
 /**
  * Best-effort, in-memory fixed-window rate limiter. Resets on cold start and
  * is per-isolate, not global across Cloudflare's edge -- this is basic abuse

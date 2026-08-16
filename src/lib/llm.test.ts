@@ -6,7 +6,7 @@
 // gives a flaky AI response exactly one more chance before giving up.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generate, generateStructured } from './llm';
+import { extractText, generate, generateStructured, llmErrorMessage } from './llm';
 
 interface Hello {
   hello: string;
@@ -145,5 +145,66 @@ describe('generateStructured', () => {
 
     await expect(generateStructured('say hi', isHello)).rejects.toThrow();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+function ocrResponse(pages: { index?: number; markdown?: string }[]) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ pages }),
+    text: async () => '',
+  } as Response;
+}
+
+describe('extractText', () => {
+  it('reads a text file locally without any network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await extractText(new File(['plain notes'], 'notes.md', { type: 'text/markdown' }));
+
+    expect(result).toBe('plain notes');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('POSTs a PDF to /extract as mimeType + base64', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ocrResponse([{ index: 0, markdown: 'page one' }]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await extractText(new File(['ABC'], 'cv.pdf', { type: 'application/pdf' }));
+
+    expect(result).toBe('page one');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://localhost:8787/extract');
+    expect(JSON.parse(init.body)).toEqual({ mimeType: 'application/pdf', base64: 'QUJD' });
+  });
+
+  it('joins pages in index order regardless of the order returned', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      ocrResponse([
+        { index: 1, markdown: 'second' },
+        { index: 0, markdown: 'first' },
+      ]),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await extractText(new File(['ABC'], 'cv.pdf', { type: 'application/pdf' }))).toBe('first\n\nsecond');
+  });
+
+  it('throws when the reader finds no text', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ocrResponse([])));
+
+    await expect(extractText(new File(['ABC'], 'cv.pdf', { type: 'application/pdf' }))).rejects.toThrow(
+      /no text/i,
+    );
+  });
+});
+
+describe('llmErrorMessage', () => {
+  it('translates an unsupported-file-type failure into something readable', () => {
+    const message = llmErrorMessage(new Error('Document reader request failed: 415 Unsupported file type'), 'Import');
+    expect(message).toContain('file type');
+    expect(message).not.toContain('415');
   });
 });

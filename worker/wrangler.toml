@@ -25,6 +25,17 @@ LLM_MODEL = "openai/gpt-oss-120b"
 # deployed Cloudflare Pages origin here once the frontend is deployed.
 ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:5174,https://pimp-my-resume.pages.dev"
 
-# LLM_API_KEY is a secret, not a var -- never put it here.
-# Production: `wrangler secret put LLM_API_KEY`
-# Local dev:  create worker/.dev.vars (gitignored) with LLM_API_KEY=...
+# Document reader (OCR) used by /extract to turn an attached PDF/DOCX/PPTX or
+# image into text. A separate provider from the text model above because Groq
+# has no vision or document model. Endpoint and model confirmed against
+# https://docs.mistral.ai/capabilities/OCR/basic_ocr/ at the time this was
+# written -- re-verify if the provider changes. Files are sent inline as
+# base64 data URIs, never via a provider upload/file API, so nothing is
+# stored provider-side (PRD §10).
+OCR_BASE_URL = "https://api.mistral.ai/v1"
+OCR_MODEL = "mistral-ocr-latest"
+
+# LLM_API_KEY and MISTRAL_API_KEY are secrets, not vars -- never put them here.
+# Production: `wrangler secret put LLM_API_KEY` / `wrangler secret put MISTRAL_API_KEY`
+# Local dev:  create worker/.dev.vars (gitignored) with LLM_API_KEY=... and
+#             MISTRAL_API_KEY=...
