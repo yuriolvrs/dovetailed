@@ -76,8 +76,8 @@ Verify Mistral's exact max file size and page count at build time — the overvi
 Confirmed by the user:
 
 1. **Existing resume → Profile.** The biggest win and the hardest parse: file → text → `Profile`-shaped JSON (contact, `SkillGroup[]`, experience, projects, education). Fabrication-sensitive; see below.
-2. **Job posting → posting text.** Smallest change and the fastest real payoff — it only needs to fill `rawText` (plus best-effort title/company/location), and the existing analysis pipeline runs unchanged. Reuse `guessJobTitleAndCompany` as a fallback when extraction is thin.
-3. **Job description docs → posting.** A supplementary file merged into what analysis sees, alongside the pasted/extracted posting text.
+2. ~~**Job posting → posting text.**~~ **Built in 8B, then removed 2026-08-16 per explicit user decision: job postings are paste-only.** The dropzone in the Add Job Posting modal and the "supporting document" attach on Job Detail (which also appended into `rawText`) were both taken out. `guessJobTitleAndCompany` still runs on paste, unchanged.
+3. ~~**Job description docs → posting.**~~ Removed with #2 — same reason, same code path.
 4. **Writing samples → Profile.** Extract text, append to `profile.writingSamples`. Trivial once the pipeline exists — no structuring stage, just transcription.
 
 Additional manual-typing removals worth including, per the user's "others you can think of":

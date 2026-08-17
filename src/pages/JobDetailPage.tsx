@@ -25,8 +25,6 @@ import {
   toJobAnalysis,
 } from '../prompts/analyzePosting';
 import { generateStructured, llmErrorMessage } from '../lib/llm';
-import { useFileText } from '../lib/files/useFileText';
-import { FileDropzone } from '../components/ui/FileDropzone';
 import { AnalysisEditor } from '../components/jobs/AnalysisEditor';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { useToast } from '../components/ui/Toast';
@@ -52,7 +50,6 @@ export default function JobDetailPage() {
   // Which of the blur-saved free-text fields currently differ from what's
   // persisted, so their labels can show an "Unsaved" indicator until blur.
   const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
-  const supportingDoc = useFileText('Reading that document');
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -264,27 +261,6 @@ export default function JobDetailPage() {
               Only the first {MAX_POSTING_CHARS.toLocaleString()} characters are sent for analysis.
             </p>
           )}
-          {/* A supporting document (role spec, JD deck) is appended to the
-              posting text so analysis sees it, rather than living separately. */}
-          <div className="mt-3 shrink-0">
-            <FileDropzone
-              compact
-              busy={supportingDoc.busy}
-              label="Attach a supporting document"
-              onFile={(f) =>
-                supportingDoc.read(f, (text) => {
-                  const combined = posting.rawText.trim()
-                    ? `${posting.rawText.trim()}\n\n${text}`
-                    : text;
-                  update({ rawText: combined });
-                  markClean('rawText');
-                })
-              }
-            />
-            {supportingDoc.error && (
-              <p className="text-xs text-red-600 mt-2">{supportingDoc.error}</p>
-            )}
-          </div>
         </Card>
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)]">
