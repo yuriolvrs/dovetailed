@@ -110,10 +110,13 @@ Storage: Dexie (IndexedDB) tables mirroring these types. Export/import = JSON du
 ## 10. Data handling & privacy (contract)
 
 - User content is stored only in the user's browser (IndexedDB). No server-side database exists.
-- User content transits the stateless proxy to the LLM provider solely to generate output; nothing is retained by the proxy.
-- Choose LLM providers whose terms do not permit training on API data; document the chosen provider and its policy in the README.
+- User content transits the stateless proxy to the provider solely to generate output; nothing is retained by the proxy.
+- Attached files (resumes, documents) are sent **inline** through the same stateless proxy and are never uploaded to a provider's file-storage API, which would persist them provider-side. The file itself is never written to IndexedDB either — it is read, used, and dropped.
+- Files whose text can be read locally (`.txt`, `.md`, `.tex`) are never transmitted at all.
+- Choose providers whose terms do not permit training on API data; document each chosen provider and its policy in the README. This rule is load-bearing, not aspirational: it is why Gemini's free tier was rejected for document reading in Phase 8 (its terms permit training on submitted content and human review of it), in favour of Mistral with training opt-out disabled.
+- Where a provider's no-training guarantee depends on an account setting rather than its default terms, record in the README which setting and the date it was verified — a default can change, and an account setting can be reset.
 - Export/import gives users full data portability; a "delete all data" button wipes IndexedDB.
-- State this contract verbatim in the app's About/Privacy section.
+- State this contract verbatim in the app's About/Privacy section, including which providers receive content and what each does with it.
 
 ## 11. Tech stack
 

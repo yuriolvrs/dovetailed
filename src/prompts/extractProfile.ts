@@ -8,7 +8,6 @@
 
 import type { Contact, EducationEntry, ExperienceEntry, ProjectEntry, SkillGroup } from '../types';
 
-
 // The extracted shape deliberately differs from the stored one: a resume
 // doesn't carry project links, and "current" is only known when the document
 // actually says so. Modelling that here (rather than casting to the stored

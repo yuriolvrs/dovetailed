@@ -31,5 +31,5 @@ export function useFileText(label: string) {
     }
   }
 
-  return { busy, error, read, clearError: () => setError(null) };
+  return { busy, error, read };
 }

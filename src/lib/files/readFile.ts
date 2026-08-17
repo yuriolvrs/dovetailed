@@ -20,27 +20,35 @@ export interface Attachment {
 // tuned to it.
 export const MAX_FILE_BYTES = 15_000_000;
 
-const DOCUMENT_MIME_TYPES: Record<string, string> = {
-  pdf: 'application/pdf',
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+// The one table describing every format we accept: extension -> its MIME type
+// and how it should be read. 'text' entries are read in the browser and never
+// reach the OCR provider, so a .md or .tex file never leaves the machine.
+//
+// NOTE: worker/src/lib.ts carries its own copy of the document/image MIME
+// types. That duplication is deliberate -- the Worker is a standalone package
+// with no dependency on this one -- but the two must be kept in step when a
+// format is added or dropped.
+const FORMATS: Record<string, { mimeType: string; kind: Exclude<FileKind, 'unsupported'> }> = {
+  pdf: { mimeType: 'application/pdf', kind: 'document' },
+  docx: {
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    kind: 'document',
+  },
+  pptx: {
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    kind: 'document',
+  },
+  png: { mimeType: 'image/png', kind: 'image' },
+  jpg: { mimeType: 'image/jpeg', kind: 'image' },
+  jpeg: { mimeType: 'image/jpeg', kind: 'image' },
+  avif: { mimeType: 'image/avif', kind: 'image' },
+  txt: { mimeType: 'text/plain', kind: 'text' },
+  md: { mimeType: 'text/markdown', kind: 'text' },
+  markdown: { mimeType: 'text/markdown', kind: 'text' },
+  tex: { mimeType: 'text/plain', kind: 'text' },
 };
 
-const IMAGE_MIME_TYPES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  avif: 'image/avif',
-};
-
-// Read in the browser and sent as text -- these never reach the OCR
-// provider, so a .md or .tex file never leaves the machine at all.
-const TEXT_MIME_TYPES: Record<string, string> = {
-  txt: 'text/plain',
-  md: 'text/markdown',
-  markdown: 'text/markdown',
-  tex: 'text/plain',
-};
+const KIND_BY_MIME_TYPE = new Map(Object.values(FORMATS).map((f) => [f.mimeType, f.kind]));
 
 function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
@@ -56,15 +64,8 @@ function extensionOf(name: string): string {
  * don't know it.
  */
 export function normalizeMimeType(name: string, mimeType: string): string {
-  const known = [
-    ...Object.values(DOCUMENT_MIME_TYPES),
-    ...Object.values(IMAGE_MIME_TYPES),
-    ...Object.values(TEXT_MIME_TYPES),
-  ];
-  if (known.includes(mimeType)) return mimeType;
-
-  const ext = extensionOf(name);
-  return DOCUMENT_MIME_TYPES[ext] ?? IMAGE_MIME_TYPES[ext] ?? TEXT_MIME_TYPES[ext] ?? mimeType;
+  if (KIND_BY_MIME_TYPE.has(mimeType)) return mimeType;
+  return FORMATS[extensionOf(name)]?.mimeType ?? mimeType;
 }
 
 /**
@@ -74,15 +75,20 @@ export function normalizeMimeType(name: string, mimeType: string): string {
  * ourselves, or reject it.
  */
 export function classifyFile(name: string, mimeType: string): FileKind {
-  const resolved = normalizeMimeType(name, mimeType);
-  if (Object.values(DOCUMENT_MIME_TYPES).includes(resolved)) return 'document';
-  if (Object.values(IMAGE_MIME_TYPES).includes(resolved)) return 'image';
-  if (Object.values(TEXT_MIME_TYPES).includes(resolved)) return 'text';
-  return 'unsupported';
+  return KIND_BY_MIME_TYPE.get(normalizeMimeType(name, mimeType)) ?? 'unsupported';
 }
 
 /** Human-readable list of what can be attached, for empty states and errors. */
 export const SUPPORTED_FILE_HINT = 'PDF, DOCX, PPTX, PNG, JPG, TXT, or MD';
+
+/**
+ * Value for a file input's `accept` attribute, derived from FORMATS so adding
+ * a format updates the picker automatically instead of needing a second edit.
+ * In plain terms: the list of extensions the file browser will offer.
+ */
+export const SUPPORTED_FILE_ACCEPT = Object.keys(FORMATS)
+  .map((extension) => `.${extension}`)
+  .join(',');
 
 /**
  * Checks a file is readable and small enough, returning a message to show the

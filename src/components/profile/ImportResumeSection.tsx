@@ -28,6 +28,11 @@ import { Badge, Btn, Card, SectionTitle } from '../ui/primitives';
 // gpt-oss-120b findings).
 const EXTRACT_MAX_TOKENS = 6000;
 
+// Transcribing a document into fields needs almost no deliberation, and any
+// reasoning tokens spent come straight out of the budget the JSON answer
+// needs -- the same trade-off the LaTeX conversion makes.
+const EXTRACT_REASONING_EFFORT = 'low' as const;
+
 const SECTION_LABELS: Record<SectionKey, string> = {
   contact: 'Contact Info',
   education: 'Education',
@@ -66,7 +71,10 @@ export function ImportResumeSection({
   onImported: (next: Profile) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  // What the dropzone says while working. Kept distinct from `imported` so a
+  // progress label is never doubling as a completion flag.
   const [status, setStatus] = useState<string | null>(null);
+  const [imported, setImported] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [selected, setSelected] = useState<Set<SectionKey>>(new Set());
@@ -75,6 +83,7 @@ export function ImportResumeSection({
   async function handleFile(file: File) {
     setBusy(true);
     setError(null);
+    setImported(false);
     setStatus('Reading the document…');
     try {
       const documentText = await extractText(file);
@@ -82,7 +91,7 @@ export function ImportResumeSection({
       const extracted = await generateStructured(
         buildExtractProfilePrompt(documentText),
         isExtractedProfile,
-        { maxTokens: EXTRACT_MAX_TOKENS },
+        { maxTokens: EXTRACT_MAX_TOKENS, reasoningEffort: EXTRACT_REASONING_EFFORT },
       );
       // Verified against the document's own text, not the model's say-so.
       const unverified = verifyExtractedProfile(extracted, documentText);
@@ -114,7 +123,7 @@ export function ImportResumeSection({
     const next = mergeProfile(profile, review.extracted, [...selected], resolutions);
     onImported(next);
     setReview(null);
-    setStatus('Imported.');
+    setImported(true);
   }
 
   const duplicates = review ? findDuplicates(profile, review.extracted) : [];
@@ -135,7 +144,7 @@ export function ImportResumeSection({
             label="Attach your existing resume"
           />
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
-          {status === 'Imported.' && (
+          {imported && (
             <p className="text-xs text-emerald-600 mt-2 inline-flex items-center gap-1">
               <Check size={12} />
               Imported into your profile.

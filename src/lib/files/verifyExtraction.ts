@@ -56,14 +56,15 @@ export function normalizeForCompare(value: string): string {
 }
 
 /**
- * True when `value` appears in the document text. Empty values are treated as
- * present -- there is nothing to fabricate in a blank field.
+ * True when `value` appears in an already-normalized document. Empty values
+ * count as present -- there is nothing to fabricate in a blank field. Takes
+ * the corpus pre-normalized because a single verification pass checks ~30
+ * fields against the same document.
  * In plain terms: did this piece of text actually come from the file?
  */
-export function isPresentInCorpus(value: string, corpus: string): boolean {
+export function isPresentInCorpus(value: string, normalizedCorpus: string): boolean {
   const needle = normalizeForCompare(value);
-  if (needle === '') return true;
-  return normalizeForCompare(corpus).includes(needle);
+  return needle === '' || normalizedCorpus.includes(needle);
 }
 
 /**
@@ -82,10 +83,7 @@ export function verifyExtractedProfile(
   const normalizedCorpus = normalizeForCompare(corpus);
 
   const check = (path: string, text: string | undefined) => {
-    if (!text) return;
-    const needle = normalizeForCompare(text);
-    if (needle === '') return;
-    if (!normalizedCorpus.includes(needle)) unverified.push({ path, text });
+    if (text && !isPresentInCorpus(text, normalizedCorpus)) unverified.push({ path, text });
   };
 
   check('contact.name', extracted.contact?.name);

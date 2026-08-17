@@ -13,8 +13,55 @@ import { JsonParseError, parseJson } from './json';
 export interface GenerateOptions {
   temperature?: number;
   maxTokens?: number;
+  /**
+   * How much chain-of-thought the model may spend before answering. This
+   * model bills its reasoning against the same max_tokens budget as the
+   * answer, so a long task can burn the whole budget thinking and return
+   * nothing -- 'low' buys that budget back for actual output.
+   * In plain terms: how long the AI is allowed to think before it starts
+   * writing the answer.
+   */
+  reasoningEffort?: 'low' | 'medium' | 'high';
   /** Aborts the in-flight request (and any pending rate-limit retry) when triggered. */
   signal?: AbortSignal;
+}
+
+/**
+ * Thrown when the proxy answers successfully but with no usable content --
+ * nearly always because the model hit its token budget mid-reasoning
+ * (finish_reason "length") and never got as far as writing an answer. Its own
+ * type so generateStructured can retry it, since it's a stochastic failure
+ * rather than a permanent one.
+ * In plain terms: the AI replied with nothing, usually because it ran out of
+ * room to answer.
+ */
+export class EmptyResponseError extends Error {
+  constructor(readonly finishReason?: string) {
+    super(
+      finishReason === 'length'
+        ? 'the model ran out of room before writing an answer. The input is likely too long — shorten it and try again.'
+        : 'the model returned an empty response.',
+    );
+    this.name = 'EmptyResponseError';
+  }
+}
+
+/**
+ * Thrown when the proxy itself rejects a request (bad type, too large, rate
+ * limited). Carries the status and which route failed so callers can react to
+ * a specific case without string-matching the message.
+ * In plain terms: a failed request to our own proxy, labelled well enough to
+ * turn into a useful message.
+ */
+export class ProxyRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly label: string,
+    body: string,
+  ) {
+    super(`${label} request failed: ${status} ${body}`);
+    this.name = 'ProxyRequestError';
+  }
 }
 
 const DEFAULT_PROXY_URL = 'http://localhost:8787';
@@ -24,7 +71,7 @@ function proxyUrl(): string {
 }
 
 interface ChatCompletionResponse {
-  choices?: { message?: { content?: string } }[];
+  choices?: { message?: { content?: string }; finish_reason?: string }[];
 }
 
 // Matching/analysis can fire a burst of calls (one per requirement) that
@@ -112,7 +159,7 @@ async function postWithRetry(
     }
 
     if (!response.ok) {
-      throw new Error(`${label} request failed: ${response.status} ${await response.text()}`);
+      throw new ProxyRequestError(response.status, label, await response.text());
     }
 
     return response.json();
@@ -126,6 +173,7 @@ export async function generate(prompt: string, options: GenerateOptions = {}): P
       messages: [{ role: 'user', content: prompt }],
       temperature: options.temperature,
       max_tokens: options.maxTokens,
+      reasoning_effort: options.reasoningEffort,
     },
     options.signal,
     'LLM proxy',
@@ -133,7 +181,7 @@ export async function generate(prompt: string, options: GenerateOptions = {}): P
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error('LLM proxy response had no content.');
+    throw new EmptyResponseError(data.choices?.[0]?.finish_reason);
   }
   return fixMojibake(content);
 }
@@ -187,17 +235,17 @@ export function llmErrorMessage(err: unknown, label: string): string {
   if (err instanceof JsonParseError) {
     return `${label} failed: the model returned an unusable response. Try again — the model this app uses is small and occasionally produces malformed output.`;
   }
-  if (err instanceof Error) {
-    // The proxy answers 415 for a file type the document reader doesn't
-    // accept; surfacing the raw status here would be meaningless to the user.
-    if (err.message.includes('Document reader request failed: 415')) {
+  // A raw status code means nothing to the user, so the two the proxy raises
+  // for a bad attachment get spelled out.
+  if (err instanceof ProxyRequestError) {
+    if (err.status === 415) {
       return `${label} failed: that file type can't be read. Attach a ${SUPPORTED_FILE_HINT} file.`;
     }
-    if (err.message.includes('Document reader request failed: 413')) {
+    if (err.status === 413) {
       return `${label} failed: that file is too large to read.`;
     }
-    return `${label} failed: ${err.message}`;
   }
+  if (err instanceof Error) return `${label} failed: ${err.message}`;
   return `${label} failed: unknown error.`;
 }
 
@@ -206,11 +254,13 @@ export async function generateStructured<T>(
   validate: (x: unknown) => x is T,
   options: GenerateOptions = {},
 ): Promise<T> {
-  const first = await generate(prompt, options);
+  // An empty response is as retryable as a malformed one -- both are the
+  // small model being flaky rather than the request being wrong -- so the
+  // single retry covers the whole call, not just the parse.
   try {
-    return parseJson(first, validate);
-  } catch {
-    const retry = await generate(prompt, options);
-    return parseJson(retry, validate);
+    return parseJson(await generate(prompt, options), validate);
+  } catch (err) {
+    if (!(err instanceof JsonParseError || err instanceof EmptyResponseError)) throw err;
+    return parseJson(await generate(prompt, options), validate);
   }
 }

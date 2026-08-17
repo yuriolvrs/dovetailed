@@ -8,11 +8,11 @@
 import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { Loader2, Paperclip, Upload } from 'lucide-react';
-import { SUPPORTED_FILE_HINT, validateFile } from '../../lib/files/readFile';
+import { SUPPORTED_FILE_ACCEPT, SUPPORTED_FILE_HINT, validateFile } from '../../lib/files/readFile';
 
 export function FileDropzone({
   onFile,
-  accept = '.pdf,.docx,.pptx,.png,.jpg,.jpeg,.txt,.md',
+  accept = SUPPORTED_FILE_ACCEPT,
   busy = false,
   busyLabel = 'Reading…',
   label = 'Drop a file here, or click to browse',
@@ -33,7 +33,9 @@ export function FileDropzone({
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function accept_(file: File | undefined) {
+  // Named for what it does rather than `accept`, which is already the prop
+  // carrying the input's accept attribute.
+  function acceptFile(file: File | undefined) {
     if (!file) return;
     const problem = validateFile(file);
     if (problem) {
@@ -48,7 +50,7 @@ export function FileDropzone({
     e.preventDefault();
     setDragging(false);
     if (busy) return;
-    accept_(e.dataTransfer.files[0]);
+    acceptFile(e.dataTransfer.files[0]);
   }
 
   // Only react to drags that actually carry a file -- a tag being dragged
@@ -96,7 +98,7 @@ export function FileDropzone({
         accept={accept}
         className="hidden"
         onChange={(e) => {
-          accept_(e.target.files?.[0]);
+          acceptFile(e.target.files?.[0]);
           // Reset so picking the same file twice in a row still fires.
           e.target.value = '';
         }}

@@ -6,7 +6,7 @@
 // gives a flaky AI response exactly one more chance before giving up.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { extractText, generate, generateStructured, llmErrorMessage } from './llm';
+import { extractText, generate, generateStructured, llmErrorMessage, ProxyRequestError } from './llm';
 
 interface Hello {
   hello: string;
@@ -21,6 +21,17 @@ function chatResponse(content: string) {
     ok: true,
     status: 200,
     json: async () => ({ choices: [{ message: { content } }] }),
+    text: async () => '',
+  } as Response;
+}
+
+// What the model returns when its reasoning ate the whole max_tokens budget:
+// a 200 with an empty content string and finish_reason "length".
+function truncatedResponse() {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
     text: async () => '',
   } as Response;
 }
@@ -43,6 +54,21 @@ describe('generate', () => {
     expect(init.method).toBe('POST');
     const body = JSON.parse(init.body);
     expect(body.messages).toEqual([{ role: 'user', content: 'say hi' }]);
+  });
+
+  it('forwards reasoning_effort when asked for one', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse('hi there'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await generate('say hi', { reasoningEffort: 'low' });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).reasoning_effort).toBe('low');
+  });
+
+  it('explains a budget-truncated empty response instead of a bare "no content"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(truncatedResponse()));
+
+    await expect(generate('say hi')).rejects.toThrow(/ran out of room/);
   });
 
   it('repairs mis-decoded UTF-8 punctuation in the content (Groq mojibake)', async () => {
@@ -136,6 +162,31 @@ describe('generateStructured', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('retries an empty (budget-truncated) response, then succeeds', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(truncatedResponse())
+      .mockResolvedValueOnce(chatResponse('{"hello":"world"}'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await generateStructured('say hi', isHello);
+
+    expect(result).toEqual({ hello: 'world' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a failed request, only a bad response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => 'boom',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(generateStructured('say hi', isHello)).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('throws after the retry also fails, without a third attempt', async () => {
     const fetchMock = vi
       .fn()
@@ -203,8 +254,25 @@ describe('extractText', () => {
 
 describe('llmErrorMessage', () => {
   it('translates an unsupported-file-type failure into something readable', () => {
-    const message = llmErrorMessage(new Error('Document reader request failed: 415 Unsupported file type'), 'Import');
+    const message = llmErrorMessage(
+      new ProxyRequestError(415, 'Document reader', 'Unsupported file type'),
+      'Import',
+    );
     expect(message).toContain('file type');
     expect(message).not.toContain('415');
+  });
+
+  it('translates a too-large failure into something readable', () => {
+    const message = llmErrorMessage(
+      new ProxyRequestError(413, 'Document reader', 'Payload too large'),
+      'Import',
+    );
+    expect(message).toContain('too large');
+    expect(message).not.toContain('413');
+  });
+
+  it('falls back to the raw message for a status it has no wording for', () => {
+    const message = llmErrorMessage(new ProxyRequestError(500, 'LLM proxy', 'boom'), 'Analysis');
+    expect(message).toContain('500');
   });
 });

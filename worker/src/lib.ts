@@ -38,13 +38,15 @@ export function isOversized(bodyText: string, maxBytes: number): boolean {
 // if the provider changes.
 // In plain terms: the file types the document reader accepts, split into
 // "documents" and "images" because the API wants them in different fields.
-export const OCR_DOCUMENT_MIME_TYPES = [
+// Sets rather than arrays so membership is a lookup and no `as readonly
+// string[]` cast is needed to test an arbitrary incoming MIME type.
+export const OCR_DOCUMENT_MIME_TYPES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-] as const;
+]);
 
-export const OCR_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/avif'] as const;
+export const OCR_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/avif']);
 
 export type OcrDocument =
   | { type: 'document_url'; document_url: string }
@@ -58,10 +60,10 @@ export type OcrDocument =
  */
 export function buildOcrDocument(mimeType: string, base64: string): OcrDocument | null {
   const dataUri = `data:${mimeType};base64,${base64}`;
-  if ((OCR_DOCUMENT_MIME_TYPES as readonly string[]).includes(mimeType)) {
+  if (OCR_DOCUMENT_MIME_TYPES.has(mimeType)) {
     return { type: 'document_url', document_url: dataUri };
   }
-  if ((OCR_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType)) {
+  if (OCR_IMAGE_MIME_TYPES.has(mimeType)) {
     return { type: 'image_url', image_url: dataUri };
   }
   return null;

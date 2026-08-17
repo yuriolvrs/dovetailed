@@ -56,18 +56,21 @@ describe('normalizeForCompare', () => {
 });
 
 describe('isPresentInCorpus', () => {
+  // Takes the corpus already normalized, as verifyExtractedProfile passes it.
+  const NORMALIZED = normalizeForCompare(CORPUS);
+
   it('finds text that is decorated in the document but bare in the extraction', () => {
-    expect(isPresentInCorpus('Senior Frontend Engineer', CORPUS)).toBe(true);
-    expect(isPresentInCorpus('Rhianna Lauren A. Lim', CORPUS)).toBe(true);
-    expect(isPresentInCorpus('Led the migration to a new billing system', CORPUS)).toBe(true);
+    expect(isPresentInCorpus('Senior Frontend Engineer', NORMALIZED)).toBe(true);
+    expect(isPresentInCorpus('Rhianna Lauren A. Lim', NORMALIZED)).toBe(true);
+    expect(isPresentInCorpus('Led the migration to a new billing system', NORMALIZED)).toBe(true);
   });
 
   it('rejects text that is not in the document', () => {
-    expect(isPresentInCorpus('Built Spring Boot microservices', CORPUS)).toBe(false);
+    expect(isPresentInCorpus('Built Spring Boot microservices', NORMALIZED)).toBe(false);
   });
 
   it('treats an empty value as nothing to verify', () => {
-    expect(isPresentInCorpus('', CORPUS)).toBe(true);
+    expect(isPresentInCorpus('', NORMALIZED)).toBe(true);
   });
 });
 
