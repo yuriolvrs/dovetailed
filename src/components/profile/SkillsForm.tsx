@@ -15,7 +15,7 @@
 // what's in your profile.
 
 import { useEffect, useRef, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Rows3, Sparkles } from 'lucide-react';
 import type { SkillGroup } from '../../types';
 import { EditableList } from '../EditableList';
 import { Btn, Card, Collapsible, CollapsibleSectionHeader, FieldInput, ResetButton, TagInput } from '../ui/primitives';
@@ -85,6 +85,10 @@ export function SkillsForm({
     }
   }
 
+  function handleFlatten() {
+    onChange([{ category: '', items: [...new Set(allItems)] }]);
+  }
+
   return (
     <Card className="p-6" ref={containerRef}>
       <CollapsibleSectionHeader
@@ -100,6 +104,12 @@ export function SkillsForm({
               <Btn size="sm" variant="secondary" onClick={handleCategorize} disabled={categorizing}>
                 <Sparkles size={13} />
                 {categorizing ? 'Categorizing…' : 'AI Categorize'}
+              </Btn>
+            )}
+            {value.length > 1 && (
+              <Btn size="sm" variant="secondary" onClick={handleFlatten}>
+                <Rows3 size={13} />
+                Flatten
               </Btn>
             )}
             {onReset && <ResetButton onReset={onReset} />}

@@ -20,6 +20,7 @@ import { useEffect, useRef } from 'react';
 import type { ExperienceEntry, ResumeContent } from '../../types';
 import { educationKey, experienceKey, projectKey, type ResumeFocusTarget, type ResumeNavTarget } from '../../lib/resumeEntryKeys';
 import { formatMonthYear } from '../ui/primitives';
+import { withRenderableEntries } from '../../lib/renderableResume';
 
 // Shared styling for a clickable preview region -- only applied on the
 // 'preview' variant (the print/measure variants render the exact same
@@ -66,7 +67,7 @@ function groupBySection(entries: ExperienceEntry[]): { section: string; entries:
 }
 
 export function ResumePrintView({
-  content,
+  content: rawContent,
   variant = 'print',
   focusedTarget = null,
   onNavigate,
@@ -86,6 +87,10 @@ export function ResumePrintView({
   onNavigate?: (target: ResumeNavTarget) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  // An entry stripped of all its bullets isn't printed at all -- see
+  // renderableResume.ts. Done here rather than on the stored content so the
+  // editor keeps the entry and can bring it back with a bullet.
+  const content = withRenderableEntries(rawContent);
 
   useEffect(() => {
     if (!focusedTarget || variant !== 'preview' || !rootRef.current) return;

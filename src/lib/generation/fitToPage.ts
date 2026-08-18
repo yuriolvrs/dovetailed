@@ -2,7 +2,8 @@
 // toward one printed page. Decides *what* to cut and in *what order* --
 // never *whether* it currently fits, that's a DOM measurement done by the
 // caller (see useFitToOnePage.ts). Two-tier removal: whole experience
-// entries flagged `prunable` (e.g. "Extra-Curricular Activities") go first,
+// entries that count as `prunable` (anything outside the core work-history
+// section -- e.g. "Extra-Curricular Activities") go first,
 // oldest-with-no-matched-bullets before oldest-with-matched-bullets, removed
 // as a whole entry (not just its bullets); once none are left, falls back to
 // trimming unmatched bullets out of core (non-prunable) Experience/Project
@@ -11,9 +12,10 @@
 // never fully removed and a bare title/company/date line with no bullets at
 // all would be pointless. A matched bullet is never removed by either tier.
 // In plain terms: figures out which whole extra-curricular activities or
-// extra bullets to drop first when a resume runs too long -- extra-curricular
-// entries can disappear entirely, a core job or project always keeps at
-// least one bullet, and your best (job-matched) content is never touched.
+// extra bullets to drop first when a resume runs too long -- entries outside
+// your main work history can disappear entirely (unless you tick "keep"), a
+// core job or project always keeps at least one bullet, and your best
+// (job-matched) content is never touched.
 
 import { MONTHS } from '../../components/ui/primitives';
 import type { ExperienceEntry, ProjectEntry, ResumeContent } from '../../types';
@@ -36,6 +38,31 @@ function startDateKey(entry: ExperienceEntry): number {
   return year * 12 + Math.max(monthIndex, 0);
 }
 
+// Section names that count as the resume's core work history, and are
+// therefore never droppable as whole entries. Matched loosely (case- and
+// whitespace-insensitive, substring) so "Work Experience", "Professional
+// Experience" and "Employment History" all qualify, while headings like
+// "Extra-Curricular Activities", "Volunteer Work" or "Certifications" do
+// not. An entry with no section at all falls into the default "Experience"
+// group and so is core too.
+const CORE_SECTION_PATTERN = /experience|employment/i;
+
+/**
+ * Whether an entry may be dropped whole to fit one page. An explicit
+ * `prunable` value on the entry always wins (the profile/resume editors'
+ * checkbox); with nothing set, entries outside the core work-history section
+ * default to droppable, so a "Extra-Curricular Activities" group is pruned
+ * before core content without the user having to tick every entry -- while
+ * unticking the box protects an entry.
+ * In plain terms: extra sections like extra-curriculars are droppable unless
+ * you say otherwise; your actual jobs never are.
+ */
+export function isPrunable(entry: ExperienceEntry): boolean {
+  if (entry.prunable !== undefined) return entry.prunable;
+  const section = entry.section?.trim();
+  return Boolean(section) && !CORE_SECTION_PATTERN.test(section as string);
+}
+
 /**
  * Indexes of `prunable` experience entries, ordered for removal: entries
  * with zero matched bullets first (oldest to newest within that group), then
@@ -50,7 +77,7 @@ export function rankPrunableExperience(experience: ExperienceEntry[], matchedBul
       hasMatch: entry.bullets.some((b) => matchedBulletTexts.has(b)),
       dateKey: startDateKey(entry),
     }))
-    .filter((c) => experience[c.index].prunable);
+    .filter((c) => isPrunable(experience[c.index]));
 
   return candidates
     .sort((a, b) => Number(a.hasMatch) - Number(b.hasMatch) || a.dateKey - b.dateKey)
@@ -85,7 +112,7 @@ export function nextTrim(content: ResumeContent, matchedBulletTexts: Set<string>
 
   const coreExperience = content.experience
     .map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => !entry.prunable)
+    .filter(({ entry }) => !isPrunable(entry))
     .sort((a, b) => startDateKey(a.entry) - startDateKey(b.entry));
 
   for (const { entry, index } of coreExperience) {

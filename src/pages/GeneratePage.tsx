@@ -81,7 +81,7 @@ export default function GeneratePage() {
   // page (see fitToOnePage.ts) -- shown as a dismissible "restore" prompt.
   // Not persisted: it's a note about what generation just did, not part of
   // the saved resume, and manually re-adding one clears the note.
-  const [pageFitRemoved, setPageFitRemoved] = useState<ExperienceEntry[]>([]);
+
   // Which bullet is focused in the editor right now, so the live preview
   // alongside it can highlight the matching spot.
   const [focusedTarget, setFocusedTarget] = useState<ResumeFocusTarget | null>(null);
@@ -102,7 +102,6 @@ export default function GeneratePage() {
 
   const refresh = useCallback(() => {
     if (!id) return;
-    setPageFitRemoved([]);
     loadJobPosting(id).then((p) => setPosting(p ?? 'missing'));
     listSnapshots(id, 'resume').then(setSnapshots);
     loadTemplate().then((t) => setTemplate(t ?? null));
@@ -140,12 +139,17 @@ export default function GeneratePage() {
     }
     const atoms = buildProfileAtoms(profile);
     const selected = selectResumeContent(profile, posting.analysis, atoms);
-    const { content, removedExperience } = await fitToOnePage(selected.content, selected.sourceMap);
-    const next = newGeneration(id, 'resume', content, selected.sourceMap);
+    const { content, removedExperience, fits } = await fitToOnePage(selected.content, selected.sourceMap);
+    // Persisted on the generation, not held in component state, so the
+    // "Removed to fit one page" restore list survives a page reload.
+    const next: Generation = {
+      ...newGeneration(id, 'resume', content, selected.sourceMap),
+      removedForPageFit: removedExperience,
+      pageFitOverflow: !fits,
+    };
     await saveGeneration(next);
     setGeneration(next);
     setStale(false);
-    setPageFitRemoved(removedExperience);
     setConfirmingRegenerate(false);
     listSnapshots(id, 'resume').then(setSnapshots);
   }
@@ -154,11 +158,14 @@ export default function GeneratePage() {
     setGeneration((prev) => {
       if (!prev || prev === 'none') return prev;
       const content = prev.content as ResumeContent;
-      const next = { ...prev, content: { ...content, experience: [...content.experience, entry] } };
+      const next: Generation = {
+        ...prev,
+        content: { ...content, experience: [...content.experience, entry] },
+        removedForPageFit: (prev.removedForPageFit ?? []).filter((e) => e !== entry),
+      };
       void saveGeneration(next);
       return next;
     });
-    setPageFitRemoved((prev) => prev.filter((e) => e !== entry));
   }
 
   async function handleRestore(snapshot: GenerationSnapshot) {
@@ -166,7 +173,16 @@ export default function GeneratePage() {
     // Snapshot the current version too before overwriting it, so restoring
     // an old version doesn't itself lose whatever was just replaced.
     await snapshotGeneration(generation);
-    const restored: Generation = { ...generation, content: snapshot.content, sourceMap: snapshot.sourceMap };
+    // The page-fit fields describe the build being replaced, not this
+    // snapshot -- keeping them could offer to "restore" an entry the snapshot
+    // already contains, adding a duplicate.
+    const restored: Generation = {
+      ...generation,
+      content: snapshot.content,
+      sourceMap: snapshot.sourceMap,
+      removedForPageFit: [],
+      pageFitOverflow: false,
+    };
     await saveGeneration(restored);
     setGeneration(restored);
     setStale(false);
@@ -180,7 +196,7 @@ export default function GeneratePage() {
   // In plain terms: builds the actual .tex file from your resume and your
   // saved template, and downloads it.
   function handleExportTex() {
-    if (!template || generation === 'none' || generation === null) return;
+    if (!template?.compiledTemplate.trim() || generation === 'none' || generation === null) return;
     setTexExportError(null);
     try {
       const context = buildLatexContext(generation.content as ResumeContent);
@@ -260,9 +276,18 @@ export default function GeneratePage() {
   }
 
   const hasResume = generation !== 'none' && !stale;
+  // Page-fit results ride on the saved generation rather than component
+  // state, so the restore list and the overflow warning are still there after
+  // a reload instead of needing a regenerate to see again.
+  const pageFitRemoved = generation !== 'none' ? (generation.removedForPageFit ?? []) : [];
+  const pageFitOverflow = generation !== 'none' && Boolean(generation.pageFitOverflow);
 
   return (
-    <div className="pb-16">
+    // print:pb-0 -- the on-screen bottom padding must not survive printing, or
+    // a nearly-full resume page spills those few empty rem onto a blank
+    // second sheet (and the page-fit measurement, which sizes the resume
+    // alone, can't see it).
+    <div className="pb-16 print:pb-0">
       <JobDetailHeader
         backHref={`/jobs/${posting.id}/match`}
         backLabel="Back to matches"
@@ -313,7 +338,7 @@ export default function GeneratePage() {
                     <Sparkles size={13} />
                     Regenerate
                   </Btn>
-                  {template && (
+                  {template && template.compiledTemplate.trim() !== '' && (
                     <Btn size="sm" variant="secondary" onClick={handleExportTex}>
                       <FileCode size={13} />
                       Export .tex
@@ -421,6 +446,18 @@ export default function GeneratePage() {
               {texExportError && (
                 <Card className="p-4 mb-5 print:hidden">
                   <p className="text-sm text-red-600">{texExportError}</p>
+                </Card>
+              )}
+              {pageFitOverflow && (
+                <Card className="p-4 mb-5 print:hidden">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2 px-1">
+                    Still longer than one page
+                  </p>
+                  <p className="text-sm text-slate-600 px-1">
+                    Everything that could be dropped automatically already was -- every droppable entry, and every
+                    extra bullet down to the last one per job. Shorten some bullets below, or tick "Drop this first"
+                    on more entries, to get under a page.
+                  </p>
                 </Card>
               )}
               {pageFitRemoved.length > 0 && (

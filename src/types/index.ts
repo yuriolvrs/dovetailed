@@ -202,6 +202,15 @@ export interface Generation {
   type: GenerationType;
   content: ResumeContent | CoverLetterContent;
   sourceMap: SourceMapEntry[];
+  /**
+   * Whole experience entries page-fit trimming dropped when this was
+   * generated, in removal order, so they stay offered for one-click restore
+   * for as long as this generation exists -- not just until the page is
+   * reloaded. Emptied as entries are restored.
+   */
+  removedForPageFit?: ExperienceEntry[];
+  /** True when page-fit trimming ran out of allowed cuts and the resume is still over one page. */
+  pageFitOverflow?: boolean;
 }
 
 /**

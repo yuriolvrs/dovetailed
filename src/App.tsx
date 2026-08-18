@@ -4,7 +4,7 @@
 // wherever a page gets shown depending on which tab you're on.
 
 import { Link, NavLink, Navigate, Route, Routes, useMatch } from 'react-router-dom';
-import { Briefcase, FileText, Shield, User } from 'lucide-react';
+import { Briefcase, Shield, User } from 'lucide-react';
 import ProfilePage from './pages/ProfilePage.tsx';
 import JobsPage from './pages/JobsPage.tsx';
 import JobDetailPage from './pages/JobDetailPage.tsx';
@@ -12,6 +12,7 @@ import MatchingReviewPage from './pages/MatchingReviewPage.tsx';
 import GeneratePage from './pages/GeneratePage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
 import { ToastProvider } from './components/ui/Toast.tsx';
+import Logo from './components/ui/Logo.tsx';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -32,8 +33,8 @@ export default function App() {
         <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 print:hidden">
           <div className="mx-auto flex max-w-4xl h-[54px] items-center justify-between px-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
-                <FileText size={14} className="text-white" />
+              <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
+                <Logo size={22} className="text-white" />
               </div>
               <span className="text-sm font-semibold text-slate-900 tracking-tight">
                 Pimp My Resume

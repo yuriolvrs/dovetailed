@@ -50,14 +50,18 @@ function overflowsOnePage(content: ResumeContent): Promise<boolean> {
  * Trims `content` down toward one printed page, cutting the least important
  * content first per fitToPage.ts's nextTrim(), until it fits or nothing more
  * can be cut. `removedExperience` lists whole experience entries that were
- * dropped, in removal order, so the caller can offer to restore them.
- * In plain terms: shrinks a generated resume to fit one page, and reports
- * what got removed so the user can undo it.
+ * dropped, in removal order, so the caller can offer to restore them, and
+ * `fits` says whether the result actually got under one page -- it can't
+ * always, since nextTrim() refuses to remove core work history, so the
+ * caller has to be able to tell the user rather than silently print two
+ * pages.
+ * In plain terms: shrinks a generated resume to fit one page, reports what
+ * got removed so the user can undo it, and says whether it succeeded.
  */
 export async function fitToOnePage(
   content: ResumeContent,
   sourceMap: SourceMapEntry[],
-): Promise<{ content: ResumeContent; removedExperience: ResumeContent['experience'] }> {
+): Promise<{ content: ResumeContent; removedExperience: ResumeContent['experience']; fits: boolean }> {
   const matchedBulletTexts = new Set(sourceMap.map((e) => e.generatedText));
   let candidate = content;
   const removedExperience: ResumeContent['experience'] = [];
@@ -67,13 +71,15 @@ export async function fitToOnePage(
     candidate.experience.reduce((n, e) => n + e.bullets.length, 0) +
     candidate.projects.reduce((n, p) => n + p.bullets.length, 0);
 
-  for (let i = 0; i < maxSteps; i++) {
-    if (!(await overflowsOnePage(candidate))) break;
+  // <= maxSteps, not <, so the page is measured once more after the final
+  // possible cut rather than being reported as still overflowing.
+  for (let i = 0; i <= maxSteps; i++) {
+    if (!(await overflowsOnePage(candidate))) return { content: candidate, removedExperience, fits: true };
     const step: TrimStep | null = nextTrim(candidate, matchedBulletTexts);
     if (!step) break;
     if (step.kind === 'removeExperienceEntry') removedExperience.push(candidate.experience[step.entryIndex]);
     candidate = applyTrim(candidate, step);
   }
 
-  return { content: candidate, removedExperience };
+  return { content: candidate, removedExperience, fits: false };
 }

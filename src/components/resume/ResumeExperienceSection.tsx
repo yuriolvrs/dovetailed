@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import { Check, Plus } from 'lucide-react';
 import type { ExperienceEntry } from '../../types';
 import { experienceKey } from '../../lib/resumeEntryKeys';
+import { isPrunable } from '../../lib/generation/fitToPage';
 import { StringList } from '../StringList';
 import { DateRangeFields } from '../profile/DateRangeFields';
 import { ResumeAccordionRow } from './ResumeAccordionRow';
@@ -190,11 +191,12 @@ export function ResumeExperienceSection({
                 <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    checked={entry.prunable ?? false}
+                    checked={isPrunable(entry)}
                     onChange={(e) => update(index, { ...entry, prunable: e.target.checked })}
                     className="rounded border-slate-300 text-blue-600"
                   />
-                  Drop this first if the resume runs past one page
+                  Drop this first if the resume runs past one page (on by default outside your main
+                  experience section)
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">

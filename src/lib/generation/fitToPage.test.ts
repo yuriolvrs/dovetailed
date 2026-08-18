@@ -1,5 +1,6 @@
 // What this file is: unit tests for the one-page trimming order -- confirms
-// prunable entries go before core content, no-match-before-matched within
+// which entries count as prunable by default, that prunable entries go
+// before core content, no-match-before-matched within
 // prunable entries, oldest-first within each group, and that a matched
 // bullet is never removed by either tier.
 // In plain terms: tests proving the "what to cut first when the resume runs
@@ -7,7 +8,7 @@
 // content matched to the job.
 
 import { describe, expect, it } from 'vitest';
-import { applyTrim, nextTrim, rankPrunableExperience } from './fitToPage';
+import { applyTrim, isPrunable, nextTrim, rankPrunableExperience } from './fitToPage';
 import type { ExperienceEntry, ProjectEntry, ResumeContent } from '../../types';
 
 function exp(overrides: Partial<ExperienceEntry>): ExperienceEntry {
@@ -27,6 +28,26 @@ function content(experience: ExperienceEntry[], projects: ProjectEntry[] = []): 
     education: [],
   };
 }
+
+describe('isPrunable', () => {
+  it('defaults entries outside the core work-history section to prunable', () => {
+    expect(isPrunable(exp({ section: 'Extra-Curricular Activities' }))).toBe(true);
+    expect(isPrunable(exp({ section: 'Volunteer Work' }))).toBe(true);
+  });
+
+  it('defaults core work history -- including an unset section -- to not prunable', () => {
+    expect(isPrunable(exp({}))).toBe(false);
+    expect(isPrunable(exp({ section: '  ' }))).toBe(false);
+    expect(isPrunable(exp({ section: 'Experience' }))).toBe(false);
+    expect(isPrunable(exp({ section: 'Work Experience' }))).toBe(false);
+    expect(isPrunable(exp({ section: 'Employment History' }))).toBe(false);
+  });
+
+  it('lets an explicit flag override the default either way', () => {
+    expect(isPrunable(exp({ section: 'Extra-Curricular Activities', prunable: false }))).toBe(false);
+    expect(isPrunable(exp({ section: 'Work Experience', prunable: true }))).toBe(true);
+  });
+});
 
 describe('rankPrunableExperience', () => {
   it('ignores non-prunable entries', () => {
@@ -65,6 +86,14 @@ describe('nextTrim / applyTrim', () => {
     const next = applyTrim(c, step!);
     expect(next.experience).toHaveLength(1);
     expect(next.experience[0].startYear).toBe('2010');
+  });
+
+  it('removes unflagged non-core-section entries before trimming core bullets', () => {
+    const c = content([
+      exp({ section: 'Work Experience', startYear: '2020', bullets: ['core a', 'core b'] }),
+      exp({ section: 'Extra-Curricular Activities', startYear: '2015', bullets: ['extra a'] }),
+    ]);
+    expect(nextTrim(c, new Set())).toEqual({ kind: 'removeExperienceEntry', entryIndex: 1 });
   });
 
   it('falls back to trimming unmatched bullets from the oldest core entry once no prunable entries remain', () => {

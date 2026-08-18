@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ExperienceEntry } from '../../types';
+import { isPrunable } from '../../lib/generation/fitToPage';
 import { EditableList } from '../EditableList';
 import { StringList } from '../StringList';
 import { DateRangeFields } from './DateRangeFields';
@@ -67,11 +68,12 @@ export function ExperienceForm({
               <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  checked={entry.prunable ?? false}
+                  checked={isPrunable(entry)}
                   onChange={(e) => update({ ...entry, prunable: e.target.checked })}
                   className="rounded border-slate-300 text-blue-600"
                 />
-                Drop this first if a generated resume runs past one page
+                Drop this first if a generated resume runs past one page (on by default outside your main
+                experience section)
               </label>
 
               <div className="grid grid-cols-2 gap-3">

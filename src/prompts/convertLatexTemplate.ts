@@ -18,8 +18,28 @@
 // completion budget -- for a real multi-section template it consistently
 // ran ~2800 reasoning tokens before writing any JSON, so a maxTokens set
 // too low truncates with no usable content even when nothing was rejected.
-/** Raw pasted .tex beyond this length is truncated before it's sent. */
-export const MAX_TEMPLATE_CHARS = 10_000;
+// Hence CONVERSION_REASONING_EFFORT below, and a cap on the input.
+/**
+ * Hard per-request guard: .tex beyond this length is truncated before it's
+ * sent. Long templates are split into chunks first (splitTemplate.ts), so in
+ * normal use nothing reaches this -- it only bites when one indivisible
+ * section is itself enormous, which the UI warns about separately. Sized off
+ * the round trip: the model echoes its input back as an escaped JSON string,
+ * and LaTeX tokenizes densely (~2.5-3 chars/token), so ~6k chars in costs
+ * roughly 2.5k tokens out on top of the prompt.
+ */
+export const MAX_TEMPLATE_CHARS = 6_000;
+
+/**
+ * The conversion is mechanical (copy the LaTeX, swap content for
+ * placeholders), so it doesn't need deep deliberation -- and this model's
+ * reasoning comes out of the same budget as its answer, so anything above
+ * 'low' risks spending the budget thinking and returning nothing. The user
+ * reviews and edits the result before saving either way.
+ * In plain terms: tell the AI not to overthink this one, so it has room to
+ * actually write the template out.
+ */
+export const CONVERSION_REASONING_EFFORT = 'low';
 
 const TPM_BUDGET = 8000;
 // Prompt tokens can't be known exactly client-side (no tokenizer here), so
@@ -69,11 +89,26 @@ Each loop "skillGroups", items: category, itemsLine (a single comma-joined strin
  * In plain terms: assembles the message asking the AI to turn a pasted
  * LaTeX template into a reusable fill-in-the-blanks version.
  */
-export function buildConvertLatexTemplatePrompt(rawTex: string): string {
+export function buildConvertLatexTemplatePrompt(rawTex: string, part?: { index: number; total: number }): string {
   const tex = truncate(rawTex.trim(), MAX_TEMPLATE_CHARS);
+  // Only present for a template big enough to need splitting -- without it
+  // the model reasonably assumes it's looking at a whole document and
+  // "helpfully" adds a \documentclass or \end{document} that would then be
+  // duplicated when the parts are concatenated.
+  const partRule =
+    part && part.total > 1
+      ? `
+THIS IS PART ${part.index} OF ${part.total}. The template was split at section boundaries and the
+converted parts are joined back together in order, verbatim. So: convert ONLY the LaTeX given
+below and reply with only that part converted. Do not add \\documentclass, \\begin{document},
+\\end{document}, a preamble, or any other surrounding LaTeX that isn't already in this part, and
+do not drop anything that is.
+`
+      : '';
 
   return `You convert a LaTeX resume template into a reusable placeholder template. Reply with ONE
 JSON object and nothing else.
+${partRule}
 
 Exact shape (no extra keys, no markdown, no code fences, no commentary):
 {"compiledTemplate":"…","placeholders":["…"]}

@@ -6,8 +6,10 @@
 // Profile tab.
 
 import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import type { Profile } from '../types';
 import { computeProfileCompleteness, loadProfile, saveProfile } from '../lib/profileStore';
+import { loadTemplate } from '../lib/templateStore';
 import { ContactForm } from '../components/profile/ContactForm';
 import { SkillsForm } from '../components/profile/SkillsForm';
 import { ExperienceForm } from '../components/profile/ExperienceForm';
@@ -21,27 +23,39 @@ import { PageSkeleton } from '../components/ui/primitives';
 
 // Left-rail jump-to links for the sections below -- plain in-page anchors,
 // each section carries a matching id + scroll-mt so the sticky header
-// doesn't cover it when jumped to.
+// doesn't cover it when jumped to. `checks` names the completeness labels
+// (from computeProfileCompleteness) that belong to the section, so the rail
+// can flag the ones still empty.
 // In plain terms: the list of section names on the left that scroll you to
-// that part of the page when clicked.
+// that part of the page when clicked, plus what each one needs filled in.
 const SECTIONS = [
-  { id: 'import', label: 'Import from Resume' },
-  { id: 'contact', label: 'Contact Info' },
-  { id: 'education', label: 'Education' },
-  { id: 'experience', label: 'Work Experience' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'writing-samples', label: 'Writing Samples' },
-  { id: 'tex-template', label: '.tex Template' },
-  { id: 'data', label: 'Data' },
-] as const;
+  { id: 'import', label: 'Import from Resume', checks: [] },
+  { id: 'contact', label: 'Contact Info', checks: ['Name', 'Email'] },
+  { id: 'education', label: 'Education', checks: ['Education'] },
+  { id: 'experience', label: 'Work Experience', checks: ['Work Experience'] },
+  { id: 'projects', label: 'Projects', checks: ['Projects'] },
+  { id: 'skills', label: 'Skills', checks: ['Skills'] },
+  { id: 'writing-samples', label: 'Writing Samples', checks: [] },
+  { id: 'tex-template', label: '.tex Template', checks: [] },
+  { id: 'data', label: 'Data', checks: [] },
+] as const satisfies readonly { id: string; label: string; checks: readonly string[] }[];
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  // Only needed for the rail's "still empty" flag -- the .tex section owns
+  // its own copy of the template; null means we haven't looked yet.
+  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
+
+  const refreshTemplate = useCallback(() => {
+    // Raw .tex alone doesn't count -- only a converted, saved placeholder
+    // template is usable for export.
+    loadTemplate().then((t) => setHasTemplate(Boolean(t?.compiledTemplate.trim())));
+  }, []);
 
   const refresh = useCallback(() => {
     loadProfile().then(setProfile);
-  }, []);
+    refreshTemplate();
+  }, [refreshTemplate]);
 
   useEffect(() => {
     refresh();
@@ -68,6 +82,14 @@ export default function ProfilePage() {
   }
 
   const completeness = computeProfileCompleteness(profile);
+  // Sections that don't count toward the completeness meter but are still
+  // worth pointing out when empty -- flagged amber in the rail, versus red
+  // for the required checks above.
+  // In plain terms: optional things you haven't filled in yet.
+  const optionalEmpty: Record<string, boolean> = {
+    'writing-samples': profile.writingSamples.every((s) => s.trim() === ''),
+    'tex-template': hasTemplate === false,
+  };
 
   return (
     <div className="pb-16">
@@ -94,21 +116,30 @@ export default function ProfilePage() {
                 style={{ width: `${completeness.percent}%` }}
               />
             </div>
-            {completeness.missing.length > 0 && (
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Missing: {completeness.missing.join(', ')}
-              </p>
-            )}
           </div>
-          {SECTIONS.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              className="px-3 py-1.5 rounded-lg text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            >
-              {section.label}
-            </a>
-          ))}
+          {SECTIONS.map((section) => {
+            const required = section.checks.filter((c) => completeness.missing.includes(c));
+            const flag =
+              required.length > 0
+                ? { color: 'text-red-500', title: `Required: ${required.join(', ')}` }
+                : optionalEmpty[section.id]
+                  ? { color: 'text-amber-500', title: 'Empty — optional, but recommended' }
+                  : null;
+            return (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              >
+                {section.label}
+                {flag && (
+                  <AlertCircle className={`w-3.5 h-3.5 shrink-0 ${flag.color}`} role="img">
+                    <title>{flag.title}</title>
+                  </AlertCircle>
+                )}
+              </a>
+            );
+          })}
         </aside>
 
         <div className="flex-1 min-w-0 space-y-4">
@@ -147,7 +178,7 @@ export default function ProfilePage() {
           </div>
 
           <div id="tex-template" className="scroll-mt-20">
-            <TexTemplateSection />
+            <TexTemplateSection onChanged={refreshTemplate} />
           </div>
 
           <div id="data" className="scroll-mt-20">

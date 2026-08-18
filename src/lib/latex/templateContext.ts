@@ -9,6 +9,7 @@
 
 import type { ResumeContent } from '../../types';
 import { formatMonthYear } from '../../components/ui/primitives';
+import { withRenderableEntries } from '../renderableResume';
 
 function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
@@ -23,7 +24,10 @@ function dateRange(start: string, end: string): string {
  * In plain terms: the full list of fields (name, email, each job, each
  * bullet, ...) a LaTeX template can fill in from your resume.
  */
-export function buildLatexContext(content: ResumeContent): Record<string, unknown> {
+export function buildLatexContext(rawContent: ResumeContent): Record<string, unknown> {
+  // Same rule as the printed page: a bullet-less job or project is left out
+  // entirely rather than exported as an empty heading.
+  const content = withRenderableEntries(rawContent);
   return {
     name: content.contact.name,
     email: content.contact.email,

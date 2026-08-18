@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run build:favicon",
     "build": "tsc -b && vite build",
+    "build:favicon": "node scripts/build-favicon.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -42,6 +42,7 @@ General working style, in addition to the project-specific rules below (Conventi
 - Do not add telemetry, analytics, error reporters, or any network calls beyond the LLM proxy without explicit approval.
 - Make small, reviewable changes; commit at logical checkpoints with clear messages. Do not rewrite files wholesale when a targeted edit works.
 - After completing work, update PROGRESS.md truthfully — only mark items done that are implemented AND tested. Never claim tests pass without running them.
+- Stay in scope. Multiple Claude Code sessions may be running on this repo at once, each on a different task — touching files outside what was asked risks colliding with another session's in-progress work and burns time/tokens reading unrelated code. Only read or edit files relevant to the current request; don't proactively explore, "fix while I'm here," or review other parts of the codebase unless asked. If something out of scope looks broken, mention it instead of touching it. Before broad operations (repo-wide search/refactor, `git status`/`git diff` review, running the full test suite) confirm they're actually needed for the task at hand rather than doing them by default.
 
 ## Commands
 - Frontend dev: `npm run dev`
