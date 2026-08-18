@@ -18,7 +18,7 @@ import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { loadProfile, saveProfile } from '../lib/profileStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
-import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
+import { computeFitScore } from '../lib/matching/fitScore';
 import { llmErrorMessage } from '../lib/llm';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
@@ -83,6 +83,16 @@ export default function MatchingReviewPage() {
   const [rematchProgress, setRematchProgress] = useState<{ done: number; total: number } | null>(null);
   const [expandedAtomIds, setExpandedAtomIds] = useState<Set<string>>(new Set());
   const rematchAbortRef = useRef<AbortController | null>(null);
+  // Rail filter -- narrows the requirement list to one status bucket so a
+  // long posting's gaps/partials can be triaged without scrolling past
+  // everything that's already fine. 'gap' covers both gap statuses (no
+  // candidates / unverified), matching the simplified 3-way breakdown shown
+  // in the fit-score band above the rail.
+  const [statusFilter, setStatusFilter] = useState<'all' | 'full' | 'partial' | 'gap'>('all');
+  // Which of the two full-width sections below the requirement/evidence
+  // panes is showing -- they used to be two separate stacked cards; now one
+  // card with a tab switch, to cut page length.
+  const [infoTab, setInfoTab] = useState<'evidence' | 'additional'>('evidence');
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -135,6 +145,43 @@ export default function MatchingReviewPage() {
     const matches = posting && posting !== 'missing' ? (posting.analysis?.matches ?? []) : [];
     return new Map(matches.map((m) => [m.requirementId, m]));
   }, [posting]);
+
+  // Simplified 3-way bucket (both gap statuses collapse to 'gap') for the
+  // fit-score band and the rail's filter chips -- the fuller 4-status detail
+  // still drives the individual status dots and the selected requirement's
+  // own detail panel.
+  function statusBucket(status: MatchStatus): 'full' | 'partial' | 'gap' {
+    if (status === 'full') return 'full';
+    if (status === 'partial') return 'partial';
+    return 'gap';
+  }
+
+  const statusCounts = useMemo(() => {
+    let full = 0;
+    let partial = 0;
+    let gap = 0;
+    for (const requirement of requirements) {
+      const status = matchByRequirementId.get(requirement.id)?.status ?? 'gap_no_candidates';
+      const bucket = statusBucket(status);
+      if (bucket === 'full') full++;
+      else if (bucket === 'partial') partial++;
+      else gap++;
+    }
+    return { full, partial, gap, total: requirements.length };
+  }, [requirements, matchByRequirementId]);
+
+  const filteredRequirements = useMemo(() => {
+    if (statusFilter === 'all') return requirements;
+    return requirements.filter((r) => {
+      const status = matchByRequirementId.get(r.id)?.status ?? 'gap_no_candidates';
+      return statusBucket(status) === statusFilter;
+    });
+  }, [requirements, matchByRequirementId, statusFilter]);
+
+  const reviewedCount = useMemo(
+    () => requirements.filter((r) => matchByRequirementId.has(r.id)).length,
+    [requirements, matchByRequirementId],
+  );
 
   const usedAtomIds = useMemo(() => {
     const matches = posting && posting !== 'missing' ? (posting.analysis?.matches ?? []) : [];
@@ -407,33 +454,105 @@ export default function MatchingReviewPage() {
       )}
       {rematchError && <p className="text-xs text-red-600 mb-4">{rematchError}</p>}
 
+      {fitScore !== null && (
+        <Card className="p-5 mb-5">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center shrink-0">
+              <span className="text-3xl font-bold text-slate-900 leading-none">{fitScore}%</span>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">
+                Overall fit
+              </span>
+            </div>
+            <div className="flex-1 space-y-2.5">
+              <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden flex">
+                {statusCounts.total > 0 && (
+                  <>
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: `${(statusCounts.full / statusCounts.total) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-amber-500"
+                      style={{ width: `${(statusCounts.partial / statusCounts.total) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-red-500"
+                      style={{ width: `${(statusCounts.gap / statusCounts.total) * 100}%` }}
+                    />
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  {statusCounts.full} Full match
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  {statusCounts.partial} Partial
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  {statusCounts.gap} Gap{statusCounts.gap !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
         <Card className="p-3 lg:sticky lg:top-20">
-          <div className="flex items-center justify-between mb-3 px-2">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-              Requirements
-            </p>
-            {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit score: {fitScore}%</Badge>}
-          </div>
-          <div className="space-y-1">
-            {requirements.map((requirement) => {
-              const match = matchByRequirementId.get(requirement.id);
-              const status: MatchStatus = match?.status ?? 'gap_no_candidates';
-              const isSelected = requirement.id === selected.id;
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-2 mb-3">
+            Requirements
+          </p>
+          <div className="flex gap-1.5 px-1 mb-3 flex-wrap">
+            {(
+              [
+                ['all', 'All', statusCounts.total],
+                ['gap', 'Gaps', statusCounts.gap],
+                ['partial', 'Partial', statusCounts.partial],
+                ['full', 'Full', statusCounts.full],
+              ] as const
+            ).map(([key, label, count]) => {
+              const active = statusFilter === key;
               return (
                 <button
-                  key={requirement.id}
+                  key={key}
                   type="button"
-                  onClick={() => selectRequirement(requirement.id)}
-                  className={`w-full text-left flex items-start gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${
-                    isSelected ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-700'
+                  onClick={() => setStatusFilter(key)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${
+                    active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                   }`}
                 >
-                  <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
-                  <span className="line-clamp-2">{requirement.text}</span>
+                  {label} {count}
                 </button>
               );
             })}
+          </div>
+          <div className="space-y-1">
+            {filteredRequirements.length === 0 ? (
+              <p className="text-xs text-slate-300 text-center py-6">No requirements in this filter.</p>
+            ) : (
+              filteredRequirements.map((requirement) => {
+                const match = matchByRequirementId.get(requirement.id);
+                const status: MatchStatus = match?.status ?? 'gap_no_candidates';
+                const isSelected = requirement.id === selected.id;
+                return (
+                  <button
+                    key={requirement.id}
+                    type="button"
+                    onClick={() => selectRequirement(requirement.id)}
+                    className={`w-full text-left flex items-start gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${
+                      isSelected ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                    <span className="line-clamp-2">{requirement.text}</span>
+                  </button>
+                );
+              })
+            )}
           </div>
         </Card>
 
@@ -522,103 +641,136 @@ export default function MatchingReviewPage() {
       </div>
 
       {/* Full-width, belongs to neither pane -- these are opposite sets by
-          definition (an atom is either used by some requirement or it isn't),
-          kept visually distinct with separate headers and a divider. */}
+          definition (an atom is either used by some requirement or it isn't).
+          Used to be two separate stacked full-width cards; now one card with
+          a tab switch (same idiom as Generate's Resume/Cover Letter tabs),
+          so reviewing both doesn't mean scrolling past everything. */}
       <Card className="p-5 mt-5">
-        <SectionTitle sub="Profile items currently attached as evidence to at least one requirement">
-          Evidence in use
-        </SectionTitle>
-        {evidenceRows.length === 0 ? (
-          <p className="text-xs text-slate-300 py-2">No evidence attached yet.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {evidenceRows.map(({ atom, requirementTexts }) => {
-              const expanded = expandedAtomIds.has(atom.id);
-              return (
-                <div key={atom.id} className="rounded-xl border border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(atom.id)}
-                    className="w-full flex items-start justify-between gap-3 px-3 py-2.5 text-left"
-                  >
-                    <div className="flex items-start gap-2 min-w-0">
-                      <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-600 truncate">
-                          {atomSourceTitle(atom)}
-                        </p>
-                        <p className="text-sm text-slate-700 break-words mt-0.5">{atom.text}</p>
-                      </div>
+        <div className="flex border-b border-slate-200 mb-4 -mt-1">
+          <button
+            type="button"
+            onClick={() => setInfoTab('evidence')}
+            className={`flex-1 text-center text-sm font-semibold py-2.5 border-b-2 -mb-px transition-colors ${
+              infoTab === 'evidence'
+                ? 'border-slate-900 text-slate-900'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Evidence in use ({evidenceRows.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setInfoTab('additional')}
+            className={`flex-1 text-center text-sm font-semibold py-2.5 border-b-2 -mb-px transition-colors ${
+              infoTab === 'additional'
+                ? 'border-slate-900 text-slate-900'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Additional info ({profile.additionalInfo.length})
+          </button>
+        </div>
+
+        {infoTab === 'evidence' && (
+          <>
+            <p className="text-xs text-slate-400 -mt-1 mb-3">
+              Profile items currently attached as evidence to at least one requirement
+            </p>
+            {evidenceRows.length === 0 ? (
+              <p className="text-xs text-slate-300 py-2">No evidence attached yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {evidenceRows.map(({ atom, requirementTexts }) => {
+                  const expanded = expandedAtomIds.has(atom.id);
+                  return (
+                    <div key={atom.id} className="rounded-xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(atom.id)}
+                        className="w-full flex items-start justify-between gap-3 px-3 py-2.5 text-left"
+                      >
+                        <div className="flex items-start gap-2 min-w-0">
+                          <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-600 truncate">
+                              {atomSourceTitle(atom)}
+                            </p>
+                            <p className="text-sm text-slate-700 break-words mt-0.5">{atom.text}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[11px] text-slate-400">
+                            matched {requirementTexts.length}×
+                          </span>
+                          <ChevronDown
+                            size={14}
+                            className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                          />
+                        </div>
+                      </button>
+                      {expanded && (
+                        <div className="px-3 pb-3 space-y-1 border-t border-slate-100 pt-2">
+                          {requirementTexts.map((text, i) => (
+                            <p key={i} className="text-xs text-slate-500">
+                              — {text}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] text-slate-400">
-                        matched {requirementTexts.length}×
-                      </span>
-                      <ChevronDown
-                        size={14}
-                        className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-                      />
-                    </div>
-                  </button>
-                  {expanded && (
-                    <div className="px-3 pb-3 space-y-1 border-t border-slate-100 pt-2">
-                      {requirementTexts.map((text, i) => (
-                        <p key={i} className="text-xs text-slate-500">
-                          — {text}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
-        <div className="mt-6 pt-6 border-t border-slate-100">
-          <SectionTitle sub="Accomplishments not tied to a specific requirement -- eligible evidence for any future matching">
-            Additional information
-          </SectionTitle>
-          {profile.additionalInfo.length === 0 ? (
-            <button
-              type="button"
-              onClick={() => setAdditionalInfoModalOpen(true)}
-              className="w-full py-8 text-center text-xs text-slate-300 border-2 border-dashed border-slate-100 rounded-xl hover:border-slate-200 hover:text-slate-400 transition-colors"
-            >
-              Add accomplishment
-            </button>
-          ) : (
-            <>
-              <div className="space-y-1.5">
-                {profile.additionalInfo.map((text, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Badge color="blue">Additional</Badge>
-                      <span className="text-sm text-slate-700">{text}</span>
+        {infoTab === 'additional' && (
+          <div>
+            <p className="text-xs text-slate-400 -mt-1 mb-3">
+              Accomplishments not tied to a specific requirement — eligible evidence for any future
+              matching
+            </p>
+            {profile.additionalInfo.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setAdditionalInfoModalOpen(true)}
+                className="w-full py-8 text-center text-xs text-slate-300 border-2 border-dashed border-slate-100 rounded-xl hover:border-slate-200 hover:text-slate-400 transition-colors"
+              >
+                Add accomplishment
+              </button>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  {profile.additionalInfo.map((text, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge color="blue">Additional</Badge>
+                        <span className="text-sm text-slate-700">{text}</span>
+                      </div>
+                      <RemoveItemButton
+                        onClick={() =>
+                          updateProfile({ additionalInfo: profile.additionalInfo.filter((_, i) => i !== index) })
+                        }
+                      />
                     </div>
-                    <RemoveItemButton
-                      onClick={() =>
-                        updateProfile({ additionalInfo: profile.additionalInfo.filter((_, i) => i !== index) })
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3">
-                <Btn size="sm" variant="secondary" onClick={() => setAdditionalInfoModalOpen(true)}>
-                  Add accomplishment
-                </Btn>
-              </div>
-            </>
-          )}
-          {/* Attaching a document (a performance review, a project write-up)
-              adds its text as one accomplishment, editable like any other. */}
-          <div className="mt-3">
-            <FileDropzone
-              compact
+                  ))}
+                </div>
+                <div className="mt-3">
+                  <Btn size="sm" variant="secondary" onClick={() => setAdditionalInfoModalOpen(true)}>
+                    Add accomplishment
+                  </Btn>
+                </div>
+              </>
+            )}
+            {/* Attaching a document (a performance review, a project write-up)
+                adds its text as one accomplishment, editable like any other. */}
+            <div className="mt-3">
+              <FileDropzone
+                compact
               busy={infoDoc.busy}
               label="Attach a document instead"
               onFile={(f) =>
@@ -628,15 +780,21 @@ export default function MatchingReviewPage() {
               }
             />
             {infoDoc.error && <p className="text-xs text-red-600 mt-2">{infoDoc.error}</p>}
+            </div>
           </div>
-        </div>
+        )}
       </Card>
 
-      <div className="flex justify-end mt-5">
-        <Btn onClick={() => navigate(`/jobs/${posting.id}/generate`)}>
-          <FileText size={14} />
-          Generate
-        </Btn>
+      <div className="sticky bottom-4 mt-5">
+        <Card className="p-3 pl-4 flex items-center justify-between shadow-lg">
+          <span className="text-xs text-slate-500 font-medium">
+            {reviewedCount} of {requirements.length} requirement{requirements.length !== 1 ? 's' : ''} reviewed
+          </span>
+          <Btn onClick={() => navigate(`/jobs/${posting.id}/generate`)}>
+            <FileText size={14} />
+            Generate
+          </Btn>
+        </Card>
       </div>
 
       <EvidenceModal

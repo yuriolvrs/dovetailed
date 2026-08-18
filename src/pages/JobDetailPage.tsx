@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Trash2 } from 'lucide-react';
 import type { JobPosting, Profile } from '../types';
 import {
   ARRANGEMENTS,
@@ -143,6 +143,9 @@ export default function JobDetailPage() {
   if (!posting || !profile) {
     return <PageSkeleton cards={2} />;
   }
+
+  const requiredCount = posting.analysis?.requirements.filter((r) => r.severity === 'required').length ?? 0;
+  const preferredCount = posting.analysis?.requirements.filter((r) => r.severity === 'preferred').length ?? 0;
 
   return (
     <div className="pb-16">
@@ -309,10 +312,20 @@ export default function JobDetailPage() {
             </Card>
           ) : (
             <Card className="p-5 flex-1 min-h-0 flex flex-col">
-              <div className="flex items-center justify-between mb-4 shrink-0">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-                  Analysis
-                </p>
+              <div className="flex items-start justify-between mb-1 shrink-0">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                    Analysis
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {posting.analysis.requirements.length} requirement
+                    {posting.analysis.requirements.length !== 1 ? 's' : ''} —{' '}
+                    <span className="font-semibold text-slate-900">
+                      {requiredCount} required
+                    </span>
+                    , {preferredCount} preferred
+                  </p>
+                </div>
                 <Btn
                   size="sm"
                   variant="secondary"
@@ -327,9 +340,18 @@ export default function JobDetailPage() {
                   Reanalyze
                 </Btn>
               </div>
-              {error && <p className="text-xs text-red-600 mb-3 shrink-0">{error}</p>}
-              <div className="flex-1 min-h-0 overflow-y-auto scroll-thin pr-1 -mr-1">
+              {error && <p className="text-xs text-red-600 mb-3 mt-3 shrink-0">{error}</p>}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-thin pr-1 -mr-1 mt-3">
                 <AnalysisEditor value={posting.analysis} onChange={(analysis) => update({ analysis })} />
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-100 shrink-0">
+                <Btn
+                  onClick={() => navigate(`/jobs/${posting.id}/match`)}
+                  className="w-full justify-center"
+                >
+                  Continue to Matching
+                  <ArrowRight size={14} />
+                </Btn>
               </div>
             </Card>
           )}

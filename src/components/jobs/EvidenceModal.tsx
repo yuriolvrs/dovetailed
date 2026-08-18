@@ -225,58 +225,58 @@ export function EvidenceModal({
 
   return (
     <Modal open={open} onClose={onClose} className="max-w-xl max-h-[85vh]">
-      <div className="p-5 border-b border-slate-100 shrink-0">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-        {subtitle && <p className="text-xs text-slate-500 leading-relaxed mb-3">{subtitle}</p>}
-        {confirmedAtoms.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{confirmedLabel}</p>
-            {confirmedAtoms.map((atom) =>
-              onRemoveExisting ? (
-                <button
-                  key={atom.id}
-                  type="button"
-                  onClick={() => onRemoveExisting(atom.id)}
-                  className="w-full flex items-center justify-between gap-2 text-left text-xs text-slate-600 px-2.5 py-1.5 bg-slate-50 hover:bg-red-50 rounded-lg transition-colors group"
-                >
-                  <span>
+      <div className="flex-1 overflow-y-auto scroll-thin p-5 space-y-5">
+        <div>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="text-sm font-semibold text-slate-900">{title}</p>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {subtitle && <p className="text-xs text-slate-500 leading-relaxed mb-3">{subtitle}</p>}
+          {confirmedAtoms.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{confirmedLabel}</p>
+              {confirmedAtoms.map((atom) =>
+                onRemoveExisting ? (
+                  <button
+                    key={atom.id}
+                    type="button"
+                    onClick={() => onRemoveExisting(atom.id)}
+                    className="w-full flex items-center justify-between gap-2 text-left text-xs text-slate-600 px-2.5 py-1.5 bg-slate-50 hover:bg-red-50 rounded-lg transition-colors group"
+                  >
+                    <span>
+                      <span className="text-slate-400">{atom.sourceLabel}: </span>
+                      {atom.text}
+                    </span>
+                    <X size={12} className="shrink-0 text-slate-300 group-hover:text-red-400 transition-colors" />
+                  </button>
+                ) : (
+                  <div key={atom.id} className="text-xs text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-lg">
                     <span className="text-slate-400">{atom.sourceLabel}: </span>
                     {atom.text}
-                  </span>
-                  <X size={12} className="shrink-0 text-slate-300 group-hover:text-red-400 transition-colors" />
-                </button>
-              ) : (
-                <div key={atom.id} className="text-xs text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-400">{atom.sourceLabel}: </span>
-                  {atom.text}
-                </div>
-              ),
-            )}
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+          <div className="relative mt-3">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your profile…"
+              className={`w-full pl-9 ${fieldInputClass}`}
+            />
           </div>
-        )}
-        <div className="relative mt-3">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search your profile…"
-            className={`w-full pl-9 ${fieldInputClass}`}
-          />
         </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto scroll-thin p-5 space-y-5">
         {noResults && <p className="text-xs text-slate-300">No matches for "{search.trim()}".</p>}
 
         {skillAtoms.length > 0 && (

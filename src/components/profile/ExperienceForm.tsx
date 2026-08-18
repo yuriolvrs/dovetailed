@@ -33,7 +33,7 @@ export function ExperienceForm({
   onChange: (experience: ExperienceEntry[]) => void;
   /** Optional per-bullet extra content (e.g. an "unevidenced" warning badge) -- used by ResumeEditor, unused on the Profile page. */
   bulletBadge?: (bulletText: string) => ReactNode;
-  /** Optional per-bullet "suggest a rewording" action -- used by ResumeEditor, unused on the Profile page. */
+  /** Optional per-bullet "suggest a rewording" action -- used by ResumeEditor and the Profile page. */
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(true);

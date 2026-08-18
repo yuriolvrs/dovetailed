@@ -26,6 +26,7 @@ export default function App() {
   // reading-width column, widened uniformly across all three so the page
   // doesn't change width as you move between them.
   const onJobDetail = useMatch('/jobs/:id/*');
+  const onProfile = useMatch('/profile');
 
   return (
     <ToastProvider>
@@ -63,7 +64,11 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`mx-auto px-4 pt-8 pb-3 print:p-0 print:max-w-none ${onJobDetail ? 'max-w-6xl' : 'max-w-4xl'}`}>
+        <main
+          className={`mx-auto px-4 pt-8 pb-3 print:p-0 print:max-w-none ${
+            onJobDetail ? 'max-w-6xl' : onProfile ? 'max-w-5xl' : 'max-w-4xl'
+          }`}
+        >
           <Routes>
             <Route path="/" element={<Navigate to="/jobs" replace />} />
             <Route path="/profile" element={<ProfilePage />} />

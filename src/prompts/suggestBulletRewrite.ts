@@ -62,7 +62,10 @@ export function isRewriteSuggestions(x: unknown): x is RewriteSuggestions {
 // In plain terms: finds capitalized words that look like proper nouns
 // (skill/tool/company names), ignoring the ordinary capital letter every
 // bullet starts a sentence with.
-function capitalizedTerms(text: string): Set<string> {
+// Exported for reuse by verifyGeneratedEntry.ts, which runs the same
+// proper-noun/number check against a whole source document instead of one
+// original bullet.
+export function capitalizedTerms(text: string): Set<string> {
   const trimmed = text.trim();
   const firstSpace = trimmed.search(/\s/);
   const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace);
@@ -70,7 +73,7 @@ function capitalizedTerms(text: string): Set<string> {
   return new Set(matches.map((m) => m.toLowerCase()));
 }
 
-function numbers(text: string): Set<string> {
+export function numbers(text: string): Set<string> {
   return new Set(text.match(/\d+/g) ?? []);
 }
 

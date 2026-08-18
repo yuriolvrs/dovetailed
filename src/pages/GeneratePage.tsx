@@ -22,7 +22,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Mail, Sparkles } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Info, Mail, Sparkles } from 'lucide-react';
 import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
 import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
@@ -329,10 +329,66 @@ export default function GeneratePage() {
               !confirmingRegenerate ? (
                 <>
                   {snapshots.length > 0 && (
-                    <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
-                      <History size={13} />
-                      History ({snapshots.length})
-                    </Btn>
+                    <div className="relative">
+                      <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
+                        <History size={13} />
+                        History ({snapshots.length})
+                      </Btn>
+                      {showHistory && (
+                        <>
+                          {/* Closes the popover on outside click without a
+                              global listener -- a full-screen transparent
+                              layer under the popover, same trick Modal's
+                              backdrop uses. */}
+                          <div className="fixed inset-0 z-40" onClick={() => setShowHistory(false)} />
+                          <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl border border-slate-200 bg-white shadow-xl p-4">
+                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">
+                              Version history
+                            </p>
+                            <div className="space-y-1.5">
+                              {snapshots.map((snapshot) =>
+                                confirmingRestoreId === snapshot.id ? (
+                                  <div key={snapshot.id} className="rounded-xl border border-slate-200 px-3 py-2.5">
+                                    <p className="text-xs text-slate-600 mb-2">
+                                      Replace the current resume with the{' '}
+                                      {new Date(snapshot.createdAt).toLocaleString()} version?
+                                    </p>
+                                    <div className="flex items-center gap-1.5">
+                                      <Btn size="sm" onClick={() => handleRestore(snapshot)}>
+                                        Yes, restore
+                                      </Btn>
+                                      <Btn
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => setConfirmingRestoreId(null)}
+                                      >
+                                        Cancel
+                                      </Btn>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div
+                                    key={snapshot.id}
+                                    className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                                  >
+                                    <span className="text-xs text-slate-700">
+                                      {new Date(snapshot.createdAt).toLocaleString()}
+                                    </span>
+                                    <Btn
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => setConfirmingRestoreId(snapshot.id)}
+                                    >
+                                      Restore
+                                    </Btn>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                   <Btn size="sm" variant="secondary" onClick={() => setConfirmingRegenerate(true)}>
                     <Sparkles size={13} />
@@ -371,41 +427,6 @@ export default function GeneratePage() {
         <CoverLetterSection posting={posting} profile={profile} actionsPortalTarget={coverLetterActionsEl} />
       ) : (
         <>
-          {showHistory && snapshots.length > 0 && (
-            <Card className="p-4 mb-5 print:hidden">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
-                Version history
-              </p>
-              <div className="space-y-1.5">
-                {snapshots.map((snapshot) => (
-                  <div
-                    key={snapshot.id}
-                    className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
-                  >
-                    <span className="text-sm text-slate-700">
-                      {new Date(snapshot.createdAt).toLocaleString()}
-                    </span>
-                    {confirmingRestoreId === snapshot.id ? (
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-slate-600">Replace the current resume with this version?</span>
-                        <Btn size="sm" onClick={() => handleRestore(snapshot)}>
-                          Yes, restore
-                        </Btn>
-                        <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(null)}>
-                          Cancel
-                        </Btn>
-                      </div>
-                    ) : (
-                      <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(snapshot.id)}>
-                        Restore
-                      </Btn>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
           {generation === 'none' ? (
             <Card className="p-10 flex flex-col items-center text-center gap-5 print:hidden">
               <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
@@ -443,43 +464,62 @@ export default function GeneratePage() {
             </Card>
           ) : (
             <>
-              {texExportError && (
+              {(texExportError || pageFitOverflow || pageFitRemoved.length > 0) && (
                 <Card className="p-4 mb-5 print:hidden">
-                  <p className="text-sm text-red-600">{texExportError}</p>
-                </Card>
-              )}
-              {pageFitOverflow && (
-                <Card className="p-4 mb-5 print:hidden">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2 px-1">
-                    Still longer than one page
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1 px-1">
+                    Notices
                   </p>
-                  <p className="text-sm text-slate-600 px-1">
-                    Everything that could be dropped automatically already was -- every droppable entry, and every
-                    extra bullet down to the last one per job. Shorten some bullets below, or tick "Drop this first"
-                    on more entries, to get under a page.
-                  </p>
-                </Card>
-              )}
-              {pageFitRemoved.length > 0 && (
-                <Card className="p-4 mb-5 print:hidden">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
-                    Removed to fit one page
-                  </p>
-                  <div className="space-y-1.5">
-                    {pageFitRemoved.map((entry, i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
-                      >
-                        <span className="text-sm text-slate-700">
-                          {entry.title}
-                          {entry.company && <span className="text-slate-400"> · {entry.company}</span>}
-                        </span>
-                        <Btn size="sm" variant="secondary" onClick={() => restorePageFitRemoved(entry)}>
-                          Restore
-                        </Btn>
+                  <div className="divide-y divide-slate-100">
+                    {texExportError && (
+                      <div className="flex items-start gap-2.5 py-3 px-1">
+                        <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600">{texExportError}</p>
                       </div>
-                    ))}
+                    )}
+                    {pageFitOverflow && (
+                      <div className="flex items-start gap-2.5 py-3 px-1">
+                        <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-slate-800">Still longer than one page</p>
+                          <p className="text-sm text-slate-500 mt-0.5">
+                            Everything that could be dropped automatically already was -- every droppable
+                            entry, and every extra bullet down to the last one per job. Shorten some bullets
+                            below, or tick "Drop this first" on more entries, to get under a page.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {pageFitRemoved.length > 0 && (
+                      <div className="flex items-start gap-2.5 py-3 px-1">
+                        <Info size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-slate-700 mb-2">
+                            Removed to fit one page — {pageFitRemoved.length}{' '}
+                            {pageFitRemoved.length === 1 ? 'entry' : 'entries'} dropped
+                          </p>
+                          <div className="space-y-1.5">
+                            {pageFitRemoved.map((entry, i) => (
+                              <div
+                                key={i}
+                                className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                              >
+                                <span className="text-sm text-slate-700">
+                                  {entry.title}
+                                  {entry.company && <span className="text-slate-400"> · {entry.company}</span>}
+                                </span>
+                                <Btn
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => restorePageFitRemoved(entry)}
+                                >
+                                  Restore
+                                </Btn>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Card>
               )}

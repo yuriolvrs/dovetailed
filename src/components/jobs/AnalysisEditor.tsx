@@ -58,6 +58,35 @@ function AutoGrowTextarea({
   );
 }
 
+// Cycles between the only two severities on click -- a filled pill rather
+// than a native select, so the requirement list reads as a scannable list of
+// badges instead of a plain table of dropdowns, while staying just as
+// editable (one click flips it).
+// In plain terms: the "Required"/"Preferred" tag next to each requirement --
+// click it to switch.
+function SeverityPill({
+  severity,
+  onToggle,
+}: {
+  severity: RequirementSeverity;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title="Click to switch"
+      className={`shrink-0 mt-0.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold transition-colors ${
+        severity === 'required'
+          ? 'bg-slate-900 text-white hover:bg-slate-700'
+          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+      }`}
+    >
+      {severity === 'required' ? 'Required' : 'Preferred'}
+    </button>
+  );
+}
+
 function RequirementRow({
   requirement,
   onUpdate,
@@ -74,14 +103,15 @@ function RequirementRow({
         onChange={(text) => onUpdate({ ...requirement, text })}
         className="flex-1 resize-none overflow-hidden bg-transparent text-sm text-slate-700 leading-relaxed outline-none border border-transparent rounded-lg -mx-1.5 px-1.5 py-1 focus:border-blue-300 focus:bg-blue-50/20 transition-all"
       />
-      <select
-        value={requirement.severity}
-        onChange={(e) => onUpdate({ ...requirement, severity: e.target.value as RequirementSeverity })}
-        className="shrink-0 w-24 mt-1 text-xs rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-500 outline-none focus:border-blue-400 transition-all"
-      >
-        <option value="required">Required</option>
-        <option value="preferred">Preferred</option>
-      </select>
+      <SeverityPill
+        severity={requirement.severity}
+        onToggle={() =>
+          onUpdate({
+            ...requirement,
+            severity: requirement.severity === 'required' ? 'preferred' : 'required',
+          })
+        }
+      />
       <div className="shrink-0 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <RemoveItemButton onClick={onRemove} />
       </div>

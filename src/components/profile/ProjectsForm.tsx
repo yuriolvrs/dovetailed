@@ -42,7 +42,7 @@ export function ProjectsForm({
   onChange: (projects: ProjectEntry[]) => void;
   /** Optional per-bullet extra content (e.g. an "unevidenced" warning badge) -- used by ResumeEditor, unused on the Profile page. */
   bulletBadge?: (bulletText: string) => ReactNode;
-  /** Optional per-bullet "suggest a rewording" action -- used by ResumeEditor, unused on the Profile page. */
+  /** Optional per-bullet "suggest a rewording" action -- used by ResumeEditor and the Profile page. */
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
   /** Requirement text a bullet is matched to, or null -- used by ResumeEditor's "add back" picker, unused on the Profile page. */
   bulletMatch?: (bulletText: string) => string | null;
