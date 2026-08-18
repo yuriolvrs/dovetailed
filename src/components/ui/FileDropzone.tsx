@@ -1,6 +1,8 @@
 // What this file is: the shared attach-a-file control -- a dashed drop target
 // that also opens a file picker on click, used everywhere a file can be
-// attached (job postings, resume import, writing samples, .tex templates).
+// attached (resume import, writing samples, .tex templates, accomplishment
+// documents). Job postings are deliberately not among them -- those are
+// paste-only.
 // Validates the file before handing it up, so every caller rejects bad files
 // the same way.
 // In plain terms: the "drop a file here or click to browse" box.

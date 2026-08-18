@@ -42,7 +42,7 @@ Deployed and live at https://pimp-my-resume.pages.dev. See [PRD.md](./PRD.md) fo
 - [x] Phase 5 — Cover letter generation (evidence-grounded, optional writing-style mimicry, field editing, version history)
 - [x] Phase 6 — LaTeX export pipeline (paste a template once, one-time AI conversion to placeholders, deterministic fill on every export)
 - [x] Phase 7 — Polish (empty states, LLM error/rate-limit handling, generation history per job, this README)
-- [x] Phase 8 — File attachments (import an existing resume into your profile; attach writing samples, `.tex` templates, and supporting documents, read via OCR)
+- [x] Phase 8 — File attachments (import an existing resume into your profile; attach writing samples, `.tex` templates, and documents as accomplishments, read via OCR. Job postings stay paste-only.)
 
 ## Tech stack
 
