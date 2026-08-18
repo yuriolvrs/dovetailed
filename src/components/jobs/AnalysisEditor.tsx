@@ -13,7 +13,7 @@ import { Plus } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import type { JobAnalysis, Requirement, RequirementSeverity } from '../../types';
 import { RemoveItemButton } from '../EditableList';
-import { Btn, FieldTextarea, TagInput } from '../ui/primitives';
+import { Btn, EmptyState, FieldTextarea, TagInput } from '../ui/primitives';
 
 function nextOrder(requirements: Requirement[]): number {
   return requirements.length === 0 ? 0 : Math.max(...requirements.map((r) => r.order)) + 1;
@@ -21,7 +21,7 @@ function nextOrder(requirements: Requirement[]): number {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">{children}</p>
+    <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">{children}</p>
   );
 }
 
@@ -78,8 +78,8 @@ function SeverityPill({
       title="Click to switch"
       className={`shrink-0 mt-0.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold transition-colors ${
         severity === 'required'
-          ? 'bg-slate-900 text-white hover:bg-slate-700'
-          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+          ? 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
+          : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20'
       }`}
     >
       {severity === 'required' ? 'Required' : 'Preferred'}
@@ -97,11 +97,11 @@ function RequirementRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="group flex items-start gap-3 py-2.5 border-b border-slate-100 last:border-b-0">
+    <div className="group flex items-start gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
       <AutoGrowTextarea
         value={requirement.text}
         onChange={(text) => onUpdate({ ...requirement, text })}
-        className="flex-1 resize-none overflow-hidden bg-transparent text-sm text-slate-700 leading-relaxed outline-none border border-transparent rounded-lg -mx-1.5 px-1.5 py-1 focus:border-blue-300 focus:bg-blue-50/20 transition-all"
+        className="flex-1 resize-none overflow-hidden bg-transparent text-sm text-slate-700 dark:text-slate-300 leading-relaxed outline-none border border-transparent rounded-lg -mx-1.5 px-1.5 py-1 focus:border-blue-300 dark:focus:border-blue-500 focus:bg-blue-50/20 dark:focus:bg-blue-500/10 transition-all"
       />
       <SeverityPill
         severity={requirement.severity}
@@ -150,15 +150,13 @@ export function AnalysisEditor({
         />
       </div>
 
-      <div className="mt-6 pt-6 border-t border-slate-100">
+      <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
         <SectionLabel>Requirements</SectionLabel>
         {requirements.length === 0 ? (
-          <p className="py-8 text-center text-xs text-slate-300 border-2 border-dashed border-slate-100 rounded-xl">
-            No requirements listed.
-          </p>
+          <EmptyState>No requirements listed.</EmptyState>
         ) : (
           <>
-            <div className="flex items-center gap-3 pb-2 border-b border-slate-200 text-[10px] font-semibold text-slate-300 uppercase tracking-widest">
+            <div className="flex items-center gap-3 pb-2 border-b border-slate-200 dark:border-slate-700 text-[10px] font-semibold text-slate-300 dark:text-slate-600 uppercase tracking-widest">
               <span className="flex-1">Requirement</span>
               <span className="shrink-0 w-24">Type</span>
               <span className="shrink-0 w-[13px]" />
@@ -181,7 +179,7 @@ export function AnalysisEditor({
         </div>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-slate-100">
+      <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
         <SectionLabel>Keywords</SectionLabel>
         <TagInput
           value={value.keywords}

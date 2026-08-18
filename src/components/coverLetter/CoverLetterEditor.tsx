@@ -21,11 +21,12 @@
 // you click the matching part of the live preview.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import type { CoverLetterContent, SourceMapEntry } from '../../types';
+import { AlertTriangle, Sparkles } from 'lucide-react';
+import type { CoverLetterContent, Profile, ProfileAtom, SourceMapEntry } from '../../types';
 import type { CoverLetterNavTarget } from './coverLetterNav';
+import { buildProfileAtoms } from '../../lib/profileAtoms';
 import { StringList } from '../StringList';
-import { Badge, Card, FieldInput } from '../ui/primitives';
+import { AtomHoverDetail, Badge, Card, FieldInput } from '../ui/primitives';
 
 function normalizeForMatch(text: string): string {
   return text
@@ -38,12 +39,15 @@ function normalizeForMatch(text: string): string {
 export function CoverLetterEditor({
   value,
   sourceMap,
+  profile,
   onChange,
   onFocusParagraph,
   navRequest,
 }: {
   value: CoverLetterContent;
   sourceMap: SourceMapEntry[];
+  /** Source of the profile atoms a paragraph's sourceMap entry points to, for the hover tooltip. */
+  profile: Profile;
   onChange: (content: CoverLetterContent) => void;
   /** Reports a paragraph gaining focus (index) or losing it (null), so the live preview can highlight it. */
   onFocusParagraph: (index: number | null) => void;
@@ -54,6 +58,7 @@ export function CoverLetterEditor({
     () => new Map(sourceMap.map((e) => [normalizeForMatch(e.generatedText), e.atomIds])),
     [sourceMap],
   );
+  const atomsById = useMemo(() => new Map(buildProfileAtoms(profile).map((a) => [a.id, a])), [profile]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [highlightField, setHighlightField] = useState<'greeting' | 'closing' | null>(null);
@@ -68,11 +73,11 @@ export function CoverLetterEditor({
       if (target.section === 'paragraph') {
         const row = containerRef.current?.querySelector(`[data-index="${target.index}"]`);
         row?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        row?.classList.add('bg-amber-50');
-        const rowClearTimer = setTimeout(() => row?.classList.remove('bg-amber-50'), 1500);
+        row?.classList.add('bg-amber-50', 'dark:bg-amber-500/10');
+        const rowClearTimer = setTimeout(() => row?.classList.remove('bg-amber-50', 'dark:bg-amber-500/10'), 1500);
         removeRowHighlight = () => {
           clearTimeout(rowClearTimer);
-          row?.classList.remove('bg-amber-50');
+          row?.classList.remove('bg-amber-50', 'dark:bg-amber-500/10');
         };
       } else {
         containerRef.current?.querySelector(`[data-field="${target.section}"]`)?.scrollIntoView({
@@ -107,12 +112,22 @@ export function CoverLetterEditor({
     // treated the same as an empty one -- both are unevidenced AI-free text
     // the user is fully responsible for, nothing to flag as a broken AI claim.
     if (atomIds === undefined) return null;
-    if (atomIds.length > 0) return null;
+    if (atomIds.length === 0) {
+      return (
+        <Badge color="amber">
+          <AlertTriangle size={11} />
+          Not traceable to your profile -- review before sending
+        </Badge>
+      );
+    }
+    const atoms = atomIds.map((id) => atomsById.get(id)).filter((a): a is ProfileAtom => a !== undefined);
     return (
-      <Badge color="amber">
-        <AlertTriangle size={11} />
-        Not traceable to your profile -- review before sending
-      </Badge>
+      <AtomHoverDetail atoms={atoms}>
+        <Badge color="blue">
+          <Sparkles size={11} />
+          Grounded in your profile
+        </Badge>
+      </AtomHoverDetail>
     );
   }
 
@@ -131,7 +146,7 @@ export function CoverLetterEditor({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+          <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Paragraphs
           </span>
           <StringList

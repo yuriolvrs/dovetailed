@@ -131,7 +131,7 @@ export function ImportResumeSection({
 
   return (
     <Card className="p-6">
-      <SectionTitle sub="Attach an existing resume to fill this page in — you review everything before it's applied">
+      <SectionTitle sub="Attach an existing resume to fill this page in. You review everything before it's applied">
         Import from a Resume
       </SectionTitle>
 
@@ -143,9 +143,9 @@ export function ImportResumeSection({
             busyLabel={status ?? 'Reading…'}
             label="Attach your existing resume"
           />
-          {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+          {error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>}
           {imported && (
-            <p className="text-xs text-emerald-600 mt-2 inline-flex items-center gap-1">
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 inline-flex items-center gap-1">
               <Check size={12} />
               Imported into your profile.
             </p>
@@ -156,35 +156,35 @@ export function ImportResumeSection({
       {review && (
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
-              <FileText size={13} className="text-slate-400" />
+            <p className="text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-1.5">
+              <FileText size={13} className="text-slate-400 dark:text-slate-500" />
               Choose what to add. Nothing is changed until you apply.
             </p>
             <button
               type="button"
               onClick={() => setReview(null)}
               aria-label="Discard import"
-              className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
+              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>
           </div>
 
           {unverifiedCount > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p className="text-xs text-amber-800 font-medium inline-flex items-center gap-1.5">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3">
+              <p className="text-xs text-amber-800 dark:text-amber-400 font-medium inline-flex items-center gap-1.5">
                 <AlertTriangle size={13} />
                 {unverifiedCount} item{unverifiedCount === 1 ? '' : 's'} could not be found in the
                 document
               </p>
-              <p className="text-[11px] text-amber-700 mt-1">
+              <p className="text-[11px] text-amber-700 dark:text-amber-500 mt-1">
                 These may have been rephrased or invented rather than copied. Check them after
                 importing.
               </p>
               <ul className="mt-2 space-y-1">
                 {review.unverified.slice(0, 6).map((field) => (
-                  <li key={field.path} className="text-[11px] text-amber-900">
-                    <span className="font-mono text-amber-700">{field.path}</span> — “{field.text}”
+                  <li key={field.path} className="text-[11px] text-amber-900 dark:text-amber-300">
+                    <span className="font-mono text-amber-700 dark:text-amber-500">{field.path}</span> — “{field.text}”
                   </li>
                 ))}
               </ul>
@@ -198,15 +198,15 @@ export function ImportResumeSection({
               const sectionDupes = duplicates.filter((d) => d.section === section);
 
               return (
-                <div key={section} className="rounded-xl border border-slate-200 p-3">
+                <div key={section} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
                   <label className="flex items-center gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selected.has(section)}
                       onChange={() => toggle(section)}
-                      className="rounded border-slate-300"
+                      className="rounded border-slate-300 dark:border-slate-600"
                     />
-                    <span className="text-sm font-medium text-slate-800">
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
                       {SECTION_LABELS[section]}
                     </span>
                     <Badge color="slate">
@@ -225,7 +225,7 @@ export function ImportResumeSection({
                       const action = resolutions[key] ?? 'append';
                       return (
                         <div key={key} className="mt-2 ml-7 flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             Duplicate of an entry you already have:
                           </span>
                           {(['append', 'replace', 'skip'] as DuplicateAction[]).map((option) => (
@@ -235,8 +235,8 @@ export function ImportResumeSection({
                               onClick={() => setResolutions((prev) => ({ ...prev, [key]: option }))}
                               className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
                                 action === option
-                                  ? 'bg-slate-900 text-white border-slate-900'
-                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                  ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800'
                               }`}
                             >
                               {option === 'append'

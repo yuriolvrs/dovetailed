@@ -67,12 +67,12 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
 
   return (
     <Card className="p-6">
-      <SectionTitle sub="Your data lives only in this browser — export it to back up or move to another device">
+      <SectionTitle sub="Your data lives only in this browser. Export it to back up or move to another device">
         Data
       </SectionTitle>
 
-      {error && <p className="mb-3 text-xs text-red-600">{error}</p>}
-      {message && !error && <p className="mb-3 text-xs text-emerald-600">{message}</p>}
+      {error && <p className="mb-3 text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {message && !error && <p className="mb-3 text-xs text-emerald-600 dark:text-emerald-400">{message}</p>}
 
       <div className="flex flex-wrap gap-2">
         <Btn size="sm" variant="secondary" onClick={handleExport}>
@@ -97,7 +97,7 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
           </Btn>
         ) : (
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-600">Are you sure? This cannot be undone.</span>
+            <span className="text-slate-600 dark:text-slate-300">Are you sure? This cannot be undone.</span>
             <Btn size="sm" onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-500 focus:ring-red-600/30">
               Yes, delete everything
             </Btn>

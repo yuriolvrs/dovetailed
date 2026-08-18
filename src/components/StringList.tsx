@@ -8,7 +8,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode, TextareaHTMLAttributes } from 'react';
 import { EditableList } from './EditableList';
-import { fieldInputClass } from './ui/primitives';
+import { fieldInputClass, fieldInputFlatClass } from './ui/primitives';
 
 // A textarea that grows to fit its content instead of scrolling internally,
 // so a long bullet/paragraph is fully visible without the user having to
@@ -43,6 +43,8 @@ interface StringListProps {
   hideAddButton?: boolean;
   /** Shows a drag handle on each item so bullets can be reordered by dragging. */
   reorderable?: boolean;
+  /** Row chrome, forwarded to EditableList -- 'flat' also drops the field's own box and marks each item with a bullet dot. */
+  variant?: 'card' | 'flat';
   /** Optional extra content rendered above an item's input, e.g. a warning badge. */
   itemBadge?: (value: string) => ReactNode;
   /** Optional extra content rendered below an item's input, e.g. a rewrite-suggestion action. */
@@ -71,12 +73,14 @@ export function StringList({
   emptyLabel,
   hideAddButton = false,
   reorderable = false,
+  variant = 'card',
   itemBadge,
   itemExtra,
   onItemFocus,
   onItemBlur,
 }: StringListProps) {
-  const inputClass = `w-full ${fieldInputClass}`;
+  const flat = variant === 'flat';
+  const inputClass = `w-full ${flat ? fieldInputFlatClass : fieldInputClass}`;
 
   return (
     <EditableList<string>
@@ -87,36 +91,45 @@ export function StringList({
       emptyLabel={emptyLabel}
       hideAddButton={hideAddButton}
       reorderable={reorderable}
+      variant={variant}
       renderItem={(value, update, index) => (
-        <div className={itemBadge || itemExtra ? 'space-y-1.5' : ''}>
-          {itemBadge?.(value)}
-          {multiline ? (
-            <AutoGrowTextarea
-              className={inputClass}
-              value={value}
-              placeholder={placeholder}
-              onChange={(e) => update(e.target.value)}
-              onFocus={() => onItemFocus?.(index)}
-              onBlur={() => {
-                onBlurCommit?.(items);
-                onItemBlur?.();
-              }}
-            />
-          ) : (
-            <input
-              className={inputClass}
-              type="text"
-              value={value}
-              placeholder={placeholder}
-              onChange={(e) => update(e.target.value)}
-              onFocus={() => onItemFocus?.(index)}
-              onBlur={() => {
-                onBlurCommit?.(items);
-                onItemBlur?.();
-              }}
+        <div className={flat ? 'flex items-start gap-2' : ''}>
+          {flat && (
+            <span
+              aria-hidden
+              className="mt-3 h-1 w-1 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
             />
           )}
-          {itemExtra?.(value, update)}
+          <div className={`flex-1 ${itemBadge || itemExtra ? 'space-y-1.5' : ''}`}>
+            {itemBadge?.(value)}
+            {multiline ? (
+              <AutoGrowTextarea
+                className={inputClass}
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => update(e.target.value)}
+                onFocus={() => onItemFocus?.(index)}
+                onBlur={() => {
+                  onBlurCommit?.(items);
+                  onItemBlur?.();
+                }}
+              />
+            ) : (
+              <input
+                className={inputClass}
+                type="text"
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => update(e.target.value)}
+                onFocus={() => onItemFocus?.(index)}
+                onBlur={() => {
+                  onBlurCommit?.(items);
+                  onItemBlur?.();
+                }}
+              />
+            )}
+            {itemExtra?.(value, update)}
+          </div>
         </div>
       )}
     />

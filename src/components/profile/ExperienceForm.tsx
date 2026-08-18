@@ -1,27 +1,29 @@
-// What this file is: the editable form for the Experience section — a list
-// of jobs, each with company/title/dates/location and a list of resume
-// bullets.
-// In plain terms: the form where you list your past jobs and what you did
+// What this file is: the editable form for the Experience section -- a rail
+// listing every position under its section heading next to a detail pane for
+// the one that's selected, so the list stays visible while you edit one job.
+// In plain terms: the screen where you list your past jobs and what you did
 // at each one.
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ExperienceEntry } from '../../types';
-import { isPrunable } from '../../lib/generation/fitToPage';
-import { EditableList } from '../EditableList';
-import { StringList } from '../StringList';
-import { DateRangeFields } from './DateRangeFields';
 import {
-  Card,
-  Collapsible,
-  CollapsibleSectionHeader,
-  FieldInput,
-  fieldLabelClass,
-} from '../ui/primitives';
+  DEFAULT_SECTION,
+  addEntryToSection,
+  moveEntryToSection,
+  sectionOf,
+  sectionOrder,
+  setEntrySection,
+} from '../../lib/experienceSections';
+import { ExperienceRail } from './ExperienceRail';
+import { ExperienceDetail } from './ExperienceDetail';
+import { Card, Collapsible, CollapsibleSectionHeader, EmptyState } from '../ui/primitives';
 
 function newExperienceEntry(): ExperienceEntry {
   return { section: 'Experience', company: '', title: '', current: false, bullets: [] };
 }
+
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 export function ExperienceForm({
   value,
@@ -37,86 +39,76 @@ export function ExperienceForm({
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState(0);
+
+  // Clamped rather than corrected in an effect: the list can shrink from
+  // outside this component (an import, a restored backup), and a stale
+  // selection should just fall back to the last position.
+  const selectedIndex = value.length === 0 ? -1 : Math.min(selected, value.length - 1);
+  const sections = value.length === 0 ? [DEFAULT_SECTION] : sectionOrder(value);
+  const bulletTotal = value.reduce((total, entry) => total + entry.bullets.length, 0);
+
+  function apply({ entries, index }: { entries: ExperienceEntry[]; index: number }) {
+    onChange(entries);
+    setSelected(index);
+  }
+
+  function addPosition(label: string) {
+    apply(addEntryToSection(value, label, newExperienceEntry));
+  }
+
+  function updateEntry(next: ExperienceEntry) {
+    onChange(value.map((entry, i) => (i === selectedIndex ? next : entry)));
+  }
+
+  function duplicateEntry() {
+    const copy = { ...value[selectedIndex], bullets: [...value[selectedIndex].bullets] };
+    const next = value.slice();
+    next.splice(selectedIndex + 1, 0, copy);
+    apply({ entries: next, index: selectedIndex + 1 });
+  }
+
+  function deleteEntry() {
+    onChange(value.filter((_, i) => i !== selectedIndex));
+    setSelected(Math.max(0, selectedIndex - 1));
+  }
 
   return (
     <Card className="p-6">
       <CollapsibleSectionHeader
         title="Work Experience"
-        sub={`${value.length} position${value.length !== 1 ? 's' : ''}`}
+        sub={`${count(value.length, 'position')} · ${count(bulletTotal, 'highlight')}`}
         open={open}
         onToggle={() => setOpen((o) => !o)}
-        onAdd={() => onChange([...value, newExperienceEntry()])}
-        addLabel="Add"
+        onAdd={() =>
+          addPosition(selectedIndex >= 0 ? sectionOf(value[selectedIndex]) : DEFAULT_SECTION)
+        }
+        addLabel="Add position"
       />
       <Collapsible open={open}>
-        <EditableList<ExperienceEntry>
-          items={value}
-          onChange={onChange}
-          newItem={newExperienceEntry}
-          emptyLabel="No experience entries yet."
-          hideAddButton
-          reorderable
-          renderItem={(entry, update) => (
-            <div className="space-y-3">
-              <FieldInput
-                label="Section"
-                placeholder="Experience"
-                value={entry.section ?? ''}
-                onChange={(section) => update({ ...entry, section })}
-              />
-
-              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isPrunable(entry)}
-                  onChange={(e) => update({ ...entry, prunable: e.target.checked })}
-                  className="rounded border-slate-300 text-blue-600"
-                />
-                Drop this first if a generated resume runs past one page (on by default outside your main
-                experience section)
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <FieldInput
-                  label="Company"
-                  placeholder="Stripe"
-                  value={entry.company}
-                  onChange={(company) => update({ ...entry, company })}
-                />
-                <FieldInput
-                  label="Job Title"
-                  placeholder="Senior Engineer"
-                  value={entry.title}
-                  onChange={(title) => update({ ...entry, title })}
-                />
-              </div>
-
-              <DateRangeFields entry={entry} update={update} currentLabel="Currently working here" />
-
-              <FieldInput
-                label="Location"
-                placeholder="San Francisco, CA"
-                value={entry.location ?? ''}
-                onChange={(location) => update({ ...entry, location })}
-              />
-
-              <div>
-                <span className={`mb-1 block ${fieldLabelClass}`}>Description & Achievements</span>
-                <StringList
-                  items={entry.bullets}
-                  onChange={(bullets) => update({ ...entry, bullets })}
-                  placeholder="Describe an accomplishment..."
-                  multiline
-                  addLabel="Add bullet"
-                  emptyLabel="No bullets yet."
-                  reorderable
-                  itemBadge={bulletBadge}
-                  itemExtra={bulletRewrite}
-                />
-              </div>
-            </div>
-          )}
-        />
+        {selectedIndex < 0 ? (
+          <EmptyState>No experience entries yet.</EmptyState>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <ExperienceRail
+              entries={value}
+              selectedIndex={selectedIndex}
+              onSelect={setSelected}
+              onReorder={(from, to, label) => apply(moveEntryToSection(value, from, to, label))}
+              onAdd={addPosition}
+            />
+            <ExperienceDetail
+              entry={value[selectedIndex]}
+              onChange={updateEntry}
+              onSectionChange={(label) => apply(setEntrySection(value, selectedIndex, label))}
+              onDuplicate={duplicateEntry}
+              onDelete={deleteEntry}
+              sections={sections}
+              bulletBadge={bulletBadge}
+              bulletRewrite={bulletRewrite}
+            />
+          </div>
+        )}
       </Collapsible>
     </Card>
   );

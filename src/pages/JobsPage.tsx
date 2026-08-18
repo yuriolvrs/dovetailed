@@ -11,11 +11,14 @@ import { CheckCircle, Circle, Plus, X } from 'lucide-react';
 import type { GenerationType, JobPosting } from '../types';
 import {
   ARRANGEMENTS,
+  deadlineCountdown,
   guessJobTitleAndCompany,
   listJobPostings,
   newJobPosting,
   postingLabel,
   saveJobPosting,
+  STATUS_COLORS,
+  STATUS_LABELS,
 } from '../lib/jobStore';
 import { listGenerationTypesByPosting } from '../lib/genStore';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
@@ -23,6 +26,7 @@ import {
   Badge,
   Btn,
   Card,
+  EmptyState,
   FieldInput,
   FieldSelect,
   FieldTextarea,
@@ -85,8 +89,8 @@ export default function JobsPage() {
     <div className="space-y-6 pb-16">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Jobs</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Jobs</h1>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
             Paste postings, run analysis, tailor your documents
           </p>
         </div>
@@ -97,7 +101,7 @@ export default function JobsPage() {
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-xl max-h-[90vh]">
-        <div className="p-5 border-b border-slate-100 shrink-0 flex items-start justify-between gap-3">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 shrink-0 flex items-start justify-between gap-3">
           <SectionTitle sub="Paste the full posting text — nothing is stored on a server">
             Add a Job Posting
           </SectionTitle>
@@ -105,13 +109,13 @@ export default function JobsPage() {
             type="button"
             onClick={() => setModalOpen(false)}
             aria-label="Close"
-            className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
+            className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <X size={16} />
           </button>
         </div>
         <div className="p-5 space-y-3 overflow-y-auto scroll-thin">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FieldInput
               label="Job Title"
               value={title}
@@ -120,7 +124,7 @@ export default function JobsPage() {
             />
             <FieldInput label="Company" value={company} onChange={setCompany} placeholder="Acme Corp" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FieldInput
               label="Location"
               value={location}
@@ -143,7 +147,7 @@ export default function JobsPage() {
             placeholder="Paste the full job posting text here — responsibilities, requirements, qualifications, compensation, etc."
             rows={9}
           />
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             Title/company are auto-filled from the posting text when detected — edit either freely.
           </p>
         </div>
@@ -159,7 +163,7 @@ export default function JobsPage() {
       </Modal>
 
       <div>
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">
+        <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
           Saved Postings{postings !== null && ` — ${postings.length}`}
         </p>
         {postings === null ? (
@@ -169,9 +173,7 @@ export default function JobsPage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : postings.length === 0 ? (
-          <div className="py-20 text-center text-sm text-slate-300 border-2 border-dashed border-slate-200 rounded-2xl bg-white">
-            No postings saved yet
-          </div>
+          <EmptyState size="lg">No postings saved yet</EmptyState>
         ) : (
           <div className="space-y-3">
             {postings.map((posting) => {
@@ -186,9 +188,9 @@ export default function JobsPage() {
 
               return (
                 <Link key={posting.id} to={`/jobs/${posting.id}`} className="block">
-                  <Card className="group p-5 hover:border-slate-300 hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] transition-all">
+                  <Card className="group p-5 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] dark:hover:shadow-none transition-all">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-semibold text-slate-900 truncate">
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                         {posting.title?.trim() || postingLabel(posting)}
                       </h3>
                       {posting.analysis ? (
@@ -203,6 +205,14 @@ export default function JobsPage() {
                         </Badge>
                       )}
                       {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit: {fitScore}%</Badge>}
+                      {posting.status && (
+                        <Badge color={STATUS_COLORS[posting.status]}>{STATUS_LABELS[posting.status]}</Badge>
+                      )}
+                      {posting.deadline && !posting.status && (
+                        <Badge color={deadlineCountdown(posting.deadline).color}>
+                          {deadlineCountdown(posting.deadline).label}
+                        </Badge>
+                      )}
                       <Badge color={types?.has('resume') ? 'green' : 'slate'}>
                         {types?.has('resume') ? <CheckCircle size={10} /> : <Circle size={10} />}
                         Resume
@@ -212,11 +222,11 @@ export default function JobsPage() {
                         Cover Letter
                       </Badge>
                     </div>
-                    {company && <p className="text-sm text-slate-700 mt-0.5">{company}</p>}
+                    {company && <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{company}</p>}
                     {locationArrangement && (
-                      <p className="text-sm text-slate-400 mt-0.5">{locationArrangement}</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">{locationArrangement}</p>
                     )}
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                       Saved {new Date(posting.createdAt).toLocaleDateString()}
                     </p>
                   </Card>

@@ -38,8 +38,9 @@ A privacy-first web app that helps a job seeker tailor their resume and cover le
 - Job posting input via screenshot/PDF (vision model call).
 - Profile import by parsing an uploaded resume PDF.
 - Multiple saved profiles / personas.
-- Application tracker (status per job).
 - Optional local-model mode (Ollama) for power users.
+
+Application tracker was pulled forward out of this list and built 2026-08-19 by explicit user request (overriding the "do not build yet" deferral) -- see PROGRESS.md.
 
 ## 6. Data model (single source of truth)
 

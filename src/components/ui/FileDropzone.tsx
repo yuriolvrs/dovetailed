@@ -77,20 +77,20 @@ export function FileDropzone({
           compact ? 'px-3 py-2.5' : 'px-4 py-6',
           busy ? 'cursor-wait opacity-60' : 'cursor-pointer',
           dragging
-            ? 'border-blue-400 bg-blue-50/60'
-            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50',
+            ? 'border-blue-400 bg-blue-50/60 dark:border-blue-500 dark:bg-blue-500/10'
+            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600 dark:hover:bg-slate-800',
         ].join(' ')}
       >
         <div className={`flex items-center justify-center gap-2 ${compact ? '' : 'flex-col gap-1.5'}`}>
           {busy ? (
-            <Loader2 size={compact ? 13 : 18} className="text-slate-400 animate-spin" />
+            <Loader2 size={compact ? 13 : 18} className="text-slate-400 dark:text-slate-500 animate-spin" />
           ) : compact ? (
-            <Paperclip size={13} className="text-slate-400" />
+            <Paperclip size={13} className="text-slate-400 dark:text-slate-500" />
           ) : (
-            <Upload size={18} className="text-slate-400" />
+            <Upload size={18} className="text-slate-400 dark:text-slate-500" />
           )}
-          <span className="text-xs font-medium text-slate-600">{busy ? busyLabel : label}</span>
-          {!compact && !busy && <span className="text-[11px] text-slate-400">{sublabel}</span>}
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{busy ? busyLabel : label}</span>
+          {!compact && !busy && <span className="text-[11px] text-slate-400 dark:text-slate-500">{sublabel}</span>}
         </div>
       </button>
 
@@ -106,7 +106,7 @@ export function FileDropzone({
         }}
       />
 
-      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>}
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function WritingSamplesForm({
             // not a field the user is mid-way through typing.
             onFile={(f) => file.read(f, (text) => onCommit([...value, text]))}
           />
-          {file.error && <p className="text-xs text-red-600 mt-2">{file.error}</p>}
+          {file.error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{file.error}</p>}
         </div>
         <StringList
           items={value}

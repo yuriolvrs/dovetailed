@@ -45,7 +45,10 @@ export function ResumeAccordionRow({
   highlighted?: boolean;
 }) {
   return (
-    <div data-nav-key={dataNavKey} className={`border-b border-slate-100 last:border-b-0 transition-colors ${highlighted ? 'bg-amber-50' : ''}`}>
+    <div
+      data-nav-key={dataNavKey}
+      className={`border-b border-slate-100 dark:border-slate-800 last:border-b-0 transition-colors ${highlighted ? 'bg-amber-50 dark:bg-amber-500/10' : ''}`}
+    >
       <div className="flex items-center gap-2 py-3 px-1">
         <div className="flex flex-col gap-0.5 shrink-0">
           <button
@@ -53,7 +56,7 @@ export function ResumeAccordionRow({
             onClick={onMoveUp}
             disabled={!canMoveUp}
             aria-label="Move up"
-            className="w-5 h-4 flex items-center justify-center rounded text-slate-300 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300 transition-colors"
+            className="w-5 h-4 flex items-center justify-center rounded text-slate-300 dark:text-slate-600 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300 dark:disabled:hover:text-slate-600 transition-colors"
           >
             <ChevronDown size={12} className="rotate-180" />
           </button>
@@ -62,15 +65,15 @@ export function ResumeAccordionRow({
             onClick={onMoveDown}
             disabled={!canMoveDown}
             aria-label="Move down"
-            className="w-5 h-4 flex items-center justify-center rounded text-slate-300 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300 transition-colors"
+            className="w-5 h-4 flex items-center justify-center rounded text-slate-300 dark:text-slate-600 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300 dark:disabled:hover:text-slate-600 transition-colors"
           >
             <ChevronDown size={12} />
           </button>
         </div>
 
         <button type="button" onClick={onToggle} className="flex-1 min-w-0 text-left">
-          <div className="text-sm font-semibold text-slate-800 truncate">{title}</div>
-          {subtitle && <div className="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</div>}
+          <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{title}</div>
+          {subtitle && <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{subtitle}</div>}
         </button>
 
         {badge}
@@ -81,7 +84,7 @@ export function ResumeAccordionRow({
           type="button"
           onClick={onToggle}
           aria-label={open ? 'Collapse' : 'Expand'}
-          className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors shrink-0"
+          className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 transition-colors shrink-0"
         >
           <ChevronDown size={13} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>

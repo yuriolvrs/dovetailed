@@ -6,7 +6,7 @@
 // their analyses) to your browser's storage.
 
 import { db } from './db';
-import type { JobPosting } from '../types';
+import type { ApplicationStatus, JobPosting } from '../types';
 
 const LABEL_MAX_CHARS = 80;
 
@@ -15,6 +15,50 @@ const LABEL_MAX_CHARS = 80;
  * In plain terms: the Onsite/Hybrid/Remote choices you can pick for a job.
  */
 export const ARRANGEMENTS = ['Onsite', 'Hybrid', 'Remote'] as const;
+
+/**
+ * Application-tracker status options, in the order they're offered in the
+ * Status dropdown -- roughly the order an application progresses through
+ * (though a candidate can jump straight to 'rejected' from any stage).
+ * In plain terms: the Applied/Interviewing/Rejected/Offer choices you can
+ * pick for a job's status.
+ */
+export const STATUSES: readonly ApplicationStatus[] = ['applied', 'interviewing', 'offer', 'rejected'];
+
+export const STATUS_LABELS: Record<ApplicationStatus, string> = {
+  applied: 'Applied',
+  interviewing: 'Interviewing',
+  offer: 'Offer',
+  rejected: 'Rejected',
+};
+
+/**
+ * Badge palette for each status, shared by the Jobs list's status badge and
+ * the detail page's status picker so one status never reads as two different
+ * colors depending on which screen you're looking at.
+ * In plain terms: which color each application status is shown in.
+ */
+export const STATUS_COLORS: Record<ApplicationStatus, 'blue' | 'amber' | 'green' | 'red'> = {
+  applied: 'blue',
+  interviewing: 'amber',
+  offer: 'green',
+  rejected: 'red',
+};
+
+/**
+ * Turns a deadline timestamp into a short "time left" label plus a badge
+ * color that escalates as it approaches -- slate with time to spare, amber
+ * inside 3 days, red once it's today or past.
+ * In plain terms: the "5d left" / "Overdue by 2d" chip shown next to a
+ * posting's deadline.
+ */
+export function deadlineCountdown(deadline: number): { label: string; color: 'red' | 'amber' | 'slate' } {
+  const days = Math.ceil((deadline - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return { label: `Overdue ${Math.abs(days)}d`, color: 'red' };
+  if (days === 0) return { label: 'Due today', color: 'red' };
+  if (days <= 3) return { label: `${days}d left`, color: 'amber' };
+  return { label: `${days}d left`, color: 'slate' };
+}
 
 /**
  * Builds a new, unsaved posting from pasted text. Caller must saveJobPosting it.

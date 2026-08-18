@@ -22,7 +22,7 @@ import {
 } from '../../prompts/generateEntryFromDocument';
 import { unverifiedBullets, type UnverifiedBullet } from '../../lib/files/verifyGeneratedEntry';
 import { FileDropzone } from '../ui/FileDropzone';
-import { Badge, Btn, Card, SectionTitle } from '../ui/primitives';
+import { Badge, Btn, Card, fieldInputClass, fieldLabelClass, SectionTitle } from '../ui/primitives';
 
 // Same trade-off as ImportResumeSection: reasoning tokens come out of the
 // same budget as the JSON answer, and this task (a handful of fields plus a
@@ -57,6 +57,10 @@ function toProjectEntry(entry: GeneratedEntry): ProjectEntry {
   return { name: p.name ?? '', description: p.description ?? '', bullets: entry.bullets, links: [] };
 }
 
+function existingEntryLabel(entry: ExperienceEntry | ProjectEntry): string {
+  return 'title' in entry ? [entry.title || 'Untitled role', entry.company].filter(Boolean).join(' · ') : entry.name || 'Untitled project';
+}
+
 export function JobDocumentImportSection({
   profile,
   onImported,
@@ -66,15 +70,19 @@ export function JobDocumentImportSection({
 }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
-  const [imported, setImported] = useState(false);
+  const [importedMessage, setImportedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [kind, setKind] = useState<'experience' | 'project'>('experience');
+  // Which existing entry's bullets to overwrite, or null to add a new entry
+  // instead -- reset whenever kind changes, since the two kinds draw from
+  // different lists (profile.experience vs profile.projects).
+  const [targetIndex, setTargetIndex] = useState<number | null>(null);
 
   async function handleFile(file: File) {
     setBusy(true);
     setError(null);
-    setImported(false);
+    setImportedMessage(null);
     setStatus('Reading the document…');
     try {
       const documentText = await extractText(file);
@@ -86,6 +94,7 @@ export function JobDocumentImportSection({
       });
       setReview({ documentText, entry, unverified: unverifiedBullets(entry.bullets, documentText) });
       setKind(entry.kind);
+      setTargetIndex(null);
     } catch (err) {
       setError(llmErrorMessage(err, 'Reading that document'));
     } finally {
@@ -96,21 +105,41 @@ export function JobDocumentImportSection({
 
   function applyImport() {
     if (!review) return;
-    const next: Profile =
-      kind === 'experience'
-        ? { ...profile, experience: [...profile.experience, toExperienceEntry(review.entry)] }
-        : { ...profile, projects: [...profile.projects, toProjectEntry(review.entry)] };
+    let next: Profile;
+    if (kind === 'experience') {
+      next =
+        targetIndex === null
+          ? { ...profile, experience: [...profile.experience, toExperienceEntry(review.entry)] }
+          : {
+              ...profile,
+              experience: profile.experience.map((entry, i) =>
+                i === targetIndex ? { ...entry, bullets: review.entry.bullets } : entry,
+              ),
+            };
+    } else {
+      next =
+        targetIndex === null
+          ? { ...profile, projects: [...profile.projects, toProjectEntry(review.entry)] }
+          : {
+              ...profile,
+              projects: profile.projects.map((entry, i) =>
+                i === targetIndex ? { ...entry, bullets: review.entry.bullets } : entry,
+              ),
+            };
+    }
     onImported(next);
     setReview(null);
-    setImported(true);
+    setImportedMessage(targetIndex === null ? 'Added to your profile.' : 'Bullets overwritten.');
   }
 
   const e = review?.entry.experience;
   const p = review?.entry.project;
+  const existingEntries: (ExperienceEntry | ProjectEntry)[] = kind === 'experience' ? profile.experience : profile.projects;
 
   return (
     <Card className="p-6">
-      <SectionTitle sub="Attach an old job description, offer letter, or project brief to add it as a new entry — you review it before it's applied">
+      <SectionTitle sub="Attach an old job description, offer letter, or project brief to add it as a new entry, 
+                         or overwrite the bullet points of an existing entry. You review it before it's applied">
         Add a Job or Project from a Document
       </SectionTitle>
 
@@ -122,11 +151,11 @@ export function JobDocumentImportSection({
             busyLabel={status ?? 'Reading…'}
             label="Attach a job or project document"
           />
-          {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
-          {imported && (
-            <p className="text-xs text-emerald-600 mt-2 inline-flex items-center gap-1">
+          {error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>}
+          {importedMessage && (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 inline-flex items-center gap-1">
               <Check size={12} />
-              Added to your profile.
+              {importedMessage}
             </p>
           )}
         </>
@@ -135,12 +164,12 @@ export function JobDocumentImportSection({
       {review && (
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-xs text-slate-500">Choose what this is, review the bullets, then add it.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Choose what this is, review the bullets, then add it.</p>
             <button
               type="button"
               onClick={() => setReview(null)}
               aria-label="Discard"
-              className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
+              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>
@@ -149,11 +178,14 @@ export function JobDocumentImportSection({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setKind('experience')}
+              onClick={() => {
+                setKind('experience');
+                setTargetIndex(null);
+              }}
               className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
                 kind === 'experience'
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800'
               }`}
             >
               <Briefcase size={14} />
@@ -161,11 +193,14 @@ export function JobDocumentImportSection({
             </button>
             <button
               type="button"
-              onClick={() => setKind('project')}
+              onClick={() => {
+                setKind('project');
+                setTargetIndex(null);
+              }}
               className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
                 kind === 'project'
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800'
               }`}
             >
               <FolderGit2 size={14} />
@@ -173,28 +208,46 @@ export function JobDocumentImportSection({
             </button>
           </div>
 
-          <div className="rounded-xl border border-slate-200 p-3">
+          {existingEntries.length > 0 && (
+            <div>
+              <label className={`mb-1.5 block ${fieldLabelClass}`}>Add as</label>
+              <select
+                value={targetIndex === null ? 'new' : String(targetIndex)}
+                onChange={(ev) => setTargetIndex(ev.target.value === 'new' ? null : Number(ev.target.value))}
+                className={`w-full ${fieldInputClass}`}
+              >
+                <option value="new">A new entry</option>
+                {existingEntries.map((entry, i) => (
+                  <option key={i} value={i}>
+                    Overwrite bullets on: {existingEntryLabel(entry)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
             {kind === 'experience' ? (
-              <p className="text-sm font-medium text-slate-800">
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                 {e?.title || 'Untitled role'}
-                {e?.company && <span className="text-slate-400"> · {e.company}</span>}
+                {e?.company && <span className="text-slate-400 dark:text-slate-500"> · {e.company}</span>}
                 {(e?.startYear || e?.endYear) && (
-                  <span className="text-slate-400">
+                  <span className="text-slate-400 dark:text-slate-500">
                     {' '}
                     · {e?.startYear ?? '?'}–{e?.current ? 'Present' : (e?.endYear ?? '?')}
                   </span>
                 )}
               </p>
             ) : (
-              <p className="text-sm font-medium text-slate-800">{p?.name || 'Untitled project'}</p>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{p?.name || 'Untitled project'}</p>
             )}
 
             <ul className="mt-3 space-y-1.5">
               {review.entry.bullets.map((bullet, i) => {
                 const flagged = review.unverified.find((u) => u.index === i);
                 return (
-                  <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                    <span className="mt-1 h-1 w-1 rounded-full bg-slate-300 shrink-0" />
+                  <li key={i} className="text-xs text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
+                    <span className="mt-1 h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
                     <span>
                       {bullet}
                       {flagged && (
@@ -211,13 +264,13 @@ export function JobDocumentImportSection({
           </div>
 
           {review.unverified.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p className="text-xs text-amber-800 font-medium inline-flex items-center gap-1.5">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3">
+              <p className="text-xs text-amber-800 dark:text-amber-400 font-medium inline-flex items-center gap-1.5">
                 <AlertTriangle size={13} />
                 {review.unverified.length} bullet{review.unverified.length === 1 ? '' : 's'} mention something not
                 found in the document
               </p>
-              <p className="text-[11px] text-amber-700 mt-1">
+              <p className="text-[11px] text-amber-700 dark:text-amber-500 mt-1">
                 These may have been rephrased past what the document actually says. Check them before adding, or
                 edit them after.
               </p>
@@ -230,7 +283,7 @@ export function JobDocumentImportSection({
             </Btn>
             <Btn onClick={applyImport}>
               <Check size={14} />
-              Add to my profile
+              {targetIndex === null ? 'Add to my profile' : 'Overwrite bullets'}
             </Btn>
           </div>
         </div>

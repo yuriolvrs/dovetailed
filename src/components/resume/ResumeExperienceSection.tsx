@@ -23,6 +23,7 @@ import {
   Card,
   Collapsible,
   CollapsibleSectionHeader,
+  EmptyState,
   FieldInput,
   ResetButton,
   fieldLabelClass,
@@ -143,11 +144,7 @@ export function ResumeExperienceSection({
       />
       <Collapsible open={sectionOpen}>
         <>
-          {value.length === 0 && (
-            <div className="py-8 text-center text-xs text-slate-300 border-2 border-dashed border-slate-100 rounded-xl">
-              No experience entries yet.
-            </div>
-          )}
+          {value.length === 0 && <EmptyState>No experience entries yet.</EmptyState>}
 
           {value.map((entry, index) => {
             const matchedCount = entry.bullets.filter((b) => bulletMatch(b) !== null).length;
@@ -164,7 +161,7 @@ export function ResumeExperienceSection({
                 title={
                   <>
                     {entry.title || 'Untitled role'}
-                    {entry.company && <span className="font-normal text-slate-400"> · {entry.company}</span>}
+                    {entry.company && <span className="font-normal text-slate-400 dark:text-slate-500"> · {entry.company}</span>}
                   </>
                 }
                 subtitle={entryDates(entry)}
@@ -188,18 +185,18 @@ export function ResumeExperienceSection({
                   onChange={(section) => update(index, { ...entry, section })}
                 />
 
-                <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={isPrunable(entry)}
                     onChange={(e) => update(index, { ...entry, prunable: e.target.checked })}
-                    className="rounded border-slate-300 text-blue-600"
+                    className="rounded border-slate-300 dark:border-slate-600 text-blue-600"
                   />
                   Drop this first if the resume runs past one page (on by default outside your main
                   experience section)
                 </label>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FieldInput
                     label="Company"
                     placeholder="Stripe"
@@ -262,19 +259,19 @@ export function ResumeExperienceSection({
           })}
 
           {excludedEntries.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Not included</p>
+            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Not included</p>
               {excludedEntries.map((entry, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => onAddEntry(entry)}
-                  className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
-                  <Plus size={13} className="shrink-0 text-slate-400" />
-                  <span className="flex-1 text-sm text-slate-500">
+                  <Plus size={13} className="shrink-0 text-slate-400 dark:text-slate-500" />
+                  <span className="flex-1 text-sm text-slate-500 dark:text-slate-400">
                     {entry.title || 'Untitled role'}
-                    {entry.company && <span className="text-slate-400"> · {entry.company}</span>}
+                    {entry.company && <span className="text-slate-400 dark:text-slate-500"> · {entry.company}</span>}
                   </span>
                 </button>
               ))}

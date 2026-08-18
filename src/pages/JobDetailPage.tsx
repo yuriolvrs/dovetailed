@@ -11,12 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Sparkles, Trash2 } from 'lucide-react';
 import type { JobPosting, Profile } from '../types';
-import {
-  ARRANGEMENTS,
-  deleteJobPosting,
-  loadJobPosting,
-  saveJobPosting,
-} from '../lib/jobStore';
+import { ARRANGEMENTS, deleteJobPosting, loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import {
   buildAnalyzePostingPrompt,
@@ -25,7 +20,9 @@ import {
   toJobAnalysis,
 } from '../prompts/analyzePosting';
 import { generateStructured, llmErrorMessage } from '../lib/llm';
+import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
 import { AnalysisEditor } from '../components/jobs/AnalysisEditor';
+import { ApplicationTracker } from '../components/jobs/ApplicationTracker';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { useToast } from '../components/ui/Toast';
 import {
@@ -34,6 +31,7 @@ import {
   FieldInput,
   FieldSelect,
   PageSkeleton,
+  SavedIndicator,
   UnsavedIndicator,
 } from '../components/ui/primitives';
 
@@ -50,6 +48,7 @@ export default function JobDetailPage() {
   // Which of the blur-saved free-text fields currently differ from what's
   // persisted, so their labels can show an "Unsaved" indicator until blur.
   const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
+  const { saved, pulse } = useAutosaveIndicator();
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -71,6 +70,7 @@ export default function JobDetailPage() {
       void saveJobPosting(next);
       return next;
     });
+    pulse();
   }
 
   // For free text (title/company/location/posting body): update on-screen
@@ -128,10 +128,10 @@ export default function JobDetailPage() {
   if (posting === 'missing') {
     return (
       <section className="space-y-3">
-        <p className="text-sm text-slate-500">Posting not found.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
         <Link
           to="/jobs"
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 transition-colors font-medium w-fit"
+          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit"
         >
           <ArrowLeft size={15} />
           Back to Jobs
@@ -162,14 +162,14 @@ export default function JobDetailPage() {
               size="sm"
               variant="ghost"
               onClick={() => setConfirmingDelete(true)}
-              className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+              className="text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
             >
               <Trash2 size={13} />
               Delete posting
             </Btn>
           ) : (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600">Delete this posting?</span>
+              <span className="text-slate-600 dark:text-slate-300">Delete this posting?</span>
               <Btn
                 size="sm"
                 onClick={handleConfirmDelete}
@@ -186,7 +186,7 @@ export default function JobDetailPage() {
       />
 
       <Card className="p-4 mb-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <FieldInput
             label="Job Title"
             value={posting.title ?? ''}
@@ -237,18 +237,22 @@ export default function JobDetailPage() {
             placeholder="Select…"
           />
         </div>
+
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <ApplicationTracker posting={posting} onChange={update} />
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-5 items-start">
         <Card className="p-5 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)] flex flex-col">
           <div className="flex items-center gap-2 mb-4 shrink-0">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Posting Text
             </p>
-            {dirtyFields.has('rawText') && <UnsavedIndicator />}
+            {dirtyFields.has('rawText') ? <UnsavedIndicator /> : <SavedIndicator visible={saved} />}
           </div>
           <textarea
-            className="w-full flex-1 min-h-[16rem] text-sm text-slate-600 leading-relaxed bg-transparent resize-none outline-none border border-transparent rounded-xl focus:border-blue-300 focus:bg-blue-50/20 px-2 py-2 transition-all overflow-y-auto"
+            className="w-full flex-1 min-h-[16rem] text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-transparent resize-none outline-none border border-transparent rounded-xl focus:border-blue-300 dark:focus:border-blue-500 focus:bg-blue-50/20 dark:focus:bg-blue-500/10 px-2 py-2 transition-all overflow-y-auto"
             value={posting.rawText}
             onChange={(e) => {
               updateLive({ rawText: e.target.value });
@@ -260,7 +264,7 @@ export default function JobDetailPage() {
             }}
           />
           {posting.rawText.length > MAX_POSTING_CHARS && (
-            <p className="text-xs text-slate-400 mt-2 shrink-0">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 shrink-0">
               Only the first {MAX_POSTING_CHARS.toLocaleString()} characters are sent for analysis.
             </p>
           )}
@@ -268,9 +272,9 @@ export default function JobDetailPage() {
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)]">
           {!hasProfileContent(profile) && (
-            <p className="text-sm text-slate-500 shrink-0">
+            <p className="text-sm text-slate-500 dark:text-slate-400 shrink-0">
               Add your experience or skills on the{' '}
-              <Link to="/profile" className="underline hover:text-slate-900">
+              <Link to="/profile" className="underline hover:text-slate-900 dark:hover:text-slate-100">
                 Profile page
               </Link>{' '}
               first — matches and gaps need something to compare against.
@@ -279,12 +283,12 @@ export default function JobDetailPage() {
 
           {!posting.analysis ? (
             <Card className="p-10 flex flex-col items-center text-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
-                <Sparkles size={22} className="text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
+                <Sparkles size={22} className="text-white dark:text-slate-900" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-slate-900">Analyze this posting</h3>
-                <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Analyze this posting</h3>
+                <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-xs">
                   Extract requirements, find keyword matches, identify gaps — then edit anything
                   before generating documents.
                 </p>
@@ -308,19 +312,19 @@ export default function JobDetailPage() {
                   </>
                 )}
               </Btn>
-              {error && <p className="text-xs text-red-600">{error}</p>}
+              {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
             </Card>
           ) : (
             <Card className="p-5 flex-1 min-h-0 flex flex-col">
               <div className="flex items-start justify-between mb-1 shrink-0">
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                     Analysis
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     {posting.analysis.requirements.length} requirement
                     {posting.analysis.requirements.length !== 1 ? 's' : ''} —{' '}
-                    <span className="font-semibold text-slate-900">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
                       {requiredCount} required
                     </span>
                     , {preferredCount} preferred
@@ -333,18 +337,18 @@ export default function JobDetailPage() {
                   disabled={status === 'loading' || !hasProfileContent(profile)}
                 >
                   {status === 'loading' ? (
-                    <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-slate-300 dark:border-slate-600 border-t-slate-600 dark:border-t-slate-300 rounded-full animate-spin" />
                   ) : (
                     <Sparkles size={13} />
                   )}
                   Reanalyze
                 </Btn>
               </div>
-              {error && <p className="text-xs text-red-600 mb-3 mt-3 shrink-0">{error}</p>}
+              {error && <p className="text-xs text-red-600 dark:text-red-400 mb-3 mt-3 shrink-0">{error}</p>}
               <div className="flex-1 min-h-0 overflow-y-auto scroll-thin pr-1 -mr-1 mt-3">
                 <AnalysisEditor value={posting.analysis} onChange={(analysis) => update({ analysis })} />
               </div>
-              <div className="mt-4 pt-4 border-t border-slate-100 shrink-0">
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
                 <Btn
                   onClick={() => navigate(`/jobs/${posting.id}/match`)}
                   className="w-full justify-center"

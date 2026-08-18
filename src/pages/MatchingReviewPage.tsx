@@ -20,11 +20,21 @@ import { buildProfileAtoms } from '../lib/profileAtoms';
 import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
 import { computeFitScore } from '../lib/matching/fitScore';
 import { llmErrorMessage } from '../lib/llm';
+import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
 import { EvidenceModal } from '../components/jobs/EvidenceModal';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { useToast } from '../components/ui/Toast';
 import { RemoveItemButton } from '../components/EditableList';
-import { Badge, Btn, Card, PageSkeleton, ProgressBar, SectionTitle } from '../components/ui/primitives';
+import {
+  Badge,
+  Btn,
+  Card,
+  EmptyState,
+  PageSkeleton,
+  ProgressBar,
+  SavedIndicator,
+  SectionTitle,
+} from '../components/ui/primitives';
 import { FileDropzone } from '../components/ui/FileDropzone';
 import { useFileText } from '../lib/files/useFileText';
 
@@ -93,6 +103,7 @@ export default function MatchingReviewPage() {
   // panes is showing -- they used to be two separate stacked cards; now one
   // card with a tab switch, to cut page length.
   const [infoTab, setInfoTab] = useState<'evidence' | 'additional'>('evidence');
+  const { saved, pulse } = useAutosaveIndicator();
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -223,6 +234,7 @@ export default function MatchingReviewPage() {
       void saveJobPosting(next);
       return next;
     });
+    pulse();
   }
 
   function updateProfile(patch: Partial<Profile>) {
@@ -232,6 +244,7 @@ export default function MatchingReviewPage() {
       void saveProfile(next);
       return next;
     });
+    pulse();
   }
 
   // Re-runs the full matching pass from scratch -- an explicit action (not
@@ -294,8 +307,11 @@ export default function MatchingReviewPage() {
   if (posting === 'missing') {
     return (
       <section className="space-y-3">
-        <p className="text-sm text-slate-500">Posting not found.</p>
-        <Link to="/jobs" className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium w-fit">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
+        <Link
+          to="/jobs"
+          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
+        >
           <ArrowLeft size={15} />
           Back to Jobs
         </Link>
@@ -318,9 +334,9 @@ export default function MatchingReviewPage() {
           analysisDone={false}
           matchingDone={false}
         />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           This posting hasn't been analyzed yet.{' '}
-          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900">
+          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
             Go run analysis first.
           </Link>
         </p>
@@ -411,6 +427,7 @@ export default function MatchingReviewPage() {
         actions={
           !confirmingRematch && !confirmingClear ? (
             <>
+              <SavedIndicator visible={saved} />
               <Btn size="sm" variant="danger" onClick={() => setConfirmingClear(true)}>
                 Clear matches
               </Btn>
@@ -421,7 +438,7 @@ export default function MatchingReviewPage() {
             </>
           ) : confirmingClear ? (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600">This clears every requirement's evidence. Clear matches?</span>
+              <span className="text-slate-600 dark:text-slate-300">This clears every requirement's evidence. Clear matches?</span>
               <Btn size="sm" variant="danger" onClick={handleClearMatches}>
                 Yes, clear
               </Btn>
@@ -431,7 +448,7 @@ export default function MatchingReviewPage() {
             </div>
           ) : (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600">This will overwrite any manual edits. Re-run matching?</span>
+              <span className="text-slate-600 dark:text-slate-300">This will overwrite any manual edits. Re-run matching?</span>
               <Btn size="sm" onClick={handleRematch} disabled={rematchStatus === 'loading'}>
                 {rematchStatus === 'loading' ? 'Matching…' : 'Yes, re-run'}
               </Btn>
@@ -452,19 +469,19 @@ export default function MatchingReviewPage() {
           </Btn>
         </div>
       )}
-      {rematchError && <p className="text-xs text-red-600 mb-4">{rematchError}</p>}
+      {rematchError && <p className="text-xs text-red-600 dark:text-red-400 mb-4">{rematchError}</p>}
 
       {fitScore !== null && (
         <Card className="p-5 mb-5">
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-center shrink-0">
-              <span className="text-3xl font-bold text-slate-900 leading-none">{fitScore}%</span>
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">
+              <span className="text-3xl font-bold text-slate-900 dark:text-slate-100 leading-none">{fitScore}%</span>
+              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
                 Overall fit
               </span>
             </div>
             <div className="flex-1 space-y-2.5">
-              <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden flex">
+              <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
                 {statusCounts.total > 0 && (
                   <>
                     <div
@@ -482,7 +499,7 @@ export default function MatchingReviewPage() {
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   {statusCounts.full} Full match
@@ -503,7 +520,7 @@ export default function MatchingReviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
         <Card className="p-3 lg:sticky lg:top-20">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-2 mb-3">
+          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2 mb-3">
             Requirements
           </p>
           <div className="flex gap-1.5 px-1 mb-3 flex-wrap">
@@ -522,7 +539,9 @@ export default function MatchingReviewPage() {
                   type="button"
                   onClick={() => setStatusFilter(key)}
                   className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${
-                    active ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    active
+                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
                   }`}
                 >
                   {label} {count}
@@ -532,7 +551,7 @@ export default function MatchingReviewPage() {
           </div>
           <div className="space-y-1">
             {filteredRequirements.length === 0 ? (
-              <p className="text-xs text-slate-300 text-center py-6">No requirements in this filter.</p>
+              <p className="text-xs text-slate-300 dark:text-slate-600 text-center py-6">No requirements in this filter.</p>
             ) : (
               filteredRequirements.map((requirement) => {
                 const match = matchByRequirementId.get(requirement.id);
@@ -544,7 +563,9 @@ export default function MatchingReviewPage() {
                     type="button"
                     onClick={() => selectRequirement(requirement.id)}
                     className={`w-full text-left flex items-start gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${
-                      isSelected ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-700'
+                      isSelected
+                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     <span className={`mt-1 w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
@@ -566,7 +587,10 @@ export default function MatchingReviewPage() {
                   const atom = atomsById.get(atomId);
                   if (!atom) {
                     return (
-                      <div key={atomId} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+                      <div
+                        key={atomId}
+                        className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400"
+                      >
                         This evidence no longer matches your profile — re-run matching to refresh it.
                       </div>
                     );
@@ -574,11 +598,11 @@ export default function MatchingReviewPage() {
                   return (
                     <div
                       key={atomId}
-                      className="rounded-xl border border-slate-200 flex items-start justify-between gap-3 px-3 py-2.5"
+                      className="rounded-xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3 px-3 py-2.5"
                     >
                       <div className="flex items-start gap-2 min-w-0">
                         <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
-                        <span className="text-sm text-slate-700 break-words">{atom.text}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300 break-words">{atom.text}</span>
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <Btn size="sm" variant="secondary" onClick={() => setPickerTarget({ mode: 'swap', atomId })}>
@@ -595,16 +619,16 @@ export default function MatchingReviewPage() {
             )}
 
             {isGap && (
-              <div className="rounded-xl border-2 border-dashed border-slate-200 p-4 text-sm text-slate-500 mb-3">
+              <EmptyState className="mb-3">
                 {selectedMatch.status === 'gap_no_candidates'
                   ? 'No matching experience found for this requirement.'
                   : "We found possible profile matches, but couldn't confirm any of them satisfy this requirement."}
-              </div>
+              </EmptyState>
             )}
 
             {selectedMatch.status === 'gap_unverified' && (selectedMatch.consideredAtomIds?.length ?? 0) > 0 && (
               <div className="space-y-2 mb-3">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-1">
+                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
                   Considered but not confirmed
                 </p>
                 {selectedMatch.consideredAtomIds!.map((atomId) => {
@@ -613,11 +637,11 @@ export default function MatchingReviewPage() {
                   return (
                     <div
                       key={atomId}
-                      className="rounded-xl border border-orange-200 bg-orange-50 flex items-start justify-between gap-3 px-3 py-2.5"
+                      className="rounded-xl border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10 flex items-start justify-between gap-3 px-3 py-2.5"
                     >
                       <div className="flex items-start gap-2 min-w-0">
                         <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
-                        <span className="text-sm text-slate-700 break-words">{atom.text}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300 break-words">{atom.text}</span>
                       </div>
                       <Btn size="sm" variant="secondary" onClick={() => addEvidence(atomId)}>
                         Use as evidence
@@ -646,14 +670,14 @@ export default function MatchingReviewPage() {
           a tab switch (same idiom as Generate's Resume/Cover Letter tabs),
           so reviewing both doesn't mean scrolling past everything. */}
       <Card className="p-5 mt-5">
-        <div className="flex border-b border-slate-200 mb-4 -mt-1">
+        <div className="flex border-b border-slate-200 dark:border-slate-700 mb-4 -mt-1">
           <button
             type="button"
             onClick={() => setInfoTab('evidence')}
             className={`flex-1 text-center text-sm font-semibold py-2.5 border-b-2 -mb-px transition-colors ${
               infoTab === 'evidence'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
+                ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
+                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
             Evidence in use ({evidenceRows.length})
@@ -663,8 +687,8 @@ export default function MatchingReviewPage() {
             onClick={() => setInfoTab('additional')}
             className={`flex-1 text-center text-sm font-semibold py-2.5 border-b-2 -mb-px transition-colors ${
               infoTab === 'additional'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
+                ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
+                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
             Additional info ({profile.additionalInfo.length})
@@ -673,17 +697,17 @@ export default function MatchingReviewPage() {
 
         {infoTab === 'evidence' && (
           <>
-            <p className="text-xs text-slate-400 -mt-1 mb-3">
+            <p className="text-xs text-slate-400 dark:text-slate-500 -mt-1 mb-3">
               Profile items currently attached as evidence to at least one requirement
             </p>
             {evidenceRows.length === 0 ? (
-              <p className="text-xs text-slate-300 py-2">No evidence attached yet.</p>
+              <p className="text-xs text-slate-300 dark:text-slate-600 py-2">No evidence attached yet.</p>
             ) : (
               <div className="space-y-1.5">
                 {evidenceRows.map(({ atom, requirementTexts }) => {
                   const expanded = expandedAtomIds.has(atom.id);
                   return (
-                    <div key={atom.id} className="rounded-xl border border-slate-200">
+                    <div key={atom.id} className="rounded-xl border border-slate-200 dark:border-slate-700">
                       <button
                         type="button"
                         onClick={() => toggleExpanded(atom.id)}
@@ -692,26 +716,26 @@ export default function MatchingReviewPage() {
                         <div className="flex items-start gap-2 min-w-0">
                           <Badge color="blue">{SOURCE_BADGE_LABEL[atom.source]}</Badge>
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-600 truncate">
+                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
                               {atomSourceTitle(atom)}
                             </p>
-                            <p className="text-sm text-slate-700 break-words mt-0.5">{atom.text}</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 break-words mt-0.5">{atom.text}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500">
                             matched {requirementTexts.length}×
                           </span>
                           <ChevronDown
                             size={14}
-                            className={`text-slate-300 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                            className={`text-slate-300 dark:text-slate-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
                           />
                         </div>
                       </button>
                       {expanded && (
-                        <div className="px-3 pb-3 space-y-1 border-t border-slate-100 pt-2">
+                        <div className="px-3 pb-3 space-y-1 border-t border-slate-100 dark:border-slate-800 pt-2">
                           {requirementTexts.map((text, i) => (
-                            <p key={i} className="text-xs text-slate-500">
+                            <p key={i} className="text-xs text-slate-500 dark:text-slate-400">
                               — {text}
                             </p>
                           ))}
@@ -727,7 +751,7 @@ export default function MatchingReviewPage() {
 
         {infoTab === 'additional' && (
           <div>
-            <p className="text-xs text-slate-400 -mt-1 mb-3">
+            <p className="text-xs text-slate-400 dark:text-slate-500 -mt-1 mb-3">
               Accomplishments not tied to a specific requirement — eligible evidence for any future
               matching
             </p>
@@ -735,7 +759,7 @@ export default function MatchingReviewPage() {
               <button
                 type="button"
                 onClick={() => setAdditionalInfoModalOpen(true)}
-                className="w-full py-8 text-center text-xs text-slate-300 border-2 border-dashed border-slate-100 rounded-xl hover:border-slate-200 hover:text-slate-400 transition-colors"
+                className="w-full py-8 text-center text-xs text-slate-300 dark:text-slate-600 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl hover:border-slate-200 dark:hover:border-slate-700 hover:text-slate-400 dark:hover:text-slate-500 transition-colors"
               >
                 Add accomplishment
               </button>
@@ -745,11 +769,11 @@ export default function MatchingReviewPage() {
                   {profile.additionalInfo.map((text, index) => (
                     <div
                       key={index}
-                      className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                      className="rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 px-3 py-2.5"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <Badge color="blue">Additional</Badge>
-                        <span className="text-sm text-slate-700">{text}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">{text}</span>
                       </div>
                       <RemoveItemButton
                         onClick={() =>
@@ -779,7 +803,7 @@ export default function MatchingReviewPage() {
                 )
               }
             />
-            {infoDoc.error && <p className="text-xs text-red-600 mt-2">{infoDoc.error}</p>}
+            {infoDoc.error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{infoDoc.error}</p>}
             </div>
           </div>
         )}
@@ -787,7 +811,7 @@ export default function MatchingReviewPage() {
 
       <div className="sticky bottom-4 mt-5">
         <Card className="p-3 pl-4 flex items-center justify-between shadow-lg">
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             {reviewedCount} of {requirements.length} requirement{requirements.length !== 1 ? 's' : ''} reviewed
           </span>
           <Btn onClick={() => navigate(`/jobs/${posting.id}/generate`)}>

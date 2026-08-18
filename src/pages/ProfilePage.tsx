@@ -21,7 +21,8 @@ import { ImportResumeSection } from '../components/profile/ImportResumeSection';
 import { JobDocumentImportSection } from '../components/profile/JobDocumentImportSection';
 import { BackupControls } from '../components/profile/BackupControls';
 import { BulletRewriteSuggest } from '../components/resume/BulletRewriteSuggest';
-import { Btn, PageSkeleton } from '../components/ui/primitives';
+import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
+import { Btn, PageSkeleton, SavedIndicator } from '../components/ui/primitives';
 
 // Shared by Experience and Projects tabs -- see ResumeEditor.tsx's identical
 // wiring, which is where this action originated (opt-in, per-bullet, never
@@ -58,6 +59,7 @@ export default function ProfilePage() {
   // Only needed for the tab badge's "still empty" flag -- the .tex section
   // owns its own copy of the template; null means we haven't looked yet.
   const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
+  const { saved, pulse } = useAutosaveIndicator();
 
   const refreshTemplate = useCallback(() => {
     // Raw .tex alone doesn't count -- only a converted, saved placeholder
@@ -98,6 +100,7 @@ export default function ProfilePage() {
       void saveProfile(next);
       return next;
     });
+    pulse();
   }
 
   // For writing samples: update on-screen state on every keystroke, but only
@@ -124,22 +127,25 @@ export default function ProfilePage() {
   return (
     <div className="pb-16">
       <div className="mb-6">
-        <h1 className="text-lg font-semibold text-slate-900">Profile</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Profile</h1>
+        <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
           Enter your details once — this is the source data every generated resume and cover
           letter draws from.
         </p>
       </div>
 
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-          Complete
-        </span>
-        <span className="text-xs font-semibold text-slate-700">{completeness.percent}%</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            Complete
+          </span>
+          <SavedIndicator visible={saved} />
+        </div>
+        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{completeness.percent}%</span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
         <div
-          className="h-full rounded-full bg-slate-900 transition-[width] duration-300 ease-out"
+          className="h-full rounded-full bg-slate-900 dark:bg-slate-100 transition-[width] duration-300 ease-out"
           style={{ width: `${completeness.percent}%` }}
         />
       </div>
@@ -169,23 +175,23 @@ export default function ProfilePage() {
               className={[
                 'flex flex-1 items-center justify-center gap-2 px-2 py-2.5 rounded-t-xl text-xs font-semibold whitespace-nowrap transition-colors',
                 active
-                  ? 'bg-white text-slate-900 shadow-[0_-1px_3px_rgba(15,23,42,0.04)]'
-                  : 'bg-[#e6e9ed] text-slate-500 hover:bg-[#edf0f3]',
+                  ? 'bg-white text-slate-900 shadow-[0_-1px_3px_rgba(15,23,42,0.04)] dark:bg-slate-900 dark:text-slate-100'
+                  : 'bg-[#e6e9ed] text-slate-500 hover:bg-[#edf0f3] dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700',
               ].join(' ')}
             >
               {active ? (
-                <span className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                <span className="w-4 h-4 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center text-[9px] font-bold shrink-0">
                   {i + 1}
                 </span>
               ) : flag ? (
                 <AlertCircle
-                  className={`w-3.5 h-3.5 shrink-0 ${flag.color === 'red' ? 'text-red-500' : 'text-amber-500'}`}
+                  className={`w-3.5 h-3.5 shrink-0 ${flag.color === 'red' ? 'text-red-500 dark:text-red-400' : 'text-amber-500 dark:text-amber-400'}`}
                   role="img"
                 >
                   <title>{flag.title}</title>
                 </AlertCircle>
               ) : (
-                <span className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <span className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center justify-center shrink-0">
                   <Check className="w-2.5 h-2.5" strokeWidth={3} />
                 </span>
               )}

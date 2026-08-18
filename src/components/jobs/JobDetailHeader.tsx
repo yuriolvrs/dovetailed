@@ -39,7 +39,7 @@ export function JobDetailHeader({
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <Link
           to={backHref}
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 transition-colors font-medium w-fit"
+          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit"
         >
           <ArrowLeft size={15} />
           {backLabel}

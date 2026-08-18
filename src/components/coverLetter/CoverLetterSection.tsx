@@ -12,13 +12,18 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Download, History, Sparkles } from 'lucide-react';
+import { AlertTriangle, Download, FileText, History, Sparkles } from 'lucide-react';
 import type { CoverLetterContent, Generation, GenerationSnapshot, JobPosting, Profile } from '../../types';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../../lib/genStore';
 import { generateCoverLetterContent } from '../../lib/generation/generateCoverLetterContent';
 import { llmErrorMessage } from '../../lib/llm';
-import { Btn, Card, Skeleton } from '../ui/primitives';
+import { useAutosaveIndicator } from '../../lib/useAutosaveIndicator';
+import { useEscapeKey } from '../../lib/useEscapeKey';
+import { coverLetterToMarkdown } from '../../lib/export/toMarkdown';
+import { coverLetterToDocx } from '../../lib/export/toDocx';
+import { downloadBlob, downloadTextFile } from '../../lib/download';
+import { Btn, Card, SavedIndicator, Skeleton } from '../ui/primitives';
 import { CoverLetterEditor } from './CoverLetterEditor';
 import { CoverLetterPrintView } from './CoverLetterPrintView';
 import type { CoverLetterNavTarget } from './coverLetterNav';
@@ -52,6 +57,12 @@ export function CoverLetterSection({
   // re-requested by clicking it again (same reasoning as GeneratePage's
   // resume navRequest).
   const [navRequest, setNavRequest] = useState<{ target: CoverLetterNavTarget; nonce: number } | null>(null);
+  const { saved: justRestored, pulse: pulseRestored } = useAutosaveIndicator();
+  const { saved: exported, pulse: pulseExported } = useAutosaveIndicator();
+  const [exportedLabel, setExportedLabel] = useState('Exported');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  useEscapeKey(showHistory, () => setShowHistory(false));
+  useEscapeKey(showExportMenu, () => setShowExportMenu(false));
 
   const refresh = useCallback(() => {
     loadGeneration(posting.id, 'coverLetter').then((g) => setGeneration(g ?? 'none'));
@@ -93,7 +104,32 @@ export function CoverLetterSection({
     await saveGeneration(restored);
     setGeneration(restored);
     setConfirmingRestoreId(null);
+    setShowHistory(false);
+    pulseRestored();
     listSnapshots(posting.id, 'coverLetter').then(setSnapshots);
+  }
+
+  // Deterministic -- no LLM call, just a different renderer over the same
+  // current letter content, same as the resume tab's Markdown/DOCX export.
+  // In plain terms: downloads the cover letter as a Markdown file.
+  function handleExportMarkdown() {
+    if (generation === 'none' || generation === null) return;
+    const name = profile.contact.name.trim() || 'cover_letter';
+    const md = coverLetterToMarkdown(generation.content as CoverLetterContent, profile.contact);
+    downloadTextFile(`${name.replace(/\s+/g, '_')}.md`, md, 'text/markdown');
+    setExportedLabel('Exported');
+    pulseExported();
+    setShowExportMenu(false);
+  }
+
+  async function handleExportDocx() {
+    if (generation === 'none' || generation === null) return;
+    const name = profile.contact.name.trim() || 'cover_letter';
+    const blob = await coverLetterToDocx(generation.content as CoverLetterContent, profile.contact);
+    downloadBlob(`${name.replace(/\s+/g, '_')}.docx`, blob);
+    setExportedLabel('Exported');
+    pulseExported();
+    setShowExportMenu(false);
   }
 
   function updateContent(content: CoverLetterContent) {
@@ -123,11 +159,63 @@ export function CoverLetterSection({
         createPortal(
           !confirmingRegenerate ? (
             <>
+              <SavedIndicator visible={justRestored} label="Restored" />
               {snapshots.length > 0 && (
-                <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
-                  <History size={13} />
-                  History ({snapshots.length})
-                </Btn>
+                <div className="relative">
+                  <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
+                    <History size={13} />
+                    History ({snapshots.length})
+                  </Btn>
+                  {showHistory && (
+                    <>
+                      {/* Closes the popover on outside click without a
+                          global listener -- a full-screen transparent layer
+                          under the popover, same trick Modal's backdrop and
+                          the resume tab's identical History popover use. */}
+                      <div className="fixed inset-0 z-40" onClick={() => setShowHistory(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-4">
+                        <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+                          Version history
+                        </p>
+                        <div className="space-y-1.5">
+                          {snapshots.map((snapshot) =>
+                            confirmingRestoreId === snapshot.id ? (
+                              <div
+                                key={snapshot.id}
+                                className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5"
+                              >
+                                <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
+                                  Replace the current letter with the{' '}
+                                  {new Date(snapshot.createdAt).toLocaleString()} version?
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <Btn size="sm" onClick={() => handleRestore(snapshot)}>
+                                    Yes, restore
+                                  </Btn>
+                                  <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(null)}>
+                                    Cancel
+                                  </Btn>
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                key={snapshot.id}
+                                className="rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 px-3 py-2.5"
+                              >
+                                <span className="text-xs text-slate-700 dark:text-slate-300">
+                                  {new Date(snapshot.createdAt).toLocaleString()}
+                                </span>
+                                <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(snapshot.id)}>
+                                  Restore
+                                </Btn>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
               <Btn
                 size="sm"
@@ -138,14 +226,51 @@ export function CoverLetterSection({
                 <Sparkles size={13} />
                 {status === 'loading' ? 'Writing…' : 'Regenerate'}
               </Btn>
-              <Btn size="sm" onClick={() => window.print()}>
-                <Download size={13} />
-                Export PDF
-              </Btn>
+              <div className="relative flex items-center gap-1.5">
+                <SavedIndicator visible={exported} label={exportedLabel} />
+                <Btn size="sm" onClick={() => setShowExportMenu((v) => !v)}>
+                  <Download size={13} />
+                  Export
+                </Btn>
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-52 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-1.5 space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowExportMenu(false);
+                          window.print();
+                        }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <Download size={13} />
+                        PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportMarkdown}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <FileText size={13} />
+                        Markdown (.md)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportDocx}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <FileText size={13} />
+                        Word (.docx)
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           ) : (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600">This will overwrite your edits. Regenerate?</span>
+              <span className="text-slate-600 dark:text-slate-300">This will overwrite your edits. Regenerate?</span>
               <Btn size="sm" onClick={handleGenerate} disabled={status === 'loading'}>
                 {status === 'loading' ? 'Writing…' : 'Yes, regenerate'}
               </Btn>
@@ -158,70 +283,37 @@ export function CoverLetterSection({
         )}
 
       {hasLetter && status === 'error' && error && (
-        <p className="text-xs text-red-600 flex items-center gap-1.5 mb-5 print:hidden">
+        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5 mb-5 print:hidden">
           <AlertTriangle size={13} className="shrink-0" />
           {error}
         </p>
       )}
 
-      {showHistory && snapshots.length > 0 && (
-        <Card className="p-4 mb-5 print:hidden">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
-            Version history
-          </p>
-          <div className="space-y-1.5">
-            {snapshots.map((snapshot) => (
-              <div
-                key={snapshot.id}
-                className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
-              >
-                <span className="text-sm text-slate-700">{new Date(snapshot.createdAt).toLocaleString()}</span>
-                {confirmingRestoreId === snapshot.id ? (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-600">Replace the current letter with this version?</span>
-                    <Btn size="sm" onClick={() => handleRestore(snapshot)}>
-                      Yes, restore
-                    </Btn>
-                    <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(null)}>
-                      Cancel
-                    </Btn>
-                  </div>
-                ) : (
-                  <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(snapshot.id)}>
-                    Restore
-                  </Btn>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
       {!hasLetter ? (
         <Card className="p-10 flex flex-col items-center text-center gap-5 print:hidden">
-          <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
-            <Sparkles size={22} className="text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
+            <Sparkles size={22} className="text-white dark:text-slate-900" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-base font-semibold text-slate-900">Write a tailored cover letter</h3>
-            <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Write a tailored cover letter</h3>
+            <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-sm">
               Grounded in your matched requirements and real profile evidence -- any sentence the AI
               can't back up with something from your profile is flagged for you to review.
             </p>
           </div>
           {hasWritingSamples && (
-            <label className="flex items-center gap-2 text-xs text-slate-500">
+            <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               <input
                 type="checkbox"
                 checked={useWritingStyle}
                 onChange={(e) => setUseWritingStyle(e.target.checked)}
-                className="rounded border-slate-300"
+                className="rounded border-slate-300 dark:border-slate-600"
               />
               Mimic my writing style from a saved sample
             </label>
           )}
           {status === 'error' && error && (
-            <p className="text-xs text-red-600 max-w-sm flex items-center gap-1.5">
+            <p className="text-xs text-red-600 dark:text-red-400 max-w-sm flex items-center gap-1.5">
               <AlertTriangle size={13} className="shrink-0" />
               {error}
             </p>
@@ -237,6 +329,7 @@ export function CoverLetterSection({
             <CoverLetterEditor
               value={generation.content as CoverLetterContent}
               sourceMap={generation.sourceMap}
+              profile={profile}
               onChange={updateContent}
               onFocusParagraph={setFocusedParagraph}
               navRequest={navRequest}

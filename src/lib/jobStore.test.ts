@@ -5,8 +5,8 @@
 // In plain terms: tests proving the "what do we call this saved posting"
 // logic picks a sensible label.
 
-import { describe, expect, it } from 'vitest';
-import { guessJobTitleAndCompany, postingLabel } from './jobStore';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { deadlineCountdown, guessJobTitleAndCompany, postingLabel } from './jobStore';
 import type { JobPosting } from '../types';
 
 function posting(overrides: Partial<JobPosting>): JobPosting {
@@ -93,5 +93,47 @@ describe('guessJobTitleAndCompany', () => {
       'Senior Frontend Engineer\nAt least 3 years of experience with React required.\nDetails...',
     );
     expect(company).toBeUndefined();
+  });
+});
+
+describe('deadlineCountdown', () => {
+  // Fixed "now" so the day-boundary cases below can't drift with the clock.
+  const NOW = new Date('2026-08-19T09:00:00').getTime();
+  const at = (days: number, hour = 0) =>
+    new Date(`2026-08-${String(19 + days).padStart(2, '0')}T${String(hour).padStart(2, '0')}:00:00`).getTime();
+
+  function withFakeNow(fn: () => void) {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    fn();
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('flags a deadline earlier today as due today, not overdue', () => {
+    withFakeNow(() => {
+      // Midnight today is already behind us, but the day itself hasn't ended.
+      expect(deadlineCountdown(at(0))).toEqual({ label: 'Due today', color: 'red' });
+    });
+  });
+
+  it('reports a past deadline as overdue', () => {
+    withFakeNow(() => {
+      expect(deadlineCountdown(at(-2))).toEqual({ label: 'Overdue 2d', color: 'red' });
+    });
+  });
+
+  it('warns in amber inside the three-day window', () => {
+    withFakeNow(() => {
+      expect(deadlineCountdown(at(3))).toEqual({ label: '3d left', color: 'amber' });
+    });
+  });
+
+  it('stays neutral when there is more than three days left', () => {
+    withFakeNow(() => {
+      expect(deadlineCountdown(at(4))).toEqual({ label: '4d left', color: 'slate' });
+    });
   });
 });

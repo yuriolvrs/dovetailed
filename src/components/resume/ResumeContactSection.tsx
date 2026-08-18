@@ -55,8 +55,8 @@ export function ResumeContactSection({
       />
       <Collapsible open={open}>
         <div>
-          <div className="grid grid-cols-2 gap-4 mb-5">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+            <div className="col-span-1 sm:col-span-2">
               <FieldInput label="Name" value={value.name} onChange={(name) => onChange({ ...value, name })} />
             </div>
             <FieldInput
@@ -70,7 +70,7 @@ export function ResumeContactSection({
               value={value.phone ?? ''}
               onChange={(phone) => onChange({ ...value, phone })}
             />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FieldInput
                 label="Location"
                 value={value.location ?? ''}
@@ -79,7 +79,7 @@ export function ResumeContactSection({
             </div>
           </div>
           <div>
-            <span className="mb-2 block text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+            <span className="mb-2 block text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Links
             </span>
             <EditableList

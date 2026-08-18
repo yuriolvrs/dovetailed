@@ -8,7 +8,7 @@
 // "job posting," and a "generated resume" look like as data.
 
 /** Bump when the persisted shape changes; used for export/import migrations. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // ---------------------------------------------------------------------------
 // Profile
@@ -142,6 +142,9 @@ export interface JobAnalysis {
   matches: RequirementMatch[];
 }
 
+/** Application-tracker status -- see STATUSES in jobStore.ts. Unset means not yet applied. */
+export type ApplicationStatus = 'applied' | 'interviewing' | 'rejected' | 'offer';
+
 export interface JobPosting {
   id: string;
   createdAt: number;
@@ -152,13 +155,19 @@ export interface JobPosting {
   arrangement?: string;
   rawText: string;
   analysis?: JobAnalysis;
+  /** Application-tracker status. Unset means not yet applied. */
+  status?: ApplicationStatus;
+  /** ms timestamp the status was last set to 'applied' -- shown as the applied date. */
+  appliedAt?: number;
+  /** ms timestamp of an application deadline, if any -- offered for .ics export. */
+  deadline?: number;
 }
 
 // ---------------------------------------------------------------------------
 // Generations (resume / cover letter)
 // ---------------------------------------------------------------------------
 
-export type GenerationType = 'resume' | 'coverLetter';
+export type GenerationType = 'resume' | 'coverLetter' | 'interviewPrep';
 
 /**
  * Structured, field-editable resume content. Shape is deliberately minimal for
@@ -182,6 +191,23 @@ export interface CoverLetterContent {
   closing: string;
 }
 
+/** One likely interview question, grounded in specific profile evidence via sourceMap (keyed by `question`). */
+export interface InterviewQuestion {
+  question: string;
+  /** Why this question is likely, given the posting -- e.g. which requirement it probes. */
+  rationale: string;
+}
+
+/**
+ * Structured, field-editable interview-prep content -- a set of likely
+ * interview questions, each backed by profile evidence (see sourceMap on the
+ * Generation this is stored in, keyed the same way resume bullets are: one
+ * entry per question's text).
+ */
+export interface InterviewPrepContent {
+  questions: InterviewQuestion[];
+}
+
 /**
  * Marks one included resume item (a bullet or skill, copied verbatim from
  * the profile -- nothing here is generated text) as matched to this job's
@@ -200,7 +226,7 @@ export interface Generation {
   jobPostingId: string;
   createdAt: number;
   type: GenerationType;
-  content: ResumeContent | CoverLetterContent;
+  content: ResumeContent | CoverLetterContent | InterviewPrepContent;
   sourceMap: SourceMapEntry[];
   /**
    * Whole experience entries page-fit trimming dropped when this was
@@ -224,7 +250,7 @@ export interface GenerationSnapshot {
   jobPostingId: string;
   type: GenerationType;
   createdAt: number;
-  content: ResumeContent | CoverLetterContent;
+  content: ResumeContent | CoverLetterContent | InterviewPrepContent;
   sourceMap: SourceMapEntry[];
 }
 

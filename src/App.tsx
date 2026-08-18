@@ -12,12 +12,15 @@ import MatchingReviewPage from './pages/MatchingReviewPage.tsx';
 import GeneratePage from './pages/GeneratePage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
 import { ToastProvider } from './components/ui/Toast.tsx';
+import { ThemeToggle } from './components/ui/ThemeToggle.tsx';
 import Logo from './components/ui/Logo.tsx';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
     'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-    isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+    isActive
+      ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
+      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
   ].join(' ');
 
 export default function App() {
@@ -30,37 +33,40 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen print:min-h-0 bg-[#f5f6f8] text-slate-900">
-        <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 print:hidden">
+      <div className="min-h-screen print:min-h-0 bg-[#f5f6f8] dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+        <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 print:hidden">
           <div className="mx-auto flex max-w-4xl h-[54px] items-center justify-between px-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
-                <Logo size={22} className="text-white" />
+              <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-sm">
+                <Logo size={22} className="text-white dark:text-slate-900" />
               </div>
-              <span className="text-sm font-semibold text-slate-900 tracking-tight">
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
                 Pimp My Resume
               </span>
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 border border-slate-200">
-                <Shield size={10} className="text-slate-400" />
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <Shield size={10} className="text-slate-400 dark:text-slate-500" />
+                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   Local only
                 </span>
               </div>
             </div>
 
-            <nav className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-              <NavLink to="/profile" className={navLinkClass}>
-                <User size={13} />
-                Profile
-              </NavLink>
-              <NavLink
-                to="/jobs"
-                className={({ isActive }) => navLinkClass({ isActive: isActive || Boolean(onJobDetail) })}
-              >
-                <Briefcase size={13} />
-                Jobs
-              </NavLink>
-            </nav>
+            <div className="flex items-center gap-3">
+              <nav className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <NavLink to="/profile" className={navLinkClass}>
+                  <User size={13} />
+                  Profile
+                </NavLink>
+                <NavLink
+                  to="/jobs"
+                  className={({ isActive }) => navLinkClass({ isActive: isActive || Boolean(onJobDetail) })}
+                >
+                  <Briefcase size={13} />
+                  Jobs
+                </NavLink>
+              </nav>
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 
@@ -81,9 +87,12 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className="print:hidden border-t border-slate-200/80">
+        <footer className="print:hidden border-t border-slate-200/80 dark:border-slate-800">
           <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-center">
-            <Link to="/about" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+            <Link
+              to="/about"
+              className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            >
               About &amp; Privacy
             </Link>
           </div>

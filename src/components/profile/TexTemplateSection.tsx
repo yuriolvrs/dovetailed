@@ -45,6 +45,9 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
   // Same idea for the raw .tex box, which can be saved on its own (without
   // converting) so a pasted template survives leaving the page.
   const [rawSaved, setRawSaved] = useState(false);
+  // True right after a successful Remove template, cleared as soon as a new
+  // .tex is pasted -- same fade-once pattern as justSaved/rawSaved above.
+  const [removedMessage, setRemovedMessage] = useState(false);
   // Which chunk of a split template is in flight -- a long template takes
   // several requests, paced by the provider's per-minute cap, so a bare
   // "Converting…" would look hung.
@@ -116,6 +119,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
   function updateRawTex(value: string) {
     setRawTex(value);
     setRawSaved(false);
+    setRemovedMessage(false);
   }
 
   // Persists just the pasted .tex, leaving any already-saved placeholder
@@ -145,6 +149,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
     setRawTex('');
     setDraft(null);
     setConfirmingDelete(false);
+    setRemovedMessage(true);
     onChanged?.();
   }
 
@@ -160,8 +165,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
     <Card className="p-6 space-y-4">
       <SectionTitle
         sub="Paste a LaTeX resume template once (e.g. from Overleaf). The AI converts it into a
-        fill-in-the-blanks version; every future resume export then fills it in with your own
-        code -- no AI involved after this step."
+        fill-in-the-blanks version; every future resume export then fills it in with your own code."
         right={
           template !== 'none' && (
             <Btn size="sm" variant="danger" onClick={() => setConfirmingDelete(true)}>
@@ -177,9 +181,16 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
         </div>
       </SectionTitle>
 
+      {removedMessage && (
+        <p className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <Check size={13} />
+          Template removed.
+        </p>
+      )}
+
       {confirmingDelete && (
-        <div className="flex items-center justify-between gap-3 p-4 rounded-xl border border-red-200 bg-red-50">
-          <span className="text-sm text-slate-600">Remove your saved LaTeX template? This can't be undone.</span>
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10">
+          <span className="text-sm text-slate-600 dark:text-slate-300">Remove your saved LaTeX template? This can't be undone.</span>
           <div className="flex items-center gap-2">
             <Btn size="sm" variant="danger" onClick={handleDelete}>
               Yes, remove
@@ -200,7 +211,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
         label="Attach a .tex file, or paste below"
         onFile={(f) => texFile.read(f, updateRawTex)}
       />
-      {texFile.error && <p className="text-sm text-red-600">{texFile.error}</p>}
+      {texFile.error && <p className="text-sm text-red-600 dark:text-red-400">{texFile.error}</p>}
       <FieldTextarea
         label="Raw .tex template"
         value={rawTex}
@@ -213,17 +224,17 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
           section too big to be a pass by itself, which is the single case
           the prompt still truncates. */}
       {chunks.some((c) => c.length > MAX_TEMPLATE_CHARS) && (
-        <p className="text-sm text-amber-600">
+        <p className="text-sm text-amber-600 dark:text-amber-400">
           One section of this template is longer than {MAX_TEMPLATE_CHARS.toLocaleString()}{' '}
           characters, which is more than one pass can convert -- it can't be split further
           without breaking it. Converting will cut that section short; splitting it into two
           \section blocks first avoids that.
         </p>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex items-center justify-end gap-2">
         {rawSaved && (
-          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <Check size={13} />
             Saved
           </span>
@@ -244,7 +255,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
       </div>
 
       {draft && (
-        <div className="space-y-4 pt-4 border-t border-slate-200">
+        <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
           <SectionTitle sub="Review and edit the placeholder version before saving -- fix anything the conversion got wrong.">
             Placeholder template
           </SectionTitle>
@@ -257,8 +268,8 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
             rows={16}
             className="font-mono text-xs"
           />
-          {syntaxError && <p className="text-sm text-red-600">{syntaxError}</p>}
-          <p className="text-xs text-slate-400">
+          {syntaxError && <p className="text-sm text-red-600 dark:text-red-400">{syntaxError}</p>}
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             This is a starting point, not guaranteed-correct LaTeX -- the conversion can
             occasionally drop a brace from an existing command (e.g. turning \textbf{'{'}Title
             {'}'} into invalid \textbf{'{{'}title{'}}'} instead of \textbf{'{{{'}title{'}}}'}).
@@ -266,10 +277,10 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
             wrong here before relying on it.
           </p>
           <div>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
+            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">
               Placeholders used
             </p>
-            <p className="text-xs text-slate-500 font-mono break-words">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono break-words">
               {draft.placeholders.length > 0 ? draft.placeholders.join(', ') : 'None detected.'}
             </p>
           </div>
@@ -278,7 +289,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
               Save template
             </Btn>
             {justSaved && (
-              <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+              <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <Check size={13} />
                 Saved
               </span>

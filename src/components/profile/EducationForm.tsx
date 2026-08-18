@@ -39,10 +39,11 @@ export function EducationForm({
           newItem={newEducationEntry}
           emptyLabel="No education entries yet."
           hideAddButton
+          reorderable
           renderItem={(entry, update) => (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="col-span-1 sm:col-span-2">
                   <FieldInput
                     label="Institution"
                     placeholder="UC Berkeley"

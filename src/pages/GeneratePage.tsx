@@ -22,7 +22,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Info, Mail, Sparkles } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Info, Mail, MessageCircleQuestion, Sparkles } from 'lucide-react';
 import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
 import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
@@ -34,26 +34,19 @@ import { isResumeContentVerbatim, selectResumeContent } from '../lib/generation/
 import { fitToOnePage } from '../lib/generation/fitToOnePage';
 import { buildLatexContext } from '../lib/latex/templateContext';
 import { fillLatexTemplate } from '../lib/latex/fillTemplate';
+import { resumeToMarkdown } from '../lib/export/toMarkdown';
+import { resumeToDocx } from '../lib/export/toDocx';
+import { downloadBlob, downloadTextFile } from '../lib/download';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
-import { Btn, Card, PageSkeleton } from '../components/ui/primitives';
+import { InterviewPrepSection } from '../components/interviewPrep/InterviewPrepSection';
+import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
+import { useEscapeKey } from '../lib/useEscapeKey';
+import { Btn, Card, PageSkeleton, SavedIndicator } from '../components/ui/primitives';
 
-// Triggers a browser download of plain text content -- no server round-trip,
-// consistent with this app's "everything stays local" invariant.
-// In plain terms: saves a text string as a downloadable file.
-function downloadTextFile(filename: string, content: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-type Tab = 'resume' | 'coverLetter';
+type Tab = 'resume' | 'coverLetter' | 'interviewPrep';
 
 export default function GeneratePage() {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +59,13 @@ export default function GeneratePage() {
   const [snapshots, setSnapshots] = useState<GenerationSnapshot[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [confirmingRestoreId, setConfirmingRestoreId] = useState<string | null>(null);
+  const { saved, pulse } = useAutosaveIndicator();
+  const { saved: exported, pulse: pulseExported } = useAutosaveIndicator();
+  const [exportedLabel, setExportedLabel] = useState('Exported');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const { saved: justRestored, pulse: pulseRestored } = useAutosaveIndicator();
+  useEscapeKey(showHistory, () => setShowHistory(false));
+  useEscapeKey(showExportMenu, () => setShowExportMenu(false));
   // Checked once, when a generation is first loaded from storage -- not
   // recomputed on every render. It exists to catch an old generation saved
   // by the earlier LLM-rewriting design (see selectResumeContent.ts's file
@@ -91,10 +91,10 @@ export default function GeneratePage() {
   // change, so an effect keyed on it wouldn't re-fire).
   const [navRequest, setNavRequest] = useState<{ target: ResumeNavTarget; nonce: number } | null>(null);
   // DOM node inside the shared header's actions slot that CoverLetterSection
-  // portals its own action buttons into, so they land in the exact same
-  // header position as the resume tab's actions instead of appearing lower
-  // down the page when switching tabs.
-  const [coverLetterActionsEl, setCoverLetterActionsEl] = useState<HTMLDivElement | null>(null);
+  // and InterviewPrepSection portal their own action buttons into, so they
+  // land in the exact same header position as the resume tab's actions
+  // instead of appearing lower down the page when switching tabs.
+  const [sideActionsEl, setSideActionsEl] = useState<HTMLDivElement | null>(null);
   // The user's saved LaTeX template (set up once in the profile page's
   // TexTemplateSection), if any -- gates whether "Export .tex" appears at all.
   const [template, setTemplate] = useState<LatexTemplate | null>(null);
@@ -187,6 +187,8 @@ export default function GeneratePage() {
     setGeneration(restored);
     setStale(false);
     setConfirmingRestoreId(null);
+    setShowHistory(false);
+    pulseRestored();
     listSnapshots(id, 'resume').then(setSnapshots);
   }
 
@@ -203,9 +205,36 @@ export default function GeneratePage() {
       const filled = fillLatexTemplate(template.compiledTemplate, context);
       const name = (generation.content as ResumeContent).contact.name.trim() || 'resume';
       downloadTextFile(`${name.replace(/\s+/g, '_')}.tex`, filled, 'application/x-tex');
+      setExportedLabel('Exported');
+      pulseExported();
     } catch (err) {
       setTexExportError(err instanceof Error ? err.message : 'Could not fill the LaTeX template.');
     }
+    setShowExportMenu(false);
+  }
+
+  // Deterministic, like handleExportTex -- no LLM call, just a different
+  // renderer over the same current resume content.
+  // In plain terms: downloads the resume as a Markdown file.
+  function handleExportMarkdown() {
+    if (generation === 'none' || generation === null) return;
+    const content = generation.content as ResumeContent;
+    const name = content.contact.name.trim() || 'resume';
+    downloadTextFile(`${name.replace(/\s+/g, '_')}.md`, resumeToMarkdown(content), 'text/markdown');
+    setExportedLabel('Exported');
+    pulseExported();
+    setShowExportMenu(false);
+  }
+
+  async function handleExportDocx() {
+    if (generation === 'none' || generation === null) return;
+    const content = generation.content as ResumeContent;
+    const name = content.contact.name.trim() || 'resume';
+    const blob = await resumeToDocx(content);
+    downloadBlob(`${name.replace(/\s+/g, '_')}.docx`, blob);
+    setExportedLabel('Exported');
+    pulseExported();
+    setShowExportMenu(false);
   }
 
   function updateContent(content: Generation['content']) {
@@ -215,13 +244,17 @@ export default function GeneratePage() {
       void saveGeneration(next);
       return next;
     });
+    pulse();
   }
 
   if (posting === 'missing') {
     return (
       <section className="space-y-3">
-        <p className="text-sm text-slate-500">Posting not found.</p>
-        <Link to="/jobs" className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 font-medium w-fit">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
+        <Link
+          to="/jobs"
+          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
+        >
           <ArrowLeft size={15} />
           Back to Jobs
         </Link>
@@ -244,9 +277,9 @@ export default function GeneratePage() {
           analysisDone={false}
           matchingDone={false}
         />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           This posting hasn't been analyzed yet.{' '}
-          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900">
+          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
             Go run analysis first.
           </Link>
         </p>
@@ -265,9 +298,9 @@ export default function GeneratePage() {
           analysisDone={true}
           matchingDone={false}
         />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           This posting hasn't been matched yet.{' '}
-          <Link to={`/jobs/${posting.id}/match`} className="underline hover:text-slate-900">
+          <Link to={`/jobs/${posting.id}/match`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
             Go run matching first.
           </Link>
         </p>
@@ -296,14 +329,14 @@ export default function GeneratePage() {
         analysisDone={Boolean(posting.analysis)}
         matchingDone={posting.analysis.matches.length > 0}
         subtabs={
-          <div className="flex border-b border-slate-200 print:hidden">
+          <div className="flex border-b border-slate-200 dark:border-slate-700 print:hidden">
             <button
               type="button"
               onClick={() => setTab('resume')}
               className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'resume'
-                  ? 'border-slate-900 text-slate-900'
-                  : 'border-transparent text-slate-400 hover:text-slate-600'
+                  ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
+                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
             >
               <FileText size={14} />
@@ -314,12 +347,24 @@ export default function GeneratePage() {
               onClick={() => setTab('coverLetter')}
               className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'coverLetter'
-                  ? 'border-slate-900 text-slate-900'
-                  : 'border-transparent text-slate-400 hover:text-slate-600'
+                  ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
+                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
             >
               <Mail size={14} />
               Cover Letter
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('interviewPrep')}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
+                tab === 'interviewPrep'
+                  ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
+                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              }`}
+            >
+              <MessageCircleQuestion size={14} />
+              Interview Prep
             </button>
           </div>
         }
@@ -328,6 +373,8 @@ export default function GeneratePage() {
             hasResume ? (
               !confirmingRegenerate ? (
                 <>
+                  <SavedIndicator visible={saved} />
+                  <SavedIndicator visible={justRestored} label="Restored" />
                   {snapshots.length > 0 && (
                     <div className="relative">
                       <Btn size="sm" variant="secondary" onClick={() => setShowHistory((v) => !v)}>
@@ -341,15 +388,18 @@ export default function GeneratePage() {
                               layer under the popover, same trick Modal's
                               backdrop uses. */}
                           <div className="fixed inset-0 z-40" onClick={() => setShowHistory(false)} />
-                          <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl border border-slate-200 bg-white shadow-xl p-4">
-                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">
+                          <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-4">
+                            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
                               Version history
                             </p>
                             <div className="space-y-1.5">
                               {snapshots.map((snapshot) =>
                                 confirmingRestoreId === snapshot.id ? (
-                                  <div key={snapshot.id} className="rounded-xl border border-slate-200 px-3 py-2.5">
-                                    <p className="text-xs text-slate-600 mb-2">
+                                  <div
+                                    key={snapshot.id}
+                                    className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5"
+                                  >
+                                    <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
                                       Replace the current resume with the{' '}
                                       {new Date(snapshot.createdAt).toLocaleString()} version?
                                     </p>
@@ -357,11 +407,7 @@ export default function GeneratePage() {
                                       <Btn size="sm" onClick={() => handleRestore(snapshot)}>
                                         Yes, restore
                                       </Btn>
-                                      <Btn
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={() => setConfirmingRestoreId(null)}
-                                      >
+                                      <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(null)}>
                                         Cancel
                                       </Btn>
                                     </div>
@@ -369,16 +415,12 @@ export default function GeneratePage() {
                                 ) : (
                                   <div
                                     key={snapshot.id}
-                                    className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                                    className="rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 px-3 py-2.5"
                                   >
-                                    <span className="text-xs text-slate-700">
+                                    <span className="text-xs text-slate-700 dark:text-slate-300">
                                       {new Date(snapshot.createdAt).toLocaleString()}
                                     </span>
-                                    <Btn
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => setConfirmingRestoreId(snapshot.id)}
-                                    >
+                                    <Btn size="sm" variant="secondary" onClick={() => setConfirmingRestoreId(snapshot.id)}>
                                       Restore
                                     </Btn>
                                   </div>
@@ -394,20 +436,61 @@ export default function GeneratePage() {
                     <Sparkles size={13} />
                     Regenerate
                   </Btn>
-                  {template && template.compiledTemplate.trim() !== '' && (
-                    <Btn size="sm" variant="secondary" onClick={handleExportTex}>
-                      <FileCode size={13} />
-                      Export .tex
+                  <div className="relative flex items-center gap-1.5">
+                    <SavedIndicator visible={exported} label={exportedLabel} />
+                    <Btn size="sm" onClick={() => setShowExportMenu((v) => !v)}>
+                      <Download size={13} />
+                      Export
                     </Btn>
-                  )}
-                  <Btn size="sm" onClick={() => window.print()}>
-                    <Download size={13} />
-                    Export PDF
-                  </Btn>
+                    {showExportMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                        <div className="absolute right-0 top-full mt-2 w-52 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-1.5 space-y-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowExportMenu(false);
+                              window.print();
+                            }}
+                            className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <Download size={13} />
+                            PDF
+                          </button>
+                          {template && template.compiledTemplate.trim() !== '' && (
+                            <button
+                              type="button"
+                              onClick={handleExportTex}
+                              className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              <FileCode size={13} />
+                              LaTeX (.tex)
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleExportMarkdown}
+                            className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <FileText size={13} />
+                            Markdown (.md)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleExportDocx}
+                            className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <FileText size={13} />
+                            Word (.docx)
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-600">This will overwrite your edits. Regenerate?</span>
+                  <span className="text-slate-600 dark:text-slate-300">This will overwrite your edits. Regenerate?</span>
                   <Btn size="sm" onClick={handleGenerate}>
                     Yes, regenerate
                   </Btn>
@@ -418,23 +501,25 @@ export default function GeneratePage() {
               )
             ) : null
           ) : (
-            <div ref={setCoverLetterActionsEl} className="flex items-center gap-2" />
+            <div ref={setSideActionsEl} className="flex items-center gap-2" />
           )
         }
       />
 
       {tab === 'coverLetter' ? (
-        <CoverLetterSection posting={posting} profile={profile} actionsPortalTarget={coverLetterActionsEl} />
+        <CoverLetterSection posting={posting} profile={profile} actionsPortalTarget={sideActionsEl} />
+      ) : tab === 'interviewPrep' ? (
+        <InterviewPrepSection posting={posting} profile={profile} actionsPortalTarget={sideActionsEl} />
       ) : (
         <>
           {generation === 'none' ? (
             <Card className="p-10 flex flex-col items-center text-center gap-5 print:hidden">
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
-                <Sparkles size={22} className="text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
+                <Sparkles size={22} className="text-white dark:text-slate-900" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-slate-900">Build a tailored resume</h3>
-                <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Build a tailored resume</h3>
+                <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-xs">
                   Selects and prioritizes your most relevant experience, projects, and skills for this
                   job -- every bullet stays exactly as you wrote it. Edit anything before exporting.
                 </p>
@@ -450,8 +535,8 @@ export default function GeneratePage() {
                 <AlertTriangle size={22} className="text-white" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-slate-900">This resume needs to be rebuilt</h3>
-                <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">This resume needs to be rebuilt</h3>
+                <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-sm">
                   It was built by an older version of this app that could rewrite bullet text -- some
                   of what it shows may not actually be in your profile. Rebuilding replaces it with
                   today's selection-only version, where every bullet stays exactly as you wrote it.
@@ -466,22 +551,22 @@ export default function GeneratePage() {
             <>
               {(texExportError || pageFitOverflow || pageFitRemoved.length > 0) && (
                 <Card className="p-4 mb-5 print:hidden">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1 px-1">
+                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 px-1">
                     Notices
                   </p>
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {texExportError && (
                       <div className="flex items-start gap-2.5 py-3 px-1">
-                        <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-600">{texExportError}</p>
+                        <AlertCircle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-600 dark:text-red-400">{texExportError}</p>
                       </div>
                     )}
                     {pageFitOverflow && (
                       <div className="flex items-start gap-2.5 py-3 px-1">
                         <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-slate-800">Still longer than one page</p>
-                          <p className="text-sm text-slate-500 mt-0.5">
+                          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Still longer than one page</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                             Everything that could be dropped automatically already was -- every droppable
                             entry, and every extra bullet down to the last one per job. Shorten some bullets
                             below, or tick "Drop this first" on more entries, to get under a page.
@@ -491,9 +576,9 @@ export default function GeneratePage() {
                     )}
                     {pageFitRemoved.length > 0 && (
                       <div className="flex items-start gap-2.5 py-3 px-1">
-                        <Info size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                        <Info size={16} className="text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-700 mb-2">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
                             Removed to fit one page — {pageFitRemoved.length}{' '}
                             {pageFitRemoved.length === 1 ? 'entry' : 'entries'} dropped
                           </p>
@@ -501,11 +586,13 @@ export default function GeneratePage() {
                             {pageFitRemoved.map((entry, i) => (
                               <div
                                 key={i}
-                                className="rounded-xl border border-slate-200 flex items-center justify-between gap-3 px-3 py-2.5"
+                                className="rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 px-3 py-2.5"
                               >
-                                <span className="text-sm text-slate-700">
+                                <span className="text-sm text-slate-700 dark:text-slate-300">
                                   {entry.title}
-                                  {entry.company && <span className="text-slate-400"> · {entry.company}</span>}
+                                  {entry.company && (
+                                    <span className="text-slate-400 dark:text-slate-500"> · {entry.company}</span>
+                                  )}
                                 </span>
                                 <Btn
                                   size="sm"

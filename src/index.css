@@ -11,6 +11,15 @@
 html {
   font-size: 17px;
   scrollbar-gutter: stable;
+  color-scheme: light;
+}
+
+/* Tells the browser which palette to draw *native* controls in -- the date
+   picker popup and its calendar glyph, select dropdowns, spinners. Without
+   it the dark theme still renders a white calendar popup and a washed-out
+   mm/dd/yyyy placeholder that ignores every Tailwind dark: class. */
+html.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -47,4 +56,22 @@ textarea::-webkit-scrollbar-thumb,
 textarea::-webkit-scrollbar-thumb:hover,
 .scroll-thin::-webkit-scrollbar-thumb:hover {
   background-color: #94a3b8;
+}
+
+/* The thumb colors above are slate-300/400 -- correct on a white panel, but
+   they read as a bright bar against the dark theme's slate-900 cards, so the
+   dark theme steps them down to slate-700/600. */
+.dark textarea,
+.dark .scroll-thin {
+  scrollbar-color: #334155 transparent;
+}
+
+.dark textarea::-webkit-scrollbar-thumb,
+.dark .scroll-thin::-webkit-scrollbar-thumb {
+  background-color: #334155;
+}
+
+.dark textarea::-webkit-scrollbar-thumb:hover,
+.dark .scroll-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
 }

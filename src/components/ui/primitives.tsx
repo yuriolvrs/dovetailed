@@ -5,9 +5,11 @@
 // In plain terms: the basic look-and-feel pieces (buttons, cards, form
 // fields) that the rest of the app is built out of.
 
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useId, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
-import { ChevronDown, Plus, RotateCcw, X } from 'lucide-react';
+import { Check, ChevronDown, Plus, RotateCcw, X } from 'lucide-react';
+import type { ProfileAtom } from '../../types';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 // forwardRef so a section can scroll its own Card into view (e.g. a
 // preview-click navigation -- see ResumeNavTarget) without every caller
@@ -16,7 +18,7 @@ export const Card = forwardRef<HTMLDivElement, { children: ReactNode; className?
   ({ children, className = '' }, ref) => (
     <div
       ref={ref}
-      className={`bg-white rounded-2xl border border-slate-200 shadow-[0_1px_4px_rgba(15,23,42,0.06)] ${className}`}
+      className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-[0_1px_4px_rgba(15,23,42,0.06)] dark:shadow-none ${className}`}
     >
       {children}
     </div>
@@ -36,8 +38,8 @@ export function SectionTitle({
   return (
     <div className="mb-5 flex items-start justify-between gap-2">
       <div>
-        <h2 className="text-sm font-semibold text-slate-800">{children}</h2>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{children}</h2>
+        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
       </div>
       {right}
     </div>
@@ -71,8 +73,8 @@ export function CollapsibleSectionHeader({
   return (
     <div className="flex items-start justify-between mb-5">
       <div>
-        <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
+        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
       </div>
       <div className="flex items-center gap-2">
         {extraActions}
@@ -86,7 +88,7 @@ export function CollapsibleSectionHeader({
           type="button"
           onClick={onToggle}
           aria-label={open ? 'Collapse' : 'Expand'}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 transition-colors"
         >
           <ChevronDown
             size={14}
@@ -143,6 +145,8 @@ export function Modal({
     return () => cancelAnimationFrame(raf);
   }, [open]);
 
+  useEscapeKey(open, onClose);
+
   if (!open) return null;
 
   return (
@@ -152,7 +156,9 @@ export function Modal({
         onClick={onClose}
       />
       <div
-        className={`relative bg-white rounded-2xl shadow-2xl w-full flex flex-col transition-all duration-150 ${
+        role="dialog"
+        aria-modal="true"
+        className={`relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full flex flex-col transition-all duration-150 ${
           visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
         } ${className}`}
       >
@@ -163,10 +169,14 @@ export function Modal({
 }
 
 const buttonVariants = {
-  primary: 'bg-slate-900 text-white hover:bg-slate-700 focus:ring-slate-900/30 shadow-sm',
-  secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus:ring-slate-400/20',
-  ghost: 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-400/20',
-  danger: 'text-red-600 border border-red-200 hover:bg-red-50 focus:ring-red-400/20',
+  primary:
+    'bg-slate-900 text-white hover:bg-slate-700 focus:ring-slate-900/30 shadow-sm dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white',
+  secondary:
+    'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus:ring-slate-400/20 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800',
+  ghost:
+    'text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-400/20 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+  danger:
+    'text-red-600 border border-red-200 hover:bg-red-50 focus:ring-red-400/20 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10',
 } as const;
 
 const buttonSizes = {
@@ -218,7 +228,7 @@ export function ResetButton({ onReset, label = 'Reset' }: { onReset: () => void;
   if (confirming) {
     return (
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-slate-400">Discard edits?</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">Discard edits?</span>
         <Btn
           size="sm"
           onClick={() => {
@@ -254,14 +264,14 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           Matching requirement {Math.min(done + 1, total)} of {total}…
         </span>
-        <span className="text-xs text-slate-400">{pct}%</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">{pct}%</span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
         <div
-          className="h-full rounded-full bg-slate-900 transition-[width] duration-300 ease-out"
+          className="h-full rounded-full bg-slate-900 dark:bg-slate-100 transition-[width] duration-300 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -274,7 +284,7 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
 // "Loading…" line.
 // In plain terms: one gray animated bar shown while real content loads.
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-slate-100 ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800 ${className}`} />;
 }
 
 // Full-page loading placeholder: a title-width bar and a narrower subtitle
@@ -296,11 +306,11 @@ export function PageSkeleton({ cards = 2 }: { cards?: number }) {
 }
 
 const badgeColors = {
-  slate: 'bg-slate-100 text-slate-500',
-  green: 'bg-emerald-50 text-emerald-700',
-  blue: 'bg-blue-50 text-blue-700',
-  amber: 'bg-amber-50 text-amber-700',
-  red: 'bg-red-50 text-red-600',
+  slate: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+  green: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
+  blue: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
+  amber: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
+  red: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',
 } as const;
 
 export function Badge({
@@ -319,10 +329,80 @@ export function Badge({
   );
 }
 
-export const fieldInputClass =
-  'px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/25 focus:border-blue-400 transition-all';
+// Wraps a badge/trigger with a hover-only tooltip listing the exact profile
+// atom(s) (source + verbatim text) a generated bullet/paragraph is grounded
+// in -- pure CSS (group/group-hover), no click handler, since clicking a
+// bullet already opens its edit field. A no-op passthrough when there's
+// nothing to show, so callers can pass an empty array unconditionally.
+// In plain terms: hover over a "matched"/"sourced" badge to see the exact
+// line from your profile it came from.
+export function AtomHoverDetail({ atoms, children }: { atoms: ProfileAtom[]; children: ReactNode }) {
+  if (atoms.length === 0) return <>{children}</>;
+  return (
+    <span className="group relative inline-block">
+      {children}
+      <span className="pointer-events-none absolute left-0 top-full z-20 mt-1.5 hidden w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-left shadow-lg group-hover:block">
+        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          Grounded in your profile
+        </span>
+        <span className="block space-y-1.5">
+          {atoms.map((atom) => (
+            <span key={atom.id} className="block text-xs text-slate-600 dark:text-slate-300">
+              <span className="block text-[11px] text-slate-400 dark:text-slate-500">{atom.sourceLabel}</span>“{atom.text}”
+            </span>
+          ))}
+        </span>
+      </span>
+    </span>
+  );
+}
 
-export const fieldLabelClass = 'text-[11px] font-semibold text-slate-400 uppercase tracking-widest';
+const emptyStateSizes = {
+  // Inline "this list has nothing in it yet" -- used inside a Card that's
+  // already visually distinct, so the box itself stays understated.
+  sm: 'py-8 text-xs rounded-xl',
+  // A whole page/tab with nothing in it at all -- one size up, and given its
+  // own white background since there's no enclosing Card providing one.
+  lg: 'py-20 text-sm rounded-2xl bg-white dark:bg-slate-900',
+} as const;
+
+// The one dashed-box empty-state look used everywhere a list, section, or
+// page has nothing in it yet -- every such spot in the app should render
+// through this instead of re-typing the same border/color classes, so a
+// future style change (or an audit like this one) only has one place to
+// touch.
+// In plain terms: the shared "nothing here yet" box design, used consistently
+// across every empty list and empty page in the app.
+export function EmptyState({
+  children,
+  size = 'sm',
+  className = '',
+}: {
+  children: ReactNode;
+  size?: keyof typeof emptyStateSizes;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`text-center text-slate-300 dark:text-slate-600 border-2 border-dashed border-slate-100 dark:border-slate-800 ${emptyStateSizes[size]} ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+export const fieldInputClass =
+  'px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/25 focus:border-blue-400 transition-all dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-blue-400/20 dark:focus:border-blue-500';
+
+// The same field, minus its box: transparent until you focus it. Used where
+// a list of fields should read as content (the Experience editor's
+// highlights) rather than as a stack of form controls.
+// In plain terms: a text box that looks like plain text until you click into
+// it.
+export const fieldInputFlatClass =
+  'px-2 py-1.5 rounded-lg border border-transparent bg-transparent text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/25 focus:border-blue-400 focus:bg-white transition-all dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-blue-400/20 dark:focus:border-blue-500 dark:focus:bg-slate-950';
+
+export const fieldLabelClass = 'text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest';
 
 // Small amber dot + "Unsaved" label -- shown next to a field's label while
 // its on-screen value differs from what's actually persisted, for fields
@@ -331,9 +411,26 @@ export const fieldLabelClass = 'text-[11px] font-semibold text-slate-400 upperca
 // still typing in a field that only saves once you click away.
 export function UnsavedIndicator() {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 normal-case tracking-normal">
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 normal-case tracking-normal">
       <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
       Unsaved
+    </span>
+  );
+}
+
+// The opposite signal from UnsavedIndicator: a brief "Saved" confirmation
+// (see useAutosaveIndicator.ts) shown right after an autosaved edit -- fades
+// out on its own rather than needing to be dismissed, so it never becomes a
+// permanent fixture cluttering the page.
+// In plain terms: the little "Saved" checkmark that flashes briefly after an
+// edit autosaves.
+export function SavedIndicator({ visible, label = 'Saved' }: { visible: boolean; label?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 normal-case tracking-normal transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+    >
+      <Check size={11} />
+      {label}
     </span>
   );
 }
@@ -357,17 +454,19 @@ export function FieldInput({
   className?: string;
   unsaved?: boolean;
 }) {
+  const id = useId();
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
         <div className="flex items-center gap-2">
-          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+          <label htmlFor={id} className={fieldLabelClass}>
             {label}
           </label>
           {unsaved && <UnsavedIndicator />}
         </div>
       )}
       <input
+        id={id}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -398,17 +497,19 @@ export function FieldTextarea({
   className?: string;
   unsaved?: boolean;
 }) {
+  const id = useId();
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
         <div className="flex items-center gap-2">
-          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+          <label htmlFor={id} className={fieldLabelClass}>
             {label}
           </label>
           {unsaved && <UnsavedIndicator />}
         </div>
       )}
       <textarea
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
@@ -435,10 +536,15 @@ export function FieldSelect({
   placeholder?: string;
   className?: string;
 }) {
+  const id = useId();
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-      {label && <label className={fieldLabelClass}>{label}</label>}
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={fieldInputClass}>
+      {label && (
+        <label htmlFor={id} className={fieldLabelClass}>
+          {label}
+        </label>
+      )}
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={fieldInputClass}>
         <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option} value={option}>
@@ -609,7 +715,7 @@ export function TagInput({
         onDragOver={handleContainerDragOver}
         onDrop={(e) => handleDrop(e, value.length)}
       >
-        {value.length === 0 && <p className="text-xs text-slate-300 self-center">{emptyLabel}</p>}
+        {value.length === 0 && <p className="text-xs text-slate-300 dark:text-slate-600 self-center">{emptyLabel}</p>}
         {value.map((tag, index) =>
           editingIndex === index ? (
             <input
@@ -626,7 +732,7 @@ export function TagInput({
                   setEditingIndex(null);
                 }
               }}
-              className="px-3 py-1.5 bg-white border border-slate-300 rounded-full text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-full text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-slate-100/20"
               style={{ width: `calc(${Math.max(editDraft.length, 4)}ch + 2rem)` }}
             />
           ) : (
@@ -639,8 +745,8 @@ export function TagInput({
               onDragEnd={handleDragEnd}
               onDoubleClick={() => startEdit(index)}
               className={[
-                'inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-medium cursor-grab active:cursor-grabbing transition-[opacity,border-color] border',
-                overIndex === index ? 'border-slate-400' : 'border-transparent',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full text-xs font-medium cursor-grab active:cursor-grabbing transition-[opacity,border-color] border',
+                overIndex === index ? 'border-slate-400 dark:border-slate-500' : 'border-transparent',
                 dragIndex === index ? 'opacity-50' : '',
               ].join(' ')}
               title="Drag to reorder, double-click to edit"
@@ -649,7 +755,7 @@ export function TagInput({
               <button
                 type="button"
                 onClick={() => removeAt(index)}
-                className="text-slate-400 hover:text-slate-700 transition-colors ml-0.5"
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors ml-0.5"
                 aria-label={`Remove ${tag}`}
               >
                 <X size={10} />

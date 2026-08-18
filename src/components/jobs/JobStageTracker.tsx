@@ -65,13 +65,17 @@ export function JobStageTracker({
 
         const circleClass = `flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-semibold shrink-0 transition-colors ${
           isCurrent || isDone
-            ? 'bg-slate-900 text-white'
+            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
             : reachable
-              ? 'bg-white border border-slate-300 text-slate-500'
-              : 'bg-slate-50 text-slate-300'
+              ? 'bg-white border border-slate-300 text-slate-500 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-400'
+              : 'bg-slate-50 text-slate-300 dark:bg-slate-900 dark:text-slate-700'
         }`;
         const labelClass = `text-xs font-medium whitespace-nowrap ${
-          isCurrent ? 'text-slate-900' : reachable ? 'text-slate-500' : 'text-slate-300'
+          isCurrent
+            ? 'text-slate-900 dark:text-slate-100'
+            : reachable
+              ? 'text-slate-500 dark:text-slate-400'
+              : 'text-slate-300 dark:text-slate-700'
         }`;
 
         const content = (
@@ -86,7 +90,7 @@ export function JobStageTracker({
             {index > 0 && (
               <span
                 className={`w-6 sm:w-10 h-px mx-2 shrink-0 transition-colors ${
-                  doneMap[STAGE_ORDER[index - 1]] ? 'bg-slate-900' : 'bg-slate-200'
+                  doneMap[STAGE_ORDER[index - 1]] ? 'bg-slate-900 dark:bg-slate-100' : 'bg-slate-200 dark:bg-slate-800'
                 }`}
               />
             )}

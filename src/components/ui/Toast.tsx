@@ -45,12 +45,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ showUndo }}>
       {children}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-slate-900 text-white text-sm pl-4 pr-3 py-3 rounded-xl shadow-[0_8px_24px_rgba(15,23,42,0.35)] print:hidden">
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm pl-4 pr-3 py-3 rounded-xl shadow-[0_8px_24px_rgba(15,23,42,0.35)] print:hidden"
+        >
           <span>{toast.message}</span>
           <button
             type="button"
             onClick={handleUndo}
-            className="inline-flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-1.5 font-semibold px-2 py-1 rounded-lg hover:bg-white/10 dark:hover:bg-slate-900/10 transition-colors"
           >
             <Undo2 size={13} />
             Undo

@@ -16,6 +16,7 @@ import type {
   Generation,
   GenerationSnapshot,
   GenerationType,
+  InterviewPrepContent,
   ResumeContent,
   SourceMapEntry,
 } from '../types';
@@ -46,7 +47,7 @@ export function migrateGeneration(generation: Generation): Generation {
 export function newGeneration(
   jobPostingId: string,
   type: GenerationType,
-  content: ResumeContent | CoverLetterContent,
+  content: ResumeContent | CoverLetterContent | InterviewPrepContent,
   sourceMap: SourceMapEntry[],
 ): Generation {
   return {

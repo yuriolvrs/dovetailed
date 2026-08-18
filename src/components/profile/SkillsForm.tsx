@@ -117,7 +117,7 @@ export function SkillsForm({
         }
       />
       {categorizeError && (
-        <p className="mb-3 text-xs text-red-600">
+        <p className="mb-3 text-xs text-red-600 dark:text-red-400">
           {categorizeError}{' '}
           <button type="button" onClick={handleCategorize} className="underline">
             Try again
@@ -131,9 +131,10 @@ export function SkillsForm({
           newItem={newSkillGroup}
           emptyLabel="No skill categories yet."
           hideAddButton
+          reorderable
           renderItem={(group, update, index) => (
             <div
-              className={`space-y-2 rounded-xl transition-colors ${highlightIndex === index ? 'bg-amber-50 -m-2 p-2' : ''}`}
+              className={`space-y-2 rounded-xl transition-colors ${highlightIndex === index ? 'bg-amber-50 dark:bg-amber-500/10 -m-2 p-2' : ''}`}
             >
               <FieldInput
                 label="Category"

@@ -17,8 +17,8 @@ export function ContactForm({
   return (
     <Card className="p-6">
       <SectionTitle sub="Appears at the top of your resume">Contact Information</SectionTitle>
-      <div className="grid grid-cols-2 gap-4 mb-5">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div className="col-span-1 sm:col-span-2">
           <FieldInput label="Name" value={value.name} onChange={(name) => onChange({ ...value, name })} />
         </div>
         <FieldInput
@@ -32,7 +32,7 @@ export function ContactForm({
           value={value.phone ?? ''}
           onChange={(phone) => onChange({ ...value, phone })}
         />
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <FieldInput
             label="Location"
             value={value.location ?? ''}
@@ -41,7 +41,7 @@ export function ContactForm({
         </div>
       </div>
       <div>
-        <span className="mb-2 block text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+        <span className="mb-2 block text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
           Links
         </span>
         <EditableList<ContactLink>
@@ -50,6 +50,7 @@ export function ContactForm({
           newItem={() => ({ label: '', url: '' })}
           addLabel="Add link"
           emptyLabel="No links yet."
+          reorderable
           renderItem={(link, update) => (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <FieldInput

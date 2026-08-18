@@ -18,6 +18,7 @@ import {
   Card,
   Collapsible,
   CollapsibleSectionHeader,
+  EmptyState,
   FieldInput,
   ResetButton,
   fieldLabelClass,
@@ -122,9 +123,7 @@ export function ResumeEducationSection({
       <Collapsible open={sectionOpen}>
         <>
           {value.length === 0 && (
-            <div className="py-8 text-center text-xs text-slate-300 border-2 border-dashed border-slate-100 rounded-xl">
-              No education entries yet.
-            </div>
+            <EmptyState>No education entries yet.</EmptyState>
           )}
 
           {value.map((entry, index) => (
@@ -142,8 +141,8 @@ export function ResumeEducationSection({
               dataNavKey={educationKey(entry)}
               highlighted={highlightIndex === index}
             >
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="col-span-1 sm:col-span-2">
                   <FieldInput
                     label="Institution"
                     placeholder="UC Berkeley"

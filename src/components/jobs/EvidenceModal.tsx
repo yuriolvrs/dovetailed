@@ -75,7 +75,7 @@ function SkillChip({
       <button
         type="button"
         onClick={onRemove}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 transition-colors"
       >
         {atom.text}
         <span className="text-[9px] uppercase tracking-wide">Added</span>
@@ -89,7 +89,9 @@ function SkillChip({
       disabled={added}
       onClick={onSelect}
       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-        added ? 'bg-slate-50 text-slate-300 cursor-default' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+        added
+          ? 'bg-slate-50 text-slate-300 cursor-default dark:bg-slate-900 dark:text-slate-700'
+          : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
       }`}
     >
       {atom.text}
@@ -114,8 +116,8 @@ function EntryCard({
   onRemove: (atomId: string) => void;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 p-3">
-      <p className="text-xs font-semibold text-slate-800 mb-2">{stripLabelPrefix(label)}</p>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-2">{stripLabelPrefix(label)}</p>
       <div className="space-y-1">
         {bullets.map((atom) => {
           const state = atomState(atom.id, confirmedIds, addedIds);
@@ -129,16 +131,16 @@ function EntryCard({
               onClick={() => (confirmed ? onRemove(atom.id) : onSelect(atom.id))}
               className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                 confirmed
-                  ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                  ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20'
                   : added
-                    ? 'text-slate-300 cursor-default'
-                    : 'text-slate-600 hover:bg-blue-50/50 hover:text-slate-900'
+                    ? 'text-slate-300 cursor-default dark:text-slate-700'
+                    : 'text-slate-600 hover:bg-blue-50/50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-slate-100'
               }`}
             >
               {atom.text}
               {(confirmed || added) && (
                 <span
-                  className={`ml-2 text-[9px] uppercase tracking-wide ${confirmed ? 'text-emerald-500' : 'text-slate-300'}`}
+                  className={`ml-2 text-[9px] uppercase tracking-wide ${confirmed ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}
                 >
                   Added
                 </span>
@@ -228,37 +230,40 @@ export function EvidenceModal({
       <div className="flex-1 overflow-y-auto scroll-thin p-5 space-y-5">
         <div>
           <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="text-sm font-semibold text-slate-900">{title}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</p>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 text-slate-300 hover:text-slate-600 transition-colors"
+              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>
           </div>
-          {subtitle && <p className="text-xs text-slate-500 leading-relaxed mb-3">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{subtitle}</p>}
           {confirmedAtoms.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{confirmedLabel}</p>
+              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">{confirmedLabel}</p>
               {confirmedAtoms.map((atom) =>
                 onRemoveExisting ? (
                   <button
                     key={atom.id}
                     type="button"
                     onClick={() => onRemoveExisting(atom.id)}
-                    className="w-full flex items-center justify-between gap-2 text-left text-xs text-slate-600 px-2.5 py-1.5 bg-slate-50 hover:bg-red-50 rounded-lg transition-colors group"
+                    className="w-full flex items-center justify-between gap-2 text-left text-xs text-slate-600 dark:text-slate-300 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors group"
                   >
                     <span>
-                      <span className="text-slate-400">{atom.sourceLabel}: </span>
+                      <span className="text-slate-400 dark:text-slate-500">{atom.sourceLabel}: </span>
                       {atom.text}
                     </span>
-                    <X size={12} className="shrink-0 text-slate-300 group-hover:text-red-400 transition-colors" />
+                    <X
+                      size={12}
+                      className="shrink-0 text-slate-300 dark:text-slate-600 group-hover:text-red-400 dark:group-hover:text-red-400 transition-colors"
+                    />
                   </button>
                 ) : (
-                  <div key={atom.id} className="text-xs text-slate-600 px-2.5 py-1.5 bg-slate-50 rounded-lg">
-                    <span className="text-slate-400">{atom.sourceLabel}: </span>
+                  <div key={atom.id} className="text-xs text-slate-600 dark:text-slate-300 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <span className="text-slate-400 dark:text-slate-500">{atom.sourceLabel}: </span>
                     {atom.text}
                   </div>
                 ),
@@ -266,7 +271,7 @@ export function EvidenceModal({
             </div>
           )}
           <div className="relative mt-3">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" />
             <input
               type="text"
               value={search}
@@ -277,7 +282,7 @@ export function EvidenceModal({
           </div>
         </div>
 
-        {noResults && <p className="text-xs text-slate-300">No matches for "{search.trim()}".</p>}
+        {noResults && <p className="text-xs text-slate-300 dark:text-slate-600">No matches for "{search.trim()}".</p>}
 
         {skillAtoms.length > 0 && (
           <div>
@@ -335,11 +340,11 @@ export function EvidenceModal({
         )}
 
         {skillAtoms.length === 0 && experienceGroups.length === 0 && projectGroups.length === 0 && (
-          <p className="text-xs text-slate-300">Nothing in your profile yet -- write new evidence below.</p>
+          <p className="text-xs text-slate-300 dark:text-slate-600">Nothing in your profile yet -- write new evidence below.</p>
         )}
       </div>
 
-      <div className="p-5 border-t border-slate-100 shrink-0 flex gap-2">
+      <div className="p-5 border-t border-slate-100 dark:border-slate-800 shrink-0 flex gap-2">
         <input
           className={`flex-1 ${fieldInputClass}`}
           type="text"
