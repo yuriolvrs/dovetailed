@@ -41,7 +41,7 @@ export default function App() {
                 <Logo size={22} className="text-white dark:text-slate-900" />
               </div>
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-                Pimp My Resume
+                Dovetailed
               </span>
               <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                 <Shield size={10} className="text-slate-400 dark:text-slate-500" />

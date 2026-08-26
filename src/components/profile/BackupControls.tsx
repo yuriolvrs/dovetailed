@@ -28,7 +28,7 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pimp-my-resume-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `dovetailed-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     setMessage('Exported.');

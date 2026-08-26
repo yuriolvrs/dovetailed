@@ -40,7 +40,7 @@ export function buildDeadlineIcs(params: { uid: string; deadline: number; title:
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Pimp My Resume//Application Deadline//EN',
+    'PRODID:-//Dovetailed//Application Deadline//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
     `UID:${params.uid}`,

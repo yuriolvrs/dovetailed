@@ -1,4 +1,4 @@
-# Pimp My Resume
+# Dovetailed
 
 A privacy-first job application assistant. Store your profile (skills, experience, education) once in your browser, paste a job posting, and get an LLM-backed analysis of how you match, a tailored resume and cover letter, and an exportable filled-in LaTeX (or print-to-PDF) document — grounded strictly in your real profile, nothing invented.
 
