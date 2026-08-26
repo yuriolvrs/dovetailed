@@ -1,20 +1,25 @@
-// What this file is: generates public/favicon.svg from the exact same
-// geometry AND the exact same drawing (the stroked mark paths, round caps
-// and joins) that src/components/ui/Logo.tsx renders, sourced from
-// src/lib/brandMark.ts. The only three things that differ from the header
-// icon are things a favicon has no way around: a literal colour instead of
-// an inherited `currentColor` (there's no parent element for a favicon to
-// inherit from), its own background square (the header relies on the dark
-// tile `App.tsx` draws around it; a favicon has no parent to draw that for
-// it), and a slightly heavier stroke, because a favicon is rendered as small
-// as 16px. Nothing about the shape itself is redrawn or reinterpreted.
-// Run with `npm run build:favicon` after changing anything in
-// brandMark.ts; it also runs automatically before `npm run build`.
-// In plain terms: rebuilds the browser-tab icon as a direct copy of the
-// header icon's drawing, so the two can never look different by accident.
+// What this file is: generates the app's icon files -- public/favicon.svg
+// plus its PNG fallbacks (favicon-32.png and apple-touch-icon-180.png) --
+// from the exact same geometry AND the exact same drawing (the stroked mark
+// paths, round caps and joins) that src/components/ui/Logo.tsx renders,
+// sourced from src/lib/brandMark.ts. The PNGs are rasterised from the very
+// same SVG string that gets written to disk, so the three can't disagree.
+// The only three things that differ from the header icon are things a
+// favicon has no way around: a literal colour instead of an inherited
+// `currentColor` (there's no parent element for a favicon to inherit from),
+// its own background square (the header relies on the dark tile `App.tsx`
+// draws around it; a favicon has no parent to draw that for it), and a
+// slightly heavier stroke, because a favicon is rendered as small as 16px.
+// Nothing about the shape itself is redrawn or reinterpreted.
+// Run with `npm run build:favicon` after changing anything in brandMark.ts;
+// it also runs automatically before `npm run build`, so the PNGs are rebuilt
+// from source on every build rather than being committed once and drifting.
+// In plain terms: rebuilds the browser-tab and home-screen icons as direct
+// copies of the header icon's drawing, so they can never look different by
+// accident.
 //
-// This script also rewrites index.html's <link rel="icon"> href to
-// "/favicon.svg?v=<content hash>". Browsers cache favicons by URL and are
+// This script also rewrites index.html's icon <link> hrefs to
+// "/<file>?v=<content hash>". Browsers cache favicons by URL and are
 // notoriously unreliable about respecting normal cache-busting for them
 // (some appear to key the cache by hostname rather than full origin, so
 // even a fresh port doesn't guarantee a refetch) -- changing the URL itself
@@ -24,10 +29,16 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 import { MARK_FAVICON_STROKE_WIDTH, MARK_PATHS, MARK_VIEW_BOX } from '../src/lib/brandMark.ts';
 
 const BG = '#0f172a';
 const FG = '#fff';
+
+// Rasterise the SVG at well above the target size and let sharp downscale.
+// Rendering straight to 32px gives visibly coarser antialiasing than
+// rendering large and resampling.
+const RENDER_DENSITY = 512;
 
 // The mark is drawn on its own grid (see MARK_VIEW_BOX), so it goes into the
 // 32x32 tile as a nested <svg> sized to the 24x24 content box -- the browser
@@ -50,19 +61,48 @@ const svg = `<!--
 </svg>
 `;
 
-const outPath = fileURLToPath(new URL('../public/favicon.svg', import.meta.url));
-writeFileSync(outPath, svg);
-console.log(`Wrote ${outPath}`);
+const publicFile = (name: string) => fileURLToPath(new URL(`../public/${name}`, import.meta.url));
 
+writeFileSync(publicFile('favicon.svg'), svg);
+console.log(`Wrote ${publicFile('favicon.svg')}`);
+
+/**
+ * Rasterises the favicon SVG to a square PNG.
+ * `opaque` flattens the image onto the tile colour, filling the rounded
+ * corners' transparency -- iOS composites an apple-touch-icon onto the home
+ * screen without honouring alpha, so anything transparent renders black.
+ * In plain terms: turns the drawing into a picture file, optionally with the
+ * see-through corners filled in.
+ */
+async function writePng(name: string, size: number, opaque: boolean): Promise<void> {
+  let pipeline = sharp(Buffer.from(svg), { density: RENDER_DENSITY }).resize(size, size);
+  if (opaque) {
+    pipeline = pipeline.flatten({ background: BG });
+  }
+  await pipeline.png().toFile(publicFile(name));
+  console.log(`Wrote ${publicFile(name)}`);
+}
+
+await writePng('favicon-32.png', 32, false);
+await writePng('apple-touch-icon-180.png', 180, true);
+
+// Every icon file is derived from `svg`, so one hash of it version-stamps
+// all three links together.
 const hash = createHash('sha1').update(svg).digest('hex').slice(0, 8);
 const indexPath = fileURLToPath(new URL('../index.html', import.meta.url));
 const indexHtml = readFileSync(indexPath, 'utf8');
-const updatedIndexHtml = indexHtml.replace(
-  /href="\/favicon\.svg(?:\?v=[0-9a-f]+)?"/,
-  `href="/favicon.svg?v=${hash}"`,
-);
-if (updatedIndexHtml === indexHtml && !indexHtml.includes(`favicon.svg?v=${hash}`)) {
-  throw new Error('build-favicon.ts: could not find the favicon <link> in index.html to update.');
+
+const ICON_FILES = ['favicon.svg', 'favicon-32.png', 'apple-touch-icon-180.png'];
+
+let updatedIndexHtml = indexHtml;
+for (const file of ICON_FILES) {
+  const escaped = file.replace('.', '\\.');
+  const pattern = new RegExp(`href="/${escaped}(?:\\?v=[0-9a-f]+)?"`);
+  if (!pattern.test(updatedIndexHtml)) {
+    throw new Error(`build-favicon.ts: could not find the <link> for ${file} in index.html to update.`);
+  }
+  updatedIndexHtml = updatedIndexHtml.replace(pattern, `href="/${file}?v=${hash}"`);
 }
+
 writeFileSync(indexPath, updatedIndexHtml);
-console.log(`Updated ${indexPath} to reference favicon.svg?v=${hash}`);
+console.log(`Updated ${indexPath} to reference the icons at ?v=${hash}`);

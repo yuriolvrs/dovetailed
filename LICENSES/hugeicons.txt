@@ -4,6 +4,9 @@ src/components/ui/Logo.tsx from the paths in src/lib/brandMark.ts.
 
 Project: https://hugeicons.com
 Icon:    https://hugeicons.com/icon/quill-write-01
+Status:  quill-write-01 in the stroke-rounded style is confirmed part of the
+         FREE icon set, so the Pro-pack clause at the end of this file does
+         not apply to it.
 
 Licence text below is reproduced verbatim from
 https://github.com/hugeicons/hugeicons/blob/main/LICENSE.md
