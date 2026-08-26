@@ -38,7 +38,7 @@ export default function App() {
           <div className="mx-auto flex max-w-4xl h-[54px] items-center justify-between px-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-sm">
-                <Logo size={22} className="text-white dark:text-slate-900" />
+                <Logo size={26} className="text-white dark:text-slate-900" />
               </div>
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
                 Dovetailed

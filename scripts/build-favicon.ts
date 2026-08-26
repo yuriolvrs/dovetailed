@@ -1,11 +1,13 @@
 // What this file is: generates public/favicon.svg from the exact same
-// geometry AND the exact same drawing (the filled mark paths) that
-// src/components/ui/Logo.tsx renders, sourced from src/lib/brandMark.ts. The only two things that differ from the header
+// geometry AND the exact same drawing (the stroked mark paths, round caps
+// and joins) that src/components/ui/Logo.tsx renders, sourced from
+// src/lib/brandMark.ts. The only three things that differ from the header
 // icon are things a favicon has no way around: a literal colour instead of
 // an inherited `currentColor` (there's no parent element for a favicon to
-// inherit from), and its own background square (the header relies on the
-// dark tile `App.tsx` draws around it; a favicon has no parent to draw
-// that for it). Nothing about the shape itself is redrawn or reinterpreted.
+// inherit from), its own background square (the header relies on the dark
+// tile `App.tsx` draws around it; a favicon has no parent to draw that for
+// it), and a slightly heavier stroke, because a favicon is rendered as small
+// as 16px. Nothing about the shape itself is redrawn or reinterpreted.
 // Run with `npm run build:favicon` after changing anything in
 // brandMark.ts; it also runs automatically before `npm run build`.
 // In plain terms: rebuilds the browser-tab icon as a direct copy of the
@@ -22,7 +24,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MARK_PATHS, MARK_VIEW_BOX } from '../src/lib/brandMark.ts';
+import { MARK_FAVICON_STROKE_WIDTH, MARK_PATHS, MARK_VIEW_BOX } from '../src/lib/brandMark.ts';
 
 const BG = '#0f172a';
 const FG = '#fff';
@@ -41,7 +43,7 @@ const svg = `<!--
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <rect width="32" height="32" rx="7.5" fill="${BG}" />
   <svg x="4" y="4" width="24" height="24" viewBox="${MARK_VIEW_BOX}">
-    <g fill="${FG}">
+    <g fill="none" stroke="${FG}" stroke-width="${MARK_FAVICON_STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">
       ${paths}
     </g>
   </svg>

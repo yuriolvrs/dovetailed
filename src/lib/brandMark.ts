@@ -1,22 +1,38 @@
 // What this file is: single source of truth for the app's brand mark
-// geometry -- a solid bird. The artwork is the "bird" icon from Phosphor
-// Icons (https://phosphoricons.com), used unmodified under its MIT licence;
-// it is a filled path on a 256x256 grid rather than a stroked 24x24 one.
+// geometry -- a quill. The artwork is the "quill-write-01" icon from
+// Hugeicons (https://hugeicons.com/icon/quill-write-01), stroke-rounded
+// style, used unmodified under the MIT licence in LICENSES/hugeicons.txt.
 // Both src/components/ui/Logo.tsx (the inline header icon) and
 // scripts/build-favicon.ts (which generates public/favicon.svg) import these
 // same values rather than each hand-transcribing its own copy.
 // In plain terms: the logo's shape, defined once, used everywhere it
 // appears.
 
-/** The grid the mark is drawn on. Phosphor draws at 256, not Lucide's 24. */
-export const MARK_VIEW_BOX = '0 0 256 256';
+/** The grid the mark is drawn on. */
+export const MARK_VIEW_BOX = '0 0 24 24';
 
 /**
- * The mark's filled paths, in draw order. Rendered with `fill`, not
- * `stroke` -- this is a solid icon, so callers set a fill colour and no
- * stroke at all.
- * In plain terms: the actual outline of the bird.
+ * The mark's paths, in draw order. Rendered with `stroke`, not `fill` --
+ * this is an outline icon, so callers set a stroke colour and `fill="none"`.
+ * In plain terms: the actual outline of the quill.
  */
 export const MARK_PATHS = [
-  'M176 68a12 12 0 1 1-12-12a12 12 0 0 1 12 12m64 12a8 8 0 0 1-3.56 6.66L216 100.28V120a104.11 104.11 0 0 1-104 104H24a16 16 0 0 1-12.49-26l.1-.12L96 96.63V76.89c0-33.42 26.79-60.73 59.71-60.89h.29a60 60 0 0 1 57.21 41.86l23.23 15.48A8 8 0 0 1 240 80m-22.42 0L201.9 69.54a8 8 0 0 1-3.31-4.64A44 44 0 0 0 156 32h-.22C131.64 32.12 112 52.25 112 76.89v22.63a8 8 0 0 1-1.85 5.13L24 208h26.9l70.94-85.12a8 8 0 1 1 12.29 10.24L71.75 208H112a88.1 88.1 0 0 0 88-88V96a8 8 0 0 1 3.56-6.66Z',
+  'M5.076 17C4.089 4.545 12.912 1.012 19.973 2.224c.286 4.128-1.734 5.673-5.58 6.387c.742.776 2.055 1.753 1.913 2.974c-.1.868-.69 1.295-1.87 2.147C11.85 15.6 8.854 16.78 5.076 17',
+  'M4 22c0-6.5 3.848-9.818 6.5-12',
 ] as const;
+
+/**
+ * Stroke weight for the on-screen mark. Hugeicons ships this icon at 1.5,
+ * which reads noticeably lighter than the 2px Lucide icons it sits beside in
+ * the header, so the app draws it slightly heavier.
+ * In plain terms: how thick the logo's lines are.
+ */
+export const MARK_STROKE_WIDTH = 1.75;
+
+/**
+ * Stroke weight for the favicon only. A favicon is displayed as small as
+ * 16px, where a 1.75 stroke on a 24 grid renders under a pixel wide and goes
+ * grey; 2 keeps it a solid line.
+ * In plain terms: the tab icon needs slightly thicker lines to stay crisp.
+ */
+export const MARK_FAVICON_STROKE_WIDTH = 2;
