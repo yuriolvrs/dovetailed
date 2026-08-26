@@ -25,6 +25,7 @@ General working style, in addition to the project-specific rules below (Conventi
 ## Conventions
 - Every new file gets a short header comment at the very top: one line explaining what it is/does in normal technical terms, and one line in plain English (`// In plain terms: ...`). Skip only where the format has no comment syntax (strict JSON) or the file is already self-describing prose (the root .md docs).
 - Every new non-trivial function or class gets a description comment above it (JSDoc or `//`), same as file headers: one line/paragraph in normal technical terms, plus a plain-English line (`In plain terms: ...`). Skip only for trivial one-liners whose name already says everything (e.g. a short getter/wrapper).
+- Write prose (explanations, commit bodies, comments, docs) following ASD-STE100 simplified technical English about half the time: short sentences, one idea per sentence, plain approved words, active voice.
 - TypeScript strict mode everywhere, including the Worker.
 - Shared types for all data models live in `src/types/` and are the single source of truth; Dexie tables and prompts derive from them.
 - LLM prompts request JSON-only output; parse defensively (strip fences, validate shape, one retry). Prompt templates live in `src/prompts/`.
@@ -41,6 +42,7 @@ General working style, in addition to the project-specific rules below (Conventi
 - Never commit secrets, .env files, or API keys; never print secret values.
 - Do not add telemetry, analytics, error reporters, or any network calls beyond the LLM proxy without explicit approval.
 - Make small, reviewable changes; commit at logical checkpoints with clear messages. Do not rewrite files wholesale when a targeted edit works.
+- Commit messages contain only the conventional-commit subject and body. Never add a `Co-Authored-By` trailer, never add Claude as a co-author, and never append "Generated with Claude Code" or any similar attribution line.
 - After completing work, update PROGRESS.md truthfully — only mark items done that are implemented AND tested. Never claim tests pass without running them.
 - Stay in scope. Multiple Claude Code sessions may be running on this repo at once, each on a different task — touching files outside what was asked risks colliding with another session's in-progress work and burns time/tokens reading unrelated code. Only read or edit files relevant to the current request; don't proactively explore, "fix while I'm here," or review other parts of the codebase unless asked. If something out of scope looks broken, mention it instead of touching it. Before broad operations (repo-wide search/refactor, `git status`/`git diff` review, running the full test suite) confirm they're actually needed for the task at hand rather than doing them by default.
 
