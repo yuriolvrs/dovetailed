@@ -142,6 +142,55 @@ export interface JobAnalysis {
   matches: RequirementMatch[];
 }
 
+// ---------------------------------------------------------------------------
+// Holistic (direct) selection -- the alternate route to the same documents
+// ---------------------------------------------------------------------------
+
+/**
+ * Which route produced a generation. 'matched' is the original pipeline
+ * (posting -> extracted requirements -> per-requirement evidence matching);
+ * 'holistic' is the direct route (posting -> one LLM call picks profile
+ * evidence itself). Absent on anything saved before the holistic route
+ * existed, which is why every field carrying it is optional and defaults to
+ * 'matched'.
+ */
+export type GenerationStrategy = 'matched' | 'holistic';
+
+/**
+ * One group of chosen evidence plus the model's stated reason for choosing
+ * it. `sourceLabel` matches ProfileAtom.sourceLabel, so a note lines up with
+ * one job, project, or skill category.
+ */
+export interface HolisticGroupNote {
+  sourceLabel: string;
+  /**
+   * Why this group was featured. Display-only, and deliberately so: free text
+   * is the one field with nothing structurally constraining it to the truth
+   * (see src/prompts/matchRequirement.ts's header for the fabrication this
+   * caused when a note was previously fed back into matching). It is never
+   * written into a document, never enters a sourceMap, and never exports.
+   */
+  note: string;
+}
+
+/**
+ * The result of one direct-selection pass over a posting: which profile atoms
+ * the model chose to feature, and why. Stored on the posting rather than on a
+ * generation because both the resume and the cover letter are built from the
+ * same pass -- the exact role `analysis.matches` plays for the matched route.
+ */
+export interface HolisticSelection {
+  createdAt: number;
+  /** Ids of the chosen ProfileAtoms, most relevant first. Filtered against real atoms on receipt. */
+  atomIds: string[];
+  /** One or two sentences on the role, so the cover letter has the context the analysis pass would otherwise supply. */
+  roleSummary: string;
+  /** The overall angle the model took across the whole profile. Display-only -- see HolisticGroupNote.note. */
+  overallRationale: string;
+  /** Per-group reasons, one per featured job/project/skill category. Display-only. */
+  groupNotes: HolisticGroupNote[];
+}
+
 /** Application-tracker status -- see STATUSES in jobStore.ts. Unset means not yet applied. */
 export type ApplicationStatus = 'applied' | 'interviewing' | 'rejected' | 'offer';
 
@@ -155,6 +204,12 @@ export interface JobPosting {
   arrangement?: string;
   rawText: string;
   analysis?: JobAnalysis;
+  /**
+   * The direct route's evidence pass, if it has been run. Independent of
+   * `analysis`: both may be present on one posting, which is what makes the
+   * two routes comparable side by side on the same job.
+   */
+  holisticSelection?: HolisticSelection;
   /** Application-tracker status. Unset means not yet applied. */
   status?: ApplicationStatus;
   /** ms timestamp the status was last set to 'applied' -- shown as the applied date. */
@@ -226,6 +281,8 @@ export interface Generation {
   jobPostingId: string;
   createdAt: number;
   type: GenerationType;
+  /** Which route built this. Absent means 'matched' -- everything saved before the direct route existed. */
+  strategy?: GenerationStrategy;
   content: ResumeContent | CoverLetterContent | InterviewPrepContent;
   sourceMap: SourceMapEntry[];
   /**
@@ -249,6 +306,8 @@ export interface GenerationSnapshot {
   id: string;
   jobPostingId: string;
   type: GenerationType;
+  /** Mirrors Generation.strategy, so history stays separated per route. */
+  strategy?: GenerationStrategy;
   createdAt: number;
   content: ResumeContent | CoverLetterContent | InterviewPrepContent;
   sourceMap: SourceMapEntry[];

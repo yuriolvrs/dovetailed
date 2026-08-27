@@ -42,6 +42,17 @@ export function selectEvidenceCandidates(analysis: JobAnalysis, atoms: ProfileAt
 export interface GenerateCoverLetterOptions extends GenerateOptions {
   /** Whether to include a writing sample so the model mimics the candidate's tone. */
   useWritingStyle?: boolean;
+  /**
+   * The direct route's evidence pool, in place of the match-derived one.
+   * Supplied by the holistic selection pass (runHolisticSelection.ts), which
+   * has already chosen what to feature -- so on that route there is no
+   * analysis, no requirement list, and nothing for selectEvidenceCandidates
+   * to rank. Absent on the matched route, which behaves exactly as before.
+   */
+  holistic?: {
+    atoms: ProfileAtom[];
+    roleSummary: string;
+  };
 }
 
 /**
@@ -59,9 +70,19 @@ export async function generateCoverLetterContent(
   options: GenerateCoverLetterOptions = {},
 ): Promise<{ content: CoverLetterContent; sourceMap: SourceMapEntry[] }> {
   const analysis = posting.analysis;
-  if (!analysis) throw new Error('This posting has no analysis to generate a cover letter from.');
+  if (!analysis && !options.holistic) {
+    throw new Error('This posting has no analysis to generate a cover letter from.');
+  }
 
-  const candidateAtoms = selectEvidenceCandidates(analysis, atoms);
+  // On the direct route the pass has already chosen the evidence and read the
+  // role, so there is nothing to rank and no requirement list to send; the
+  // prompt renders "(none listed)" for requirements on its own.
+  const candidateAtoms = options.holistic
+    ? options.holistic.atoms.slice(0, MAX_CANDIDATES)
+    : selectEvidenceCandidates(analysis!, atoms);
+  const roleSummary = options.holistic ? options.holistic.roleSummary : analysis!.roleSummary;
+  const requirements = options.holistic ? [] : analysis!.requirements.map((r) => r.text);
+
   const candidates: CoverLetterCandidate[] = candidateAtoms.map((a) => ({
     id: a.id,
     text: a.text,
@@ -76,8 +97,8 @@ export async function generateCoverLetterContent(
     candidateName: profile.contact.name,
     roleTitle: posting.title,
     company: posting.company,
-    roleSummary: analysis.roleSummary,
-    requirements: analysis.requirements.map((r) => r.text),
+    roleSummary,
+    requirements,
     candidates,
     styleSample,
   });

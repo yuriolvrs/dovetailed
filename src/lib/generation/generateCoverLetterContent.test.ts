@@ -107,3 +107,52 @@ describe('generateCoverLetterContent', () => {
     expect(generateStructuredMock.mock.calls[0][0]).not.toContain('My own distinctive voice.');
   });
 });
+
+describe('generateCoverLetterContent on the direct route', () => {
+  beforeEach(() => generateStructuredMock.mockReset());
+
+  const reply = {
+    greeting: 'Dear Hiring Manager,',
+    paragraphs: ['One.'],
+    closing: 'Sincerely,',
+    sourceMap: [{ generatedText: 'One.', atomIds: ['h1'] }],
+  };
+
+  it('generates from the holistic pool on a posting with no analysis at all', async () => {
+    generateStructuredMock.mockResolvedValueOnce(reply);
+    const chosen = atom({ id: 'h1', text: 'Organised the campus hackathon' });
+
+    const result = await generateCoverLetterContent(
+      profile(),
+      posting({ analysis: undefined }),
+      [chosen],
+      { holistic: { atoms: [chosen], roleSummary: 'Runs community events.' } },
+    );
+
+    expect(result.content.paragraphs).toEqual(['One.']);
+    const prompt = generateStructuredMock.mock.calls[0][0] as string;
+    expect(prompt).toContain('Runs community events.');
+    expect(prompt).toContain('Organised the campus hackathon');
+    expect(prompt).toContain('(none listed)'); // no requirements on this route
+  });
+
+  it('still refuses ids outside the holistic pool', async () => {
+    generateStructuredMock.mockResolvedValueOnce({
+      ...reply,
+      sourceMap: [{ generatedText: 'One.', atomIds: ['h1', 'invented'] }],
+    });
+    const chosen = atom({ id: 'h1', text: 'Real thing' });
+
+    const result = await generateCoverLetterContent(profile(), posting({ analysis: undefined }), [chosen], {
+      holistic: { atoms: [chosen], roleSummary: 'A role.' },
+    });
+
+    expect(result.sourceMap[0].atomIds).toEqual(['h1']);
+  });
+
+  it('still throws when there is neither an analysis nor a holistic pool', async () => {
+    await expect(generateCoverLetterContent(profile(), posting({ analysis: undefined }), [])).rejects.toThrow(
+      /no analysis/i,
+    );
+  });
+});

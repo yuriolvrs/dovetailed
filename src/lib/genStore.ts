@@ -15,6 +15,7 @@ import type {
   CoverLetterContent,
   Generation,
   GenerationSnapshot,
+  GenerationStrategy,
   GenerationType,
   InterviewPrepContent,
   ResumeContent,
@@ -22,8 +23,17 @@ import type {
 } from '../types';
 import { normalizeSkills } from './profileStore';
 
-function generationId(jobPostingId: string, type: GenerationType): string {
-  return `${jobPostingId}:${type}`;
+// The matched route keeps the original two-part id, so every generation
+// saved before the direct route existed still loads under exactly the key it
+// was written with -- no migration, no re-generate. The direct route's own
+// output is a third segment alongside it rather than an overwrite, which is
+// what lets one posting hold both routes' results for comparison.
+// In plain terms: each job can now hold one resume from each of the two
+// methods, and older saved resumes keep working untouched.
+function generationId(jobPostingId: string, type: GenerationType, strategy?: GenerationStrategy): string {
+  return strategy && strategy !== 'matched'
+    ? `${jobPostingId}:${type}:${strategy}`
+    : `${jobPostingId}:${type}`;
 }
 
 // A resume generation saved before skills were reintroduced as category
@@ -49,12 +59,14 @@ export function newGeneration(
   type: GenerationType,
   content: ResumeContent | CoverLetterContent | InterviewPrepContent,
   sourceMap: SourceMapEntry[],
+  strategy: GenerationStrategy = 'matched',
 ): Generation {
   return {
-    id: generationId(jobPostingId, type),
+    id: generationId(jobPostingId, type, strategy),
     jobPostingId,
     createdAt: Date.now(),
     type,
+    strategy,
     content,
     sourceMap,
   };
@@ -67,8 +79,9 @@ export async function saveGeneration(generation: Generation): Promise<void> {
 export async function loadGeneration(
   jobPostingId: string,
   type: GenerationType,
+  strategy: GenerationStrategy = 'matched',
 ): Promise<Generation | undefined> {
-  const generation = await db.generations.get(generationId(jobPostingId, type));
+  const generation = await db.generations.get(generationId(jobPostingId, type, strategy));
   return generation && migrateGeneration(generation);
 }
 
@@ -94,6 +107,7 @@ export async function snapshotGeneration(generation: Generation): Promise<void> 
     id: crypto.randomUUID(),
     jobPostingId: generation.jobPostingId,
     type: generation.type,
+    strategy: generation.strategy ?? 'matched',
     createdAt: generation.createdAt,
     content: generation.content,
     sourceMap: generation.sourceMap,
@@ -123,9 +137,17 @@ export async function listGenerationTypesByPosting(): Promise<Map<string, Set<Ge
  * Past versions of a posting's generation, newest first.
  * In plain terms: the list of earlier resume versions you can go back to.
  */
-export async function listSnapshots(jobPostingId: string, type: GenerationType): Promise<GenerationSnapshot[]> {
+export async function listSnapshots(
+  jobPostingId: string,
+  type: GenerationType,
+  strategy: GenerationStrategy = 'matched',
+): Promise<GenerationSnapshot[]> {
   const snapshots = await db.generationSnapshots.where('jobPostingId').equals(jobPostingId).toArray();
-  return snapshots.filter((s) => s.type === type).sort((a, b) => b.createdAt - a.createdAt);
+  return snapshots
+    // A snapshot saved before the direct route existed has no strategy and is
+    // by definition the matched route's, so it stays visible there.
+    .filter((s) => s.type === type && (s.strategy ?? 'matched') === strategy)
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function deleteSnapshot(id: string): Promise<void> {

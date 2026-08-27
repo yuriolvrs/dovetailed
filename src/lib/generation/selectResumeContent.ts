@@ -16,6 +16,7 @@
 
 import type {
   ExperienceEntry,
+  HolisticSelection,
   JobAnalysis,
   Profile,
   ProfileAtom,
@@ -104,7 +105,23 @@ export function selectResumeContent(
   analysis: JobAnalysis,
   atoms: ProfileAtom[],
 ): { content: ResumeContent; sourceMap: SourceMapEntry[] } {
-  const matchedIds = new Set(analysis.matches.flatMap((m) => m.atomIds));
+  return selectResumeFromAtomIds(profile, new Set(analysis.matches.flatMap((m) => m.atomIds)), atoms);
+}
+
+/**
+ * The selection itself, given whichever set of atom ids counts as
+ * "prioritized" -- confirmed requirement matches on the matched route,
+ * the model's own picks on the direct route (see runHolisticSelection.ts).
+ * Both routes share this so a resume is built exactly one way, and the only
+ * thing that differs between them is how the priority set was decided.
+ * In plain terms: the one piece of code that actually builds the resume,
+ * given a list of which of your bullets matter for this job.
+ */
+export function selectResumeFromAtomIds(
+  profile: Profile,
+  matchedIds: Set<string>,
+  atoms: ProfileAtom[],
+): { content: ResumeContent; sourceMap: SourceMapEntry[] } {
   const sourceMap: SourceMapEntry[] = [];
 
   const experience: ExperienceEntry[] = profile.experience.map((entry) => ({
@@ -141,6 +158,23 @@ export function selectResumeContent(
   };
 
   return { content, sourceMap };
+}
+
+/**
+ * The direct route's entry point: same selection, with the priority set taken
+ * from one holistic LLM pass instead of per-requirement matching. Still
+ * selection-only -- a HolisticSelection carries atom ids, never text, so
+ * nothing here can say anything the profile doesn't already say, exactly as
+ * on the matched route.
+ * In plain terms: builds the resume from the bullets the AI picked when it
+ * read the whole job ad at once.
+ */
+export function selectResumeContentHolistic(
+  profile: Profile,
+  selection: HolisticSelection,
+  atoms: ProfileAtom[],
+): { content: ResumeContent; sourceMap: SourceMapEntry[] } {
+  return selectResumeFromAtomIds(profile, new Set(selection.atomIds), atoms);
 }
 
 /**

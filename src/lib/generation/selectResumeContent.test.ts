@@ -7,8 +7,14 @@
 // ever selects and reorders your real content, never invents anything.
 
 import { describe, expect, it } from 'vitest';
-import { BULLET_CAP_BASE, isResumeContentVerbatim, MAX_PROJECTS, selectResumeContent } from './selectResumeContent';
-import type { JobAnalysis, Profile, ProfileAtom, ResumeContent } from '../../types';
+import {
+  BULLET_CAP_BASE,
+  isResumeContentVerbatim,
+  MAX_PROJECTS,
+  selectResumeContent,
+  selectResumeContentHolistic,
+} from './selectResumeContent';
+import type { HolisticSelection, JobAnalysis, Profile, ProfileAtom, ResumeContent } from '../../types';
 import { emptyProfile } from '../profileStore';
 import { buildProfileAtoms } from '../profileAtoms';
 
@@ -18,6 +24,10 @@ function profile(overrides: Partial<Profile> = {}): Profile {
 
 function analysis(overrides: Partial<JobAnalysis> = {}): JobAnalysis {
   return { roleSummary: '', requirements: [], keywords: [], matches: [], ...overrides };
+}
+
+function selection(atomIds: string[]): HolisticSelection {
+  return { createdAt: 1, atomIds, roleSummary: '', overallRationale: '', groupNotes: [] };
 }
 
 describe('selectResumeContent', () => {
@@ -208,5 +218,70 @@ describe('isResumeContentVerbatim', () => {
   it('rejects a fabricated skill', () => {
     const bad = content({ skills: [{ category: 'Languages', items: ['MadeUpTechnology'] }] });
     expect(isResumeContentVerbatim(bad, p)).toBe(false);
+  });
+});
+
+describe('selectResumeContentHolistic', () => {
+  it('prioritizes the atoms the model picked, exactly as matching does', () => {
+    const p = profile({
+      experience: [
+        {
+          company: 'Acme',
+          title: 'Engineer',
+          current: true,
+          bullets: ['Wrote docs', 'Fixed a critical bug', 'Attended standups'],
+        },
+      ],
+    });
+    const atoms = buildProfileAtoms(p);
+    const bugAtom = atoms.find((a) => a.text === 'Fixed a critical bug')!;
+
+    const { content, sourceMap } = selectResumeContentHolistic(p, selection([bugAtom.id]), atoms);
+
+    expect(content.experience[0].bullets[0]).toBe('Fixed a critical bug');
+    expect(sourceMap).toContainEqual({ generatedText: 'Fixed a critical bug', atomIds: [bugAtom.id] });
+  });
+
+  it('produces byte-identical output to the matched route given the same atom ids', () => {
+    const p = profile({
+      experience: [
+        { company: 'Acme', title: 'Engineer', current: true, bullets: ['A', 'B', 'C', 'D'] },
+      ],
+      skills: [{ category: 'Languages', items: ['Java', 'Python'] }],
+    });
+    const atoms = buildProfileAtoms(p);
+    const picked = [atoms.find((a) => a.text === 'C')!.id, atoms.find((a) => a.text === 'Java')!.id];
+
+    const holistic = selectResumeContentHolistic(p, selection(picked), atoms);
+    const matched = selectResumeContent(
+      p,
+      analysis({ matches: [{ requirementId: 'r1', status: 'full', atomIds: picked }] }),
+      atoms,
+    );
+
+    expect(holistic).toEqual(matched);
+  });
+
+  it('still yields verbatim-only content, so the fabrication guard passes', () => {
+    const p = profile({
+      experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets: ['Shipped the thing'] }],
+    });
+    const atoms = buildProfileAtoms(p);
+
+    const { content } = selectResumeContentHolistic(p, selection([atoms[0].id]), atoms);
+
+    expect(isResumeContentVerbatim(content, p)).toBe(true);
+  });
+
+  it('ignores an atom id that matches nothing in the profile', () => {
+    const p = profile({
+      experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets: ['Only bullet'] }],
+    });
+    const atoms = buildProfileAtoms(p);
+
+    const { content, sourceMap } = selectResumeContentHolistic(p, selection(['not-a-real-id']), atoms);
+
+    expect(content.experience[0].bullets).toEqual(['Only bullet']);
+    expect(sourceMap).toEqual([]);
   });
 });
