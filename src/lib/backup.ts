@@ -1,12 +1,13 @@
 // What this file is: the logic behind exporting all local data to a JSON
 // file, importing it back, and deleting everything. Split into pure
-// functions (buildBackup/validateBackup/parseBackup — unit-tested in
-// backup.test.ts) and thin Dexie-touching wrappers (exportAllData/
-// importAllData/deleteAllData).
+// functions (buildBackup/serializeBackup/validateBackup/parseBackup —
+// unit-tested in backup.test.ts) and thin Dexie-touching wrappers
+// (exportAllData/importAllData/deleteAllData).
 // In plain terms: the code behind the "Export," "Import," and "Delete All
 // Data" buttons on the Profile page.
 
 import { db } from './db';
+import { repairText } from './repairText';
 import { SCHEMA_VERSION } from '../types';
 import type { Generation, GenerationSnapshot, JobPosting, LatexTemplate, Profile } from '../types';
 
@@ -69,6 +70,16 @@ export function validateBackup(x: unknown): x is BackupFile {
 }
 
 /**
+ * Pure — renders a backup file as the JSON text that gets downloaded, with
+ * any mis-decoded punctuation repaired on the way out so the file reads
+ * correctly wherever it is opened.
+ * In plain terms: turns your data into the text of the backup file.
+ */
+export function serializeBackup(backup: BackupFile): string {
+  return repairText(JSON.stringify(backup, null, 2));
+}
+
+/**
  * Pure — parses and validates a backup JSON string, throwing on any problem.
  * In plain terms: reads the backup file you upload and complains clearly if
  * it isn't a valid one.
@@ -76,7 +87,10 @@ export function validateBackup(x: unknown): x is BackupFile {
 export function parseBackup(json: string): BackupFile {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(json);
+    // Repaired before parsing, not field by field afterwards: the damage is
+    // plain text either way, and one pass over the whole file lets a garbled
+    // character anywhere in it vouch for the rest.
+    parsed = JSON.parse(repairText(json));
   } catch {
     throw new BackupValidationError('Malformed backup file: not valid JSON.');
   }

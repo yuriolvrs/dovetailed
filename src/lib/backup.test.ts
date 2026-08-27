@@ -6,7 +6,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { SCHEMA_VERSION } from '../types';
-import { BackupValidationError, buildBackup, parseBackup, validateBackup } from './backup';
+import {
+  BackupValidationError,
+  buildBackup,
+  parseBackup,
+  serializeBackup,
+  validateBackup,
+} from './backup';
 import type { BackupData } from './backup';
 
 function sampleData(): BackupData {
@@ -106,5 +112,36 @@ describe('parseBackup', () => {
   it('throws BackupValidationError on valid but non-object JSON', () => {
     expect(() => parseBackup('[]')).toThrow(BackupValidationError);
     expect(() => parseBackup('42')).toThrow(BackupValidationError);
+  });
+});
+
+describe('mis-decoded characters', () => {
+  // "McDonald<lost apostrophe>s" -- the LLM's smart quote arrives as U+00E2
+  // after the invisible C1 code points are dropped in transit.
+  const damaged = 'McDonald\u00e2s cross\u00e2functional';
+  const repaired = 'McDonald\u2019s cross-functional';
+
+  it('repairs them on the way out of an export', () => {
+    const data = sampleData();
+    data.profiles[0].contact.name = damaged;
+
+    expect(serializeBackup(buildBackup(data))).toContain(repaired);
+  });
+
+  it('repairs them on the way in from an import', () => {
+    const data = sampleData();
+    data.profiles[0].contact.name = damaged;
+    const json = JSON.stringify(buildBackup(data));
+
+    expect(parseBackup(json).data.profiles[0].contact.name).toBe(repaired);
+  });
+
+  it('survives a full export/import round trip unchanged', () => {
+    const data = sampleData();
+    data.profiles[0].contact.name = 'Ada Lovelace\u2019s caf\u00e9';
+
+    const restored = parseBackup(serializeBackup(buildBackup(data)));
+
+    expect(restored.data.profiles[0].contact.name).toBe('Ada Lovelace\u2019s caf\u00e9');
   });
 });

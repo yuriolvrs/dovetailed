@@ -9,6 +9,7 @@
 
 import { classifyFile, readAttachment, SUPPORTED_FILE_HINT } from './files/readFile';
 import { JsonParseError, parseJson } from './json';
+import { repairText } from './repairText';
 
 export interface GenerateOptions {
   temperature?: number;
@@ -83,31 +84,6 @@ interface ChatCompletionResponse {
 // the whole pass on a transient 429.
 const RATE_LIMIT_MAX_RETRIES = 4;
 const RATE_LIMIT_FALLBACK_DELAYS_MS = [2000, 5000, 10000, 15000];
-
-// The small model this app uses occasionally mis-emits multi-byte UTF-8 for
-// special punctuation (non-breaking hyphens, smart quotes, en/em dashes):
-// the intended character's bytes arrive as separate Latin-1-range characters
-// (code points U+0080-U+00FF) instead of one correct code point, e.g. a
-// non-breaking hyphen in "cross-functional" shows up as one garbled visible
-// letter followed by invisible control characters. Re-encoding each run of
-// Latin-1-range characters back to raw bytes and re-decoding as UTF-8
-// recovers the original character; runs that are not actually mis-decoded
-// UTF-8 (e.g. a genuine standalone accented letter) fail the strict decode
-// and are left untouched. Plain ASCII text never enters this path at all.
-// In plain terms: repairs the garbled special characters this AI model
-// sometimes produces.
-const LATIN1_RANGE_RUN = new RegExp('[\u0080-\u00FF]+', 'g');
-
-function fixMojibake(text: string): string {
-  return text.replace(LATIN1_RANGE_RUN, (run) => {
-    const bytes = Uint8Array.from([...run].map((c) => c.charCodeAt(0)));
-    try {
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    } catch {
-      return run;
-    }
-  });
-}
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -186,7 +162,10 @@ export async function generate(prompt: string, options: GenerateOptions = {}): P
   if (!content) {
     throw new EmptyResponseError(data.choices?.[0]?.finish_reason);
   }
-  return fixMojibake(content);
+  // The small model occasionally mis-emits multi-byte UTF-8 for special
+  // punctuation (non-breaking hyphens, smart quotes, en/em dashes), so every
+  // response is repaired before anything else sees it.
+  return repairText(content);
 }
 
 // The document reader returns one markdown block per page; joining them in
@@ -206,7 +185,7 @@ interface OcrResponse {
  */
 export async function extractText(file: File, options: GenerateOptions = {}): Promise<string> {
   if (classifyFile(file.name, file.type) === 'text') {
-    return fixMojibake(await file.text());
+    return repairText(await file.text());
   }
 
   const { mimeType, base64 } = await readAttachment(file);
@@ -226,7 +205,7 @@ export async function extractText(file: File, options: GenerateOptions = {}): Pr
   if (!text) {
     throw new Error('The document reader found no text in that file.');
   }
-  return fixMojibake(text);
+  return repairText(text);
 }
 
 // Every screen that runs an LLM call needs the same three-way message
