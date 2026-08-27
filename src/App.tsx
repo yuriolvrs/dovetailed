@@ -3,13 +3,15 @@
 // In plain terms: the outer frame of the app — the header/navigation, and
 // wherever a page gets shown depending on which tab you're on.
 
-import { Link, NavLink, Navigate, Route, Routes, useMatch } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useMatch, useParams } from 'react-router-dom';
 import { Briefcase, User } from 'lucide-react';
 import ProfilePage from './pages/ProfilePage.tsx';
 import JobsPage from './pages/JobsPage.tsx';
 import JobDetailPage from './pages/JobDetailPage.tsx';
 import MatchingReviewPage from './pages/MatchingReviewPage.tsx';
-import GeneratePage from './pages/GeneratePage.tsx';
+import DirectSelectionPage from './pages/DirectSelectionPage.tsx';
+import DocumentsPage from './pages/DocumentsPage.tsx';
+import AnalyzePostingPage from './pages/AnalyzePostingPage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
 import { ToastProvider } from './components/ui/Toast.tsx';
 import { ThemeToggle } from './components/ui/ThemeToggle.tsx';
@@ -26,6 +28,18 @@ const COLUMN = 'max-w-6xl';
 // The header's destination buttons. The brand mark also goes home, so Jobs
 // is a shortcut rather than the only way back to the list.
 // In plain terms: how the Jobs and Profile buttons in the top-right look.
+// The Documents screen was /generate before the two routes got a shared hub.
+// A relative <Navigate to="../documents"> cannot do this: React Router resolves
+// a relative `to` against the ROUTE hierarchy, not the URL, and these routes are
+// flat siblings -- so ".." lands on "/" rather than on the posting. Verified in
+// the running app; the absolute path built from the param is the fix.
+// In plain terms: sends an old /generate bookmark to the renamed screen instead
+// of dumping you on the jobs list.
+function LegacyGenerateRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/jobs/${id}/documents` : '/'} replace />;
+}
+
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
     'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
@@ -78,7 +92,10 @@ export default function App() {
             <Route path="/jobs" element={<Navigate to="/" replace />} />
             <Route path="/jobs/:id" element={<JobDetailPage />} />
             <Route path="/jobs/:id/match" element={<MatchingReviewPage />} />
-            <Route path="/jobs/:id/generate" element={<GeneratePage />} />
+            <Route path="/jobs/:id/direct" element={<DirectSelectionPage />} />
+            <Route path="/jobs/:id/match/analyze" element={<AnalyzePostingPage />} />
+            <Route path="/jobs/:id/documents" element={<DocumentsPage />} />
+            <Route path="/jobs/:id/generate" element={<LegacyGenerateRedirect />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

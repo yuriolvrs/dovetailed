@@ -13,7 +13,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Download, FileText, History, Sparkles } from 'lucide-react';
-import type { CoverLetterContent, Generation, GenerationSnapshot, JobPosting, Profile } from '../../types';
+import type {
+  CoverLetterContent,
+  Generation,
+  GenerationSnapshot,
+  GenerationStrategy,
+  JobPosting,
+  Profile,
+  ProfileAtom,
+} from '../../types';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../../lib/genStore';
 import { generateCoverLetterContent } from '../../lib/generation/generateCoverLetterContent';
@@ -31,10 +39,18 @@ import type { CoverLetterNavTarget } from './coverLetterNav';
 export function CoverLetterSection({
   posting,
   profile,
+  strategy = 'matched',
   actionsPortalTarget,
 }: {
   posting: JobPosting;
   profile: Profile;
+  /**
+   * Which route's letter this tab is showing. On 'holistic' the evidence pool
+   * comes from the posting's direct-selection pass instead of its confirmed
+   * requirement matches, and the result is stored separately, so both routes'
+   * letters coexist on one posting for comparison.
+   */
+  strategy?: GenerationStrategy;
   /** DOM node in the shared page header's actions slot -- action buttons
    * portal into it so they land in the same header position the resume
    * tab's actions use, instead of appearing in their own row lower down. */
@@ -65,16 +81,17 @@ export function CoverLetterSection({
   useEscapeKey(showExportMenu, () => setShowExportMenu(false));
 
   const refresh = useCallback(() => {
-    loadGeneration(posting.id, 'coverLetter').then((g) => setGeneration(g ?? 'none'));
-    listSnapshots(posting.id, 'coverLetter').then(setSnapshots);
-  }, [posting.id]);
+    loadGeneration(posting.id, 'coverLetter', strategy).then((g) => setGeneration(g ?? 'none'));
+    listSnapshots(posting.id, 'coverLetter', strategy).then(setSnapshots);
+  }, [posting.id, strategy]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   async function handleGenerate() {
-    if (!posting.analysis) return;
+    const selection = posting.holisticSelection;
+    if (strategy === 'holistic' ? !selection : !posting.analysis) return;
     if (generation !== 'none' && generation !== null) {
       await snapshotGeneration(generation);
     }
@@ -83,14 +100,29 @@ export function CoverLetterSection({
     setConfirmingRegenerate(false);
     try {
       const atoms = buildProfileAtoms(profile);
+      // On the direct route the selection pass already chose the evidence and
+      // read the role, so it supplies both instead of the analysis. Ordered by
+      // the model's own ranking, and filtered to atoms that still exist (an
+      // edited bullet re-hashes to a new id, so a stale pick points at
+      // nothing).
+      const holistic =
+        strategy === 'holistic' && selection
+          ? {
+              atoms: selection.atomIds
+                .map((atomId) => atoms.find((a) => a.id === atomId))
+                .filter((a): a is ProfileAtom => Boolean(a)),
+              roleSummary: selection.roleSummary,
+            }
+          : undefined;
       const { content, sourceMap } = await generateCoverLetterContent(profile, posting, atoms, {
         useWritingStyle,
+        holistic,
       });
-      const next = newGeneration(posting.id, 'coverLetter', content, sourceMap);
+      const next = newGeneration(posting.id, 'coverLetter', content, sourceMap, strategy);
       await saveGeneration(next);
       setGeneration(next);
       setStatus('idle');
-      listSnapshots(posting.id, 'coverLetter').then(setSnapshots);
+      listSnapshots(posting.id, 'coverLetter', strategy).then(setSnapshots);
     } catch (err) {
       setError(llmErrorMessage(err, 'Generating your cover letter'));
       setStatus('error');
@@ -106,7 +138,7 @@ export function CoverLetterSection({
     setConfirmingRestoreId(null);
     setShowHistory(false);
     pulseRestored();
-    listSnapshots(posting.id, 'coverLetter').then(setSnapshots);
+    listSnapshots(posting.id, 'coverLetter', strategy).then(setSnapshots);
   }
 
   // Deterministic -- no LLM call, just a different renderer over the same

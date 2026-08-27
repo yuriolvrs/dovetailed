@@ -76,7 +76,11 @@ function SeverityPill({
       type="button"
       onClick={onToggle}
       title="Click to switch"
-      className={`shrink-0 mt-0.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold transition-colors ${
+      // One fixed width for both labels: the header above declares a Type
+      // column, and an intrinsically-sized pill made that a lie -- "Required"
+      // and "Preferred" render 5px apart, so the column edge moved every time
+      // one was toggled and never lined up with the header.
+      className={`shrink-0 mt-0.5 w-[76px] text-center px-2.5 py-1 rounded-full text-[10.5px] font-semibold transition-colors ${
         severity === 'required'
           ? 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white'
           : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20'
@@ -158,8 +162,8 @@ export function AnalysisEditor({
           <>
             <div className="flex items-center gap-3 pb-2 border-b border-slate-200 dark:border-slate-700 text-[10px] font-semibold text-slate-300 dark:text-slate-600 uppercase tracking-widest">
               <span className="flex-1">Requirement</span>
-              <span className="shrink-0 w-24">Type</span>
-              <span className="shrink-0 w-[13px]" />
+              <span className="shrink-0 w-[76px]">Type</span>
+              <span className="shrink-0 w-[17px]" />
             </div>
             {requirements.map((requirement) => (
               <RequirementRow

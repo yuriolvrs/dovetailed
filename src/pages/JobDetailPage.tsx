@@ -1,39 +1,68 @@
-// What this file is: the Jobs route's detail page (/jobs/:id). Shows one
-// saved posting's text (editable), runs the LLM analysis on demand via
-// analyzePosting's prompt + the shared llm.ts proxy client, and renders the
-// result through AnalysisEditor. Edits autosave to Dexie the same way the
-// Profile page does: list-shaped edits persist immediately, the large
-// free-text posting body persists on blur.
-// In plain terms: the screen for one saved job posting -- edit the pasted
-// text, run the AI analysis, and fix up its answer if needed.
+// What this file is: the posting hub (/jobs/:id) -- one job's shared, neutral
+// ground. It owns only what belongs to the posting itself (title, company,
+// location, arrangement, application status, deadline, the pasted text) and
+// nothing belonging to either generation route. That is deliberate: the
+// analysis pass used to live here, which made Matching the route you were
+// already inside the moment you opened a job, and left the Direct read able to
+// appear only by replacing the whole screen. Extracting requirements now lives
+// on Matching's own first screen, so both routes start from here on equal
+// terms.
+//
+// The page has two states, switched on whether either route has produced
+// anything yet. Before: the posting text takes the room it deserves and a
+// decision card asks which route to use, since that choice wants the posting in
+// front of you. After: the text folds to a summary and the two routes become
+// standing status rows, because by then you have read the posting and came back
+// to open your work or run the other route.
+// In plain terms: the first screen for a job -- its details and text, plus the
+// choice of which of the two ways to build documents, or the status of both
+// once you've used them.
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Sparkles, Trash2 } from 'lucide-react';
-import type { JobPosting, Profile } from '../types';
+import { ArrowLeft, ArrowRight, Check, ListChecks, Sparkles, Trash2 } from 'lucide-react';
+import type { GenerationStrategy, JobPosting } from '../types';
 import { ARRANGEMENTS, deleteJobPosting, loadJobPosting, saveJobPosting } from '../lib/jobStore';
-import { hasProfileContent, loadProfile } from '../lib/profileStore';
-import {
-  buildAnalyzePostingPrompt,
-  isExtractedAnalysis,
-  MAX_POSTING_CHARS,
-  toJobAnalysis,
-} from '../prompts/analyzePosting';
-import { generateStructured, llmErrorMessage } from '../lib/llm';
-import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
-import { AnalysisEditor } from '../components/jobs/AnalysisEditor';
 import { ApplicationTracker } from '../components/jobs/ApplicationTracker';
-import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
+import { PostingTextPanel } from '../components/jobs/PostingTextPanel';
 import { useToast } from '../components/ui/Toast';
-import {
-  Btn,
-  Card,
-  FieldInput,
-  FieldSelect,
-  PageSkeleton,
-  SavedIndicator,
-  UnsavedIndicator,
-} from '../components/ui/primitives';
+import { Badge, Btn, Card, FieldInput, FieldSelect, PageSkeleton } from '../components/ui/primitives';
+
+/**
+ * The two routes, described in the user's terms rather than the mechanism's.
+ * `steps` is what the route's own stepper will show, stated up front so the
+ * cost of each is visible before it is chosen rather than discovered inside it.
+ */
+const ROUTES: {
+  strategy: GenerationStrategy;
+  name: string;
+  Icon: typeof ListChecks;
+  blurb: string;
+  steps: string[];
+  cta: string;
+  href: (id: string) => string;
+}[] = [
+  {
+    strategy: 'matched',
+    name: 'Matching',
+    Icon: ListChecks,
+    blurb:
+      'Pull the requirements out of the posting, then check each one against your profile. You review every pairing and can add or reject evidence yourself.',
+    steps: ['Requirements', 'Matches', 'Documents'],
+    cta: 'Extract requirements',
+    href: (id) => `/jobs/${id}/match/analyze`,
+  },
+  {
+    strategy: 'holistic',
+    name: 'Direct read',
+    Icon: Sparkles,
+    blurb:
+      'The AI reads the whole posting and your whole profile at once, picks what to feature, and explains why. One pass, no requirement list.',
+    steps: ['Choices', 'Documents'],
+    cta: 'Read & choose',
+    href: (id) => `/jobs/${id}/direct`,
+  },
+];
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,28 +70,22 @@ export default function JobDetailPage() {
   const { showUndo } = useToast();
 
   const [posting, setPosting] = useState<JobPosting | null | 'missing'>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  // Which of the blur-saved free-text fields currently differ from what's
-  // persisted, so their labels can show an "Unsaved" indicator until blur.
+  // Which route the decision card has selected. Only used before either route
+  // has run; afterwards the hub shows both as status rows and there is nothing
+  // to pre-select.
+  const [choice, setChoice] = useState<GenerationStrategy>('matched');
   const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
-  const { saved, pulse } = useAutosaveIndicator();
 
   const refresh = useCallback(() => {
     if (!id) return;
     loadJobPosting(id).then((p) => setPosting(p ?? 'missing'));
-    loadProfile().then(setProfile);
   }, [id]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  // Merges a change into state and persists immediately -- used for
-  // list-shaped edits (analysis, arrangement) and, on blur, to commit the
-  // free-text fields updated live below.
   function update(patch: Partial<JobPosting>) {
     setPosting((prev) => {
       if (!prev || prev === 'missing') return prev;
@@ -70,12 +93,8 @@ export default function JobDetailPage() {
       void saveJobPosting(next);
       return next;
     });
-    pulse();
   }
 
-  // For free text (title/company/location/posting body): update on-screen
-  // state on every keystroke, but only persist to Dexie on blur, to avoid a
-  // write per character typed.
   function updateLive(patch: Partial<JobPosting>) {
     setPosting((prev) => (prev && prev !== 'missing' ? { ...prev, ...patch } : prev));
   }
@@ -93,27 +112,6 @@ export default function JobDetailPage() {
     });
   }
 
-  async function handleAnalyze() {
-    if (!posting || posting === 'missing' || !profile) return;
-    setError(null);
-    setStatus('loading');
-    try {
-      const prompt = buildAnalyzePostingPrompt(posting.rawText);
-      const extracted = await generateStructured(prompt, isExtractedAnalysis, {
-        temperature: 0.2,
-        // Confirmed live against openai/gpt-oss-120b: 1500 usually survives
-        // but with thin margin (reasoning tokens alone can run ~700+ for a
-        // meaty posting) -- widened for headroom on harder postings.
-        maxTokens: 2500,
-      });
-      update({ analysis: toJobAnalysis(extracted) });
-      setStatus('idle');
-    } catch (err) {
-      setError(llmErrorMessage(err, 'Analysis'));
-      setStatus('error');
-    }
-  }
-
   async function handleConfirmDelete() {
     if (!id || !posting || posting === 'missing') return;
     const deleted = posting;
@@ -128,10 +126,10 @@ export default function JobDetailPage() {
   if (posting === 'missing') {
     return (
       <section className="space-y-3">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Posting not found.</p>
         <Link
           to="/"
-          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit"
+          className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit"
         >
           <ArrowLeft size={15} />
           Back to Jobs
@@ -140,48 +138,51 @@ export default function JobDetailPage() {
     );
   }
 
-  if (!posting || !profile) {
-    return <PageSkeleton cards={2} />;
-  }
+  if (!posting) return <PageSkeleton cards={2} />;
 
-  const requiredCount = posting.analysis?.requirements.filter((r) => r.severity === 'required').length ?? 0;
-  const preferredCount = posting.analysis?.requirements.filter((r) => r.severity === 'preferred').length ?? 0;
+  const matchingStarted = Boolean(posting.analysis);
+  const directStarted = Boolean(posting.holisticSelection);
+  // Which state the hub is in: a first visit that has to make a choice, or a
+  // return visit to work that already exists.
+  const started = matchingStarted || directStarted;
+
+  const statusOf = (strategy: GenerationStrategy) =>
+    strategy === 'matched' ? matchingStarted : directStarted;
 
   return (
     <div className="pb-16">
-      <JobDetailHeader
-        backHref="/jobs"
-        backLabel="Back to Jobs"
-        postingId={posting.id}
-        current="analysis"
-        analysisDone={Boolean(posting.analysis)}
-        matchingDone={Boolean(posting.analysis && posting.analysis.matches.length > 0)}
-        actions={
-          !confirmingDelete ? (
-            <Btn
-              size="sm"
-              variant="ghost"
-              onClick={() => setConfirmingDelete(true)}
-              className="text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
-            >
-              <Trash2 size={13} />
-              Delete posting
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          <ArrowLeft size={15} />
+          Back to Jobs
+        </Link>
+        {!confirmingDelete ? (
+          <Btn
+            size="sm"
+            variant="ghost"
+            onClick={() => setConfirmingDelete(true)}
+            className="text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+          >
+            <Trash2 size={13} />
+            Delete posting
+          </Btn>
+        ) : (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-600 dark:text-slate-300">Delete this posting?</span>
+            <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
+              Yes, delete
             </Btn>
-          ) : (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600 dark:text-slate-300">Delete this posting?</span>
-              <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
-                Yes, delete
-              </Btn>
-              <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
-                Cancel
-              </Btn>
-            </div>
-          )
-        }
-      />
+            <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
+              Cancel
+            </Btn>
+          </div>
+        )}
+      </div>
 
-      <Card className="p-4 mb-6">
+      <Card className="p-4 mb-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <FieldInput
             label="Job Title"
@@ -233,130 +234,147 @@ export default function JobDetailPage() {
             placeholder="Select…"
           />
         </div>
-
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           <ApplicationTracker posting={posting} onChange={update} />
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-5 items-start">
-        <Card className="p-5 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)] flex flex-col">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              Posting Text
-            </p>
-            {dirtyFields.has('rawText') ? <UnsavedIndicator /> : <SavedIndicator visible={saved} />}
-          </div>
-          <textarea
-            className="w-full flex-1 min-h-[16rem] text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-transparent resize-none outline-none border border-transparent rounded-xl focus:border-blue-300 dark:focus:border-blue-500 focus:bg-blue-50/20 dark:focus:bg-blue-500/10 px-2 py-2 transition-all overflow-y-auto"
-            value={posting.rawText}
-            onChange={(e) => {
-              updateLive({ rawText: e.target.value });
-              markDirty('rawText');
-            }}
-            onBlur={() => {
-              update({ rawText: posting.rawText });
-              markClean('rawText');
-            }}
+      {started ? (
+        // Return visit: the posting has been read, so it folds away and the two
+        // routes become the page.
+        <div className="space-y-4">
+          <PostingTextPanel
+            posting={posting}
+            variant="summary"
+            onLiveChange={(rawText) => updateLive({ rawText })}
+            onCommit={() => update({ rawText: posting.rawText })}
           />
-          {posting.rawText.length > MAX_POSTING_CHARS && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 shrink-0">
-              Only the first {MAX_POSTING_CHARS.toLocaleString()} characters are sent for analysis.
-            </p>
-          )}
-        </Card>
-
-        <div className="flex flex-col gap-4 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)]">
-          {!hasProfileContent(profile) && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 shrink-0">
-              Add your experience or skills on the{' '}
-              <Link to="/profile" className="underline hover:text-slate-900 dark:hover:text-slate-100">
-                Profile page
-              </Link>{' '}
-              first — matches and gaps need something to compare against.
-            </p>
-          )}
-
-          {!posting.analysis ? (
-            <Card className="p-10 flex flex-col items-center text-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
-                <Sparkles size={22} className="text-white dark:text-slate-900" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Analyze this posting</h3>
-                <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-xs">
-                  Extract requirements, find keyword matches, identify gaps — then edit anything
-                  before generating documents.
-                </p>
-              </div>
-              <Btn
-                onClick={handleAnalyze}
-                disabled={
-                  status === 'loading' || posting.rawText.trim() === '' || !hasProfileContent(profile)
-                }
-                className="min-w-[140px] justify-center"
-              >
-                {status === 'loading' ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Analyzing…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={14} />
-                    Run Analysis
-                  </>
-                )}
-              </Btn>
-              {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
-            </Card>
-          ) : (
-            <Card className="p-5 flex-1 min-h-0 flex flex-col">
-              <div className="flex items-start justify-between mb-1 shrink-0">
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                    Analysis
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {posting.analysis.requirements.length} requirement
-                    {posting.analysis.requirements.length !== 1 ? 's' : ''} —{' '}
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
-                      {requiredCount} required
-                    </span>
-                    , {preferredCount} preferred
-                  </p>
-                </div>
-                <Btn
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleAnalyze}
-                  disabled={status === 'loading' || !hasProfileContent(profile)}
-                >
-                  {status === 'loading' ? (
-                    <div className="w-3.5 h-3.5 border-2 border-slate-300 dark:border-slate-600 border-t-slate-600 dark:border-t-slate-300 rounded-full animate-spin" />
-                  ) : (
-                    <Sparkles size={13} />
-                  )}
-                  Reanalyze
-                </Btn>
-              </div>
-              {error && <p className="text-xs text-red-600 dark:text-red-400 mb-3 mt-3 shrink-0">{error}</p>}
-              <div className="flex-1 min-h-0 overflow-y-auto scroll-thin pr-1 -mr-1 mt-3">
-                <AnalysisEditor value={posting.analysis} onChange={(analysis) => update({ analysis })} />
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-                <Btn
-                  onClick={() => navigate(`/jobs/${posting.id}/match`)}
-                  className="w-full justify-center"
-                >
-                  Continue to Matching
-                  <ArrowRight size={14} />
-                </Btn>
-              </div>
-            </Card>
-          )}
+          <div className="space-y-3">
+            {ROUTES.map((route) => {
+              const done = statusOf(route.strategy);
+              return (
+                <Card key={route.strategy} className="p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                        <route.Icon size={15} />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{route.name}</h2>
+                          {done ? (
+                            <Badge color="green">
+                              <Check size={11} />
+                              Started
+                            </Badge>
+                          ) : (
+                            <Badge>Not run</Badge>
+                          )}
+                        </div>
+                        {/* Shown whatever the state. Hiding it once a route had
+                            run collapsed that row to a bare title and badge,
+                            and made the two rows different shapes -- which is
+                            the opposite of what this hub is for. */}
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1.5 max-w-prose">
+                          {route.blurb}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Btn
+                        variant={done ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => navigate(route.href(posting.id))}
+                      >
+                        {done ? 'Open' : route.cta}
+                        <ArrowRight size={13} />
+                      </Btn>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : (
+        // First visit: nothing has run, so the posting gets the room and the
+        // choice is made with it on screen.
+        <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-5 items-start">
+          <PostingTextPanel
+            posting={posting}
+            onLiveChange={(rawText) => updateLive({ rawText })}
+            onCommit={() => update({ rawText: posting.rawText })}
+            className="lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)]"
+          />
+
+          <Card className="p-5">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">How should we read this?</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+              Both build a resume and cover letter from your real profile, and neither invents anything. You can run
+              the other one later and compare.
+            </p>
+
+            <fieldset className="mt-4 space-y-2.5">
+              <legend className="sr-only">Which route to use</legend>
+              {ROUTES.map((route) => {
+                const selected = choice === route.strategy;
+                return (
+                  <label
+                    key={route.strategy}
+                    className={`flex gap-3 items-start rounded-xl border p-3.5 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-blue-500 ${
+                      selected
+                        ? 'border-slate-900 dark:border-slate-100 bg-slate-50 dark:bg-slate-800/60'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="route"
+                      className="sr-only"
+                      checked={selected}
+                      onChange={() => setChoice(route.strategy)}
+                    />
+                    <span
+                      aria-hidden
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition-colors ${
+                        selected
+                          ? 'border-[5px] border-slate-900 dark:border-slate-100'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2">
+                        <route.Icon size={13} className="text-slate-700 dark:text-slate-200 shrink-0" />
+                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{route.name}</span>
+                      </span>
+                      <span className="block text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+                        {route.blurb}
+                      </span>
+                      <span className="block text-[11px] text-slate-600 dark:text-slate-400 mt-1.5">
+                        {route.steps.length} steps · {route.steps.join(' → ')}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </fieldset>
+
+            <Btn
+              className="w-full justify-center mt-4"
+              disabled={posting.rawText.trim() === ''}
+              onClick={() => navigate(ROUTES.find((r) => r.strategy === choice)!.href(posting.id))}
+            >
+              Continue
+              <ArrowRight size={14} />
+            </Btn>
+            {posting.rawText.trim() === '' && (
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2.5 text-center">
+                Paste the job posting first.
+              </p>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

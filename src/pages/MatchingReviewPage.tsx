@@ -327,17 +327,21 @@ export default function MatchingReviewPage() {
     return (
       <section>
         <JobDetailHeader
-          backHref={`/jobs/${posting.id}`}
-          backLabel="Back to posting"
+          backHref={`/jobs/${posting.id}/match/analyze`}
+          backLabel="Back to requirements"
           postingId={posting.id}
-          current="matching"
+          current="matches"
+          strategy="matched"
           analysisDone={false}
           matchingDone={false}
         />
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          This posting hasn't been analyzed yet.{' '}
-          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
-            Go run analysis first.
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          This posting has no requirements yet.{' '}
+          <Link
+            to={`/jobs/${posting.id}/match/analyze`}
+            className="underline hover:text-slate-900 dark:hover:text-slate-100"
+          >
+            Extract them first.
           </Link>
         </p>
       </section>
@@ -418,10 +422,11 @@ export default function MatchingReviewPage() {
   return (
     <div className="pb-16">
       <JobDetailHeader
-        backHref={`/jobs/${posting.id}`}
-        backLabel="Back to posting"
+        backHref={`/jobs/${posting.id}/match/analyze`}
+        backLabel="Back to requirements"
         postingId={posting.id}
-        current="matching"
+        current="matches"
+        strategy="matched"
         analysisDone={Boolean(posting.analysis)}
         matchingDone={posting.analysis.matches.length > 0}
         actions={
@@ -814,7 +819,7 @@ export default function MatchingReviewPage() {
           <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             {reviewedCount} of {requirements.length} requirement{requirements.length !== 1 ? 's' : ''} reviewed
           </span>
-          <Btn onClick={() => navigate(`/jobs/${posting.id}/generate`)}>
+          <Btn onClick={() => navigate(`/jobs/${posting.id}/documents`)}>
             <FileText size={14} />
             Generate
           </Btn>

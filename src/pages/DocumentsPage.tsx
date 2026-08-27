@@ -1,4 +1,4 @@
-// What this file is: the Generate route's page (/jobs/:id/generate) --
+// What this file is: the Documents screen (/jobs/:id/documents) --
 // covers both documents built from a posting's confirmed matches, switched
 // via an in-page Resume/Cover Letter tab rather than separate stages (they
 // share the same matched requirements as their source). Resume: builds a
@@ -21,16 +21,20 @@
 // an earlier version if needed, and export to PDF.
 
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Info, Mail, MessageCircleQuestion, Sparkles } from 'lucide-react';
-import type { ExperienceEntry, Generation, GenerationSnapshot, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
+import type { ExperienceEntry, Generation, GenerationSnapshot, GenerationStrategy, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
 import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
 import { loadProfile } from '../lib/profileStore';
 import { loadTemplate } from '../lib/templateStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../lib/genStore';
-import { isResumeContentVerbatim, selectResumeContent } from '../lib/generation/selectResumeContent';
+import {
+  isResumeContentVerbatim,
+  selectResumeContent,
+  selectResumeContentHolistic,
+} from '../lib/generation/selectResumeContent';
 import { fitToOnePage } from '../lib/generation/fitToOnePage';
 import { buildLatexContext } from '../lib/latex/templateContext';
 import { fillLatexTemplate } from '../lib/latex/fillTemplate';
@@ -40,6 +44,7 @@ import { downloadBlob, downloadTextFile } from '../lib/download';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
+import { RouteSwitch } from '../components/jobs/RouteSwitch';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
 import { InterviewPrepSection } from '../components/interviewPrep/InterviewPrepSection';
 import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
@@ -48,8 +53,13 @@ import { Btn, Card, PageSkeleton, SavedIndicator } from '../components/ui/primit
 
 type Tab = 'resume' | 'coverLetter' | 'interviewPrep';
 
-export default function GeneratePage() {
+export default function DocumentsPage() {
   const { id } = useParams<{ id: string }>();
+  // Which route's documents this page is showing. Lives in the URL rather
+  // than component state so a comparison is linkable and survives a reload,
+  // and so the stage tracker's Generate link can point at a specific one.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const strategy: GenerationStrategy = searchParams.get('route') === 'direct' ? 'holistic' : 'matched';
 
   const [tab, setTab] = useState<Tab>('resume');
   const [posting, setPosting] = useState<JobPosting | null | 'missing'>(null);
@@ -103,15 +113,15 @@ export default function GeneratePage() {
   const refresh = useCallback(() => {
     if (!id) return;
     loadJobPosting(id).then((p) => setPosting(p ?? 'missing'));
-    listSnapshots(id, 'resume').then(setSnapshots);
+    listSnapshots(id, 'resume', strategy).then(setSnapshots);
     loadTemplate().then((t) => setTemplate(t ?? null));
-    Promise.all([loadProfile(), loadGeneration(id, 'resume')]).then(([p, g]) => {
+    Promise.all([loadProfile(), loadGeneration(id, 'resume', strategy)]).then(([p, g]) => {
       setProfile(p);
       const gen = g ?? 'none';
       setGeneration(gen);
       setStale(gen !== 'none' ? !isResumeContentVerbatim(gen.content as ResumeContent, p) : false);
     });
-  }, [id]);
+  }, [id, strategy]);
 
   useEffect(() => {
     refresh();
@@ -130,7 +140,8 @@ export default function GeneratePage() {
   }, [profile?.contact.name]);
 
   async function handleGenerate() {
-    if (!id || !posting || posting === 'missing' || !posting.analysis || !profile) return;
+    if (!id || !posting || posting === 'missing' || !profile) return;
+    if (strategy === 'holistic' ? !posting.holisticSelection : !posting.analysis) return;
     // Only worth keeping a version-history snapshot when overwriting a real,
     // trustworthy generation -- not the first-ever build (nothing to lose)
     // and not a stale/fabricated one (nothing trustworthy to keep).
@@ -138,12 +149,18 @@ export default function GeneratePage() {
       await snapshotGeneration(generation);
     }
     const atoms = buildProfileAtoms(profile);
-    const selected = selectResumeContent(profile, posting.analysis, atoms);
+    // Both routes end in the same selection code; only the set of atom ids
+    // treated as relevant differs (confirmed matches vs the direct pass's own
+    // picks), so the resume is built exactly one way either way.
+    const selected =
+      strategy === 'holistic'
+        ? selectResumeContentHolistic(profile, posting.holisticSelection!, atoms)
+        : selectResumeContent(profile, posting.analysis!, atoms);
     const { content, removedExperience, fits } = await fitToOnePage(selected.content, selected.sourceMap);
     // Persisted on the generation, not held in component state, so the
     // "Removed to fit one page" restore list survives a page reload.
     const next: Generation = {
-      ...newGeneration(id, 'resume', content, selected.sourceMap),
+      ...newGeneration(id, 'resume', content, selected.sourceMap, strategy),
       removedForPageFit: removedExperience,
       pageFitOverflow: !fits,
     };
@@ -151,7 +168,7 @@ export default function GeneratePage() {
     setGeneration(next);
     setStale(false);
     setConfirmingRegenerate(false);
-    listSnapshots(id, 'resume').then(setSnapshots);
+    listSnapshots(id, 'resume', strategy).then(setSnapshots);
   }
 
   function restorePageFitRemoved(entry: ExperienceEntry) {
@@ -189,7 +206,7 @@ export default function GeneratePage() {
     setConfirmingRestoreId(null);
     setShowHistory(false);
     pulseRestored();
-    listSnapshots(id, 'resume').then(setSnapshots);
+    listSnapshots(id, 'resume', strategy).then(setSnapshots);
   }
 
   // Deterministic -- no LLM call. Fills the saved placeholder template with
@@ -266,35 +283,67 @@ export default function GeneratePage() {
     return <PageSkeleton cards={3} />;
   }
 
-  if (!posting.analysis || posting.analysis.requirements.length === 0) {
+  // The direct route has one prerequisite instead of two: the selection pass.
+  if (strategy === 'holistic' && !posting.holisticSelection) {
     return (
       <section>
         <JobDetailHeader
-          backHref={`/jobs/${posting.id}`}
-          backLabel="Back to posting"
+          backHref={`/jobs/${posting.id}/direct`}
+          backLabel="Back to choices"
           postingId={posting.id}
-          current="generate"
-          analysisDone={false}
+          current="documents"
+          strategy="holistic"
+          analysisDone={Boolean(posting.analysis)}
           matchingDone={false}
+          selectionDone={false}
         />
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          This posting hasn't been analyzed yet.{' '}
-          <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
-            Go run analysis first.
+          The AI hasn't read this posting yet.{' '}
+          <Link
+            to={`/jobs/${posting.id}/direct`}
+            className="underline hover:text-slate-900 dark:hover:text-slate-100"
+          >
+            Run the direct selection first.
           </Link>
         </p>
       </section>
     );
   }
 
-  if (posting.analysis.matches.length === 0) {
+  if (strategy === 'matched' && (!posting.analysis || posting.analysis.requirements.length === 0)) {
+    return (
+      <section>
+        <JobDetailHeader
+          backHref={`/jobs/${posting.id}/match/analyze`}
+          backLabel="Back to requirements"
+          postingId={posting.id}
+          current="documents"
+          strategy="matched"
+          analysisDone={false}
+          matchingDone={false}
+        />
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          This posting has no requirements yet.{' '}
+          <Link
+            to={`/jobs/${posting.id}/match/analyze`}
+            className="underline hover:text-slate-900 dark:hover:text-slate-100"
+          >
+            Extract them first.
+          </Link>
+        </p>
+      </section>
+    );
+  }
+
+  if (strategy === 'matched' && posting.analysis!.matches.length === 0) {
     return (
       <section>
         <JobDetailHeader
           backHref={`/jobs/${posting.id}/match`}
           backLabel="Back to matches"
           postingId={posting.id}
-          current="generate"
+          current="documents"
+          strategy="matched"
           analysisDone={true}
           matchingDone={false}
         />
@@ -322,13 +371,25 @@ export default function GeneratePage() {
     // alone, can't see it).
     <div className="pb-16 print:pb-0">
       <JobDetailHeader
-        backHref={`/jobs/${posting.id}/match`}
-        backLabel="Back to matches"
+        backHref={strategy === 'holistic' ? `/jobs/${posting.id}/direct` : `/jobs/${posting.id}/match`}
+        backLabel={strategy === 'holistic' ? 'Back to choices' : 'Back to matches'}
         postingId={posting.id}
-        current="generate"
+        current="documents"
+        strategy={strategy}
         analysisDone={Boolean(posting.analysis)}
-        matchingDone={posting.analysis.matches.length > 0}
+        matchingDone={Boolean(posting.analysis && posting.analysis.matches.length > 0)}
+        selectionDone={Boolean(posting.holisticSelection)}
         subtabs={
+          <>
+            <div className="mb-3">
+              <RouteSwitch
+                current={strategy}
+                onSelect={(next) =>
+                  setSearchParams(next === 'holistic' ? { route: 'direct' } : {}, { replace: true })
+                }
+                hint={`Built by ${strategy === 'holistic' ? 'the direct read' : 'requirement matching'}. Switch to compare — each route keeps its own documents and history.`}
+              />
+            </div>
           <div className="flex border-b border-slate-200 dark:border-slate-700 print:hidden">
             <button
               type="button"
@@ -367,6 +428,7 @@ export default function GeneratePage() {
               Interview Prep
             </button>
           </div>
+          </>
         }
         actions={
           tab === 'resume' ? (
@@ -507,7 +569,12 @@ export default function GeneratePage() {
       />
 
       {tab === 'coverLetter' ? (
-        <CoverLetterSection posting={posting} profile={profile} actionsPortalTarget={sideActionsEl} />
+        <CoverLetterSection
+          posting={posting}
+          profile={profile}
+          strategy={strategy}
+          actionsPortalTarget={sideActionsEl}
+        />
       ) : tab === 'interviewPrep' ? (
         <InterviewPrepSection posting={posting} profile={profile} actionsPortalTarget={sideActionsEl} />
       ) : (

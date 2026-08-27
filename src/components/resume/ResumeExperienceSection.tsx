@@ -45,6 +45,7 @@ export function ResumeExperienceSection({
   value,
   onChange,
   bulletMatch,
+  bulletChosen,
   bulletRewrite,
   profileBulletsFor,
   excludedEntries,
@@ -55,8 +56,15 @@ export function ResumeExperienceSection({
 }: {
   value: ExperienceEntry[];
   onChange: (experience: ExperienceEntry[]) => void;
-  /** Requirement text this bullet is matched to, or null if unmatched. */
+  /** Requirement text this bullet is matched to, or null if none can be named. */
   bulletMatch: (bulletText: string) => string | null;
+  /**
+   * Whether this bullet was selected for the job at all. Separate from
+   * bulletMatch because the direct route selects without producing a
+   * requirement list, so a chosen bullet has no requirement to name -- it is
+   * still chosen, and must not be flagged as left out.
+   */
+  bulletChosen: (bulletText: string) => boolean;
   bulletRewrite: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
   /** All bullets on the matching source profile entry (not just the ones currently included), for the "add back" picker. */
   profileBulletsFor: (entry: ExperienceEntry) => string[];
@@ -147,7 +155,7 @@ export function ResumeExperienceSection({
           {value.length === 0 && <EmptyState>No experience entries yet.</EmptyState>}
 
           {value.map((entry, index) => {
-            const matchedCount = entry.bullets.filter((b) => bulletMatch(b) !== null).length;
+            const matchedCount = entry.bullets.filter((b) => bulletChosen(b)).length;
             return (
               <ResumeAccordionRow
                 key={index}
@@ -174,7 +182,7 @@ export function ResumeExperienceSection({
                       {matchedCount} matched
                     </Badge>
                   ) : (
-                    <Badge color="slate">unmatched</Badge>
+                    <Badge color="slate">nothing selected</Badge>
                   )
                 }
               >
@@ -232,10 +240,18 @@ export function ResumeExperienceSection({
                     reorderable
                     itemBadge={(bulletText) => {
                       const requirement = bulletMatch(bulletText);
-                      return requirement ? (
+                      if (requirement) {
+                        return (
+                          <Badge color="green">
+                            <Check size={11} />
+                            Matches: {requirement}
+                          </Badge>
+                        );
+                      }
+                      return bulletChosen(bulletText) ? (
                         <Badge color="green">
                           <Check size={11} />
-                          Matches: {requirement}
+                          Chosen for this job
                         </Badge>
                       ) : (
                         <Badge color="amber">Not matched yet</Badge>

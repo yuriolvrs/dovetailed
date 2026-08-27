@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Check, ChevronDown, Copy, History, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Generation, GenerationSnapshot, InterviewPrepContent, JobPosting, Profile, ProfileAtom } from '../../types';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../../lib/genStore';
@@ -335,10 +336,28 @@ export function InterviewPrepSection({
               {error}
             </p>
           )}
-          <Btn onClick={handleGenerate} disabled={status === 'loading'} className="min-w-[140px] justify-center">
+          <Btn
+            onClick={handleGenerate}
+            disabled={status === 'loading' || !posting.analysis}
+            className="min-w-[140px] justify-center"
+          >
             <Sparkles size={14} />
             {status === 'loading' ? 'Writing…' : 'Generate questions'}
           </Btn>
+          {!posting.analysis && (
+            // Interview prep is built from the extracted requirement list, so
+            // it needs the analysis pass -- the direct route doesn't produce
+            // one. Said plainly here rather than leaving a button that looks
+            // enabled and does nothing.
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm">
+              Interview prep is built from this posting's requirement list, which only the analysis
+              route produces.{' '}
+              <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
+                Run analysis
+              </Link>{' '}
+              to enable it.
+            </p>
+          )}
         </Card>
       ) : (
         <Card className="divide-y divide-slate-100 dark:divide-slate-800">

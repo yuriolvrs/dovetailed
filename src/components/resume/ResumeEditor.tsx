@@ -57,7 +57,13 @@ export function ResumeEditor({
   value: ResumeContent;
   sourceMap: SourceMapEntry[];
   /** This posting's requirements + matches, used to name which requirement a matched bullet satisfies. */
-  analysis: JobAnalysis;
+  /**
+   * The matched route's analysis, used only to name the specific requirement a
+   * bullet satisfies. Absent on the direct route, which has no requirement
+   * list -- the "chosen for this job" badge still shows, it just can't name a
+   * requirement behind it.
+   */
+  analysis?: JobAnalysis;
   /** The full source profile, used only to offer back bullets the automatic selection left out (see BulletPicker). */
   profile: Profile;
   onChange: (content: ResumeContent) => void;
@@ -108,8 +114,9 @@ export function ResumeEditor({
   // Every atom's first confirmed requirement, so a matched bullet can name
   // the specific requirement it satisfies instead of just "matched".
   const requirementTextByAtomId = useMemo(() => {
-    const requirementTextById = new Map(analysis.requirements.map((r) => [r.id, r.text]));
     const map = new Map<string, string>();
+    if (!analysis) return map;
+    const requirementTextById = new Map(analysis.requirements.map((r) => [r.id, r.text]));
     for (const match of analysis.matches) {
       const text = requirementTextById.get(match.requirementId);
       if (!text) continue;
@@ -126,7 +133,7 @@ export function ResumeEditor({
     return (
       <Badge color="blue">
         <Check size={11} />
-        Matched to this job
+        {analysis ? 'Matched to this job' : 'Chosen for this job'}
       </Badge>
     );
   }
@@ -141,6 +148,18 @@ export function ResumeEditor({
       if (text) return text;
     }
     return null;
+  }
+
+  // Whether this bullet was selected for the job at all, independent of
+  // whether a requirement can be named behind it. The direct route selects
+  // without extracting requirements, so bulletMatch is always null there --
+  // relying on it alone would flag every deliberately chosen bullet as "not
+  // matched yet", which is exactly backwards.
+  // In plain terms: did the app pick this bullet for this job, whichever
+  // method was used.
+  function bulletChosen(bulletText: string): boolean {
+    const atomIds = atomIdsByNormalizedText.get(normalizeForMatch(bulletText));
+    return Boolean(atomIds && atomIds.length > 0);
   }
 
   function bulletRewrite(bulletText: string, applySuggestion: (next: string) => void) {
@@ -182,6 +201,7 @@ export function ResumeEditor({
         value={value.experience}
         onChange={(experience) => onChange({ ...value, experience })}
         bulletMatch={bulletMatch}
+        bulletChosen={bulletChosen}
         bulletRewrite={bulletRewrite}
         profileBulletsFor={profileBulletsForExperience}
         excludedEntries={excludedExperience}
