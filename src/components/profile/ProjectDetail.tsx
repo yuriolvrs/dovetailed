@@ -19,6 +19,22 @@ import {
 } from './EntryDetailFrame';
 import { FieldInput } from '../ui/primitives';
 
+/**
+ * A permissive check: flags an obvious typo without refusing anything, since
+ * the value is printed verbatim into a resume either way.
+ * In plain terms: warns when a link doesn't look like a link.
+ */
+function looksLikeUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed === '') return true;
+  try {
+    const url = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
+    return url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
+
 export function ProjectDetail({
   entry,
   onChange,
@@ -26,6 +42,8 @@ export function ProjectDetail({
   onDelete,
   bulletBadge,
   bulletRewrite,
+  autoFocus,
+  onFocused,
 }: {
   entry: ProjectEntry;
   onChange: (next: ProjectEntry) => void;
@@ -33,6 +51,8 @@ export function ProjectDetail({
   onDelete: () => void;
   bulletBadge?: (bulletText: string) => ReactNode;
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
+  autoFocus?: boolean;
+  onFocused?: () => void;
 }) {
   return (
     <div className="flex flex-col">
@@ -47,6 +67,8 @@ export function ProjectDetail({
         noun="project"
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        autoFocus={autoFocus}
+        onFocused={onFocused}
       />
 
       <EntryDetailFields>
@@ -66,11 +88,18 @@ export function ProjectDetail({
                   value={link.label}
                   onChange={(label) => updateLink({ ...link, label })}
                 />
-                <FieldInput
-                  placeholder="https://..."
-                  value={link.url}
-                  onChange={(url) => updateLink({ ...link, url })}
-                />
+                <div>
+                  <FieldInput
+                    placeholder="https://..."
+                    value={link.url}
+                    onChange={(url) => updateLink({ ...link, url })}
+                  />
+                  {!looksLikeUrl(link.url) && (
+                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                      Doesn't look like a web address — it will be printed as written.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           />
@@ -79,9 +108,9 @@ export function ProjectDetail({
 
       <div className="p-5">
         <EntryDetailListHeader
-          label="Bullets"
+          label="Highlights"
           count={entry.bullets.length}
-          addLabel="Add bullet"
+          addLabel="Add highlight"
           onAdd={() => onChange({ ...entry, bullets: [...entry.bullets, ''] })}
         />
         <StringList
@@ -91,7 +120,7 @@ export function ProjectDetail({
           multiline
           variant="flat"
           hideAddButton
-          emptyLabel="No bullets yet."
+          emptyLabel="No highlights yet."
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}

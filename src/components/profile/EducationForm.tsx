@@ -29,16 +29,18 @@ const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 export function EducationForm({
   value,
   onChange,
+  saved,
 }: {
   value: EducationEntry[];
   onChange: (education: EducationEntry[]) => void;
+  saved?: boolean;
 }) {
   const detailTotal = value.reduce((total, entry) => total + (entry.details?.length ?? 0), 0);
 
   return (
     <EntryEditor<EducationEntry>
       title="Education"
-      sub={`${count(value.length, 'school')} · ${count(detailTotal, 'detail')}`}
+      sub={`${count(value.length, 'school')} · ${count(detailTotal, 'highlight')}`}
       items={value}
       onChange={onChange}
       newItem={newEducationEntry}
@@ -47,6 +49,7 @@ export function EducationForm({
       emptyLabel="No education entries yet."
       searchPlaceholder="Find a school"
       searchFields={(entry) => [entry.school, entry.degree, entry.field]}
+      saved={saved}
       row={(entry) => ({
         title: entry.school,
         untitled: 'Untitled school',
@@ -58,10 +61,12 @@ export function EducationForm({
           </span>
         ),
       })}
-      renderDetail={({ entry, update, onDuplicate, onDelete }) => (
+      renderDetail={({ entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
         <EducationDetail
           entry={entry}
           onChange={update}
+          autoFocus={autoFocus}
+          onFocused={onFocused}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
         />

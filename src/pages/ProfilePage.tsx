@@ -5,8 +5,9 @@
 // In plain terms: the whole "Profile" screen you see when you go to the
 // Profile tab.
 
-import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { AlertCircle, Check, ChevronLeft, ChevronRight, CircleDashed } from 'lucide-react';
 import type { Profile } from '../types';
 import { computeProfileCompleteness, loadProfile, saveProfile } from '../lib/profileStore';
 import { loadTemplate } from '../lib/templateStore';
@@ -56,6 +57,7 @@ type TabId = (typeof TABS)[number]['id'];
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('contact');
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   // Only needed for the tab badge's "still empty" flag -- the .tex section
   // owns its own copy of the template; null means we haven't looked yet.
   const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
@@ -79,18 +81,23 @@ export default function ProfilePage() {
   // Left/right arrow keys step between tabs, matching native browser-tab
   // keyboard behavior -- ignored while focus is in a text field so typing
   // isn't hijacked.
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      const idx = TABS.findIndex((t) => t.id === activeTab);
-      const next = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
-      if (next >= 0 && next < TABS.length) setActiveTab(TABS[next].id);
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab]);
+  // Arrow keys move between tabs only while a tab itself has focus (the ARIA
+  // tabs pattern). Bound to the window, they also fired inside the entry
+  // rail, where Left/Right silently navigated the user out of the section
+  // they were editing.
+  function handleTabKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    const idx = TABS.findIndex((t) => t.id === activeTab);
+    let next = idx;
+    if (e.key === 'ArrowLeft') next = idx - 1;
+    else if (e.key === 'ArrowRight') next = idx + 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = TABS.length - 1;
+    else return;
+    if (next < 0 || next >= TABS.length) return;
+    e.preventDefault();
+    setActiveTab(TABS[next].id);
+    tabRefs.current[next]?.focus();
+  }
 
   // Merges a partial change into state and persists immediately.
   function update(patch: Partial<Profile>) {
@@ -128,7 +135,7 @@ export default function ProfilePage() {
     <div className="pb-16">
       <div className="mb-6">
         <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Profile</h1>
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Enter your details. This is the source data every generated resume and cover
           letter draws from.
         </p>
@@ -160,9 +167,13 @@ export default function ProfilePage() {
           const required = tab.checks.filter((c) => completeness.missing.includes(c));
           const flag =
             required.length > 0
-              ? ({ color: 'red', title: `Required: ${required.join(', ')}` } as const)
+              ? ({
+                  color: 'red',
+                  state: `missing ${required.join(', ')}`,
+                  Icon: AlertCircle,
+                } as const)
               : optionalEmpty[tab.id]
-                ? ({ color: 'amber', title: 'Empty — optional, but recommended' } as const)
+                ? ({ color: 'amber', state: 'empty, optional', Icon: CircleDashed } as const)
                 : null;
 
           return (
@@ -170,13 +181,23 @@ export default function ProfilePage() {
               key={tab.id}
               type="button"
               role="tab"
+              id={`profile-tab-${tab.id}`}
               aria-selected={active}
+              aria-label={flag ? `${tab.label} — ${flag.state}` : `${tab.label} — complete`}
+              aria-controls="profile-tabpanel"
+              // One tab stop for the whole strip: Tab reaches the selected
+              // tab, arrows move within it.
+              tabIndex={active ? 0 : -1}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              onKeyDown={handleTabKeyDown}
               onClick={() => setActiveTab(tab.id)}
               className={[
                 'flex flex-1 items-center justify-center gap-2 px-2 py-2.5 rounded-t-xl text-xs font-semibold whitespace-nowrap transition-colors',
                 active
                   ? 'bg-white text-slate-900 shadow-[0_-1px_3px_rgba(15,23,42,0.04)] dark:bg-slate-900 dark:text-slate-100'
-                  : 'bg-[#e6e9ed] text-slate-500 hover:bg-[#edf0f3] dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700',
+                  : 'bg-[#e6e9ed] text-slate-600 hover:bg-[#edf0f3] hover:text-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
               ].join(' ')}
             >
               {active ? (
@@ -184,14 +205,17 @@ export default function ProfilePage() {
                   {i + 1}
                 </span>
               ) : flag ? (
-                <AlertCircle
+                // Shape differs as well as colour: a red and an amber copy of
+                // the same icon is a colour-only distinction.
+                <flag.Icon
+                  aria-hidden
                   className={`w-3.5 h-3.5 shrink-0 ${flag.color === 'red' ? 'text-red-500 dark:text-red-400' : 'text-amber-500 dark:text-amber-400'}`}
-                  role="img"
-                >
-                  <title>{flag.title}</title>
-                </AlertCircle>
+                />
               ) : (
-                <span className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <span
+                  aria-hidden
+                  className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center justify-center shrink-0"
+                >
                   <Check className="w-2.5 h-2.5" strokeWidth={3} />
                 </span>
               )}
@@ -201,18 +225,19 @@ export default function ProfilePage() {
         })}
       </div>
 
-      <div role="tabpanel" className="[&>*:first-child]:rounded-t-none [&>*:first-child]:border-t-0">
+      <div role="tabpanel" id="profile-tabpanel" aria-labelledby={`profile-tab-${activeTab}`} className="[&>*:first-child]:rounded-t-none [&>*:first-child]:border-t-0">
         {activeTab === 'contact' && (
           <ContactForm value={profile.contact} onChange={(contact) => update({ contact })} />
         )}
         {activeTab === 'education' && (
-          <EducationForm value={profile.education} onChange={(education) => update({ education })} />
+          <EducationForm value={profile.education} onChange={(education) => update({ education })} saved={saved} />
         )}
         {activeTab === 'experience' && (
           <ExperienceForm
             value={profile.experience}
             onChange={(experience) => update({ experience })}
             bulletRewrite={bulletRewrite}
+            saved={saved}
           />
         )}
         {activeTab === 'projects' && (
@@ -220,6 +245,7 @@ export default function ProfilePage() {
             value={profile.projects}
             onChange={(projects) => update({ projects })}
             bulletRewrite={bulletRewrite}
+            saved={saved}
           />
         )}
         {activeTab === 'skills' && (
@@ -268,7 +294,7 @@ export default function ProfilePage() {
           <div />
         )}
         {activeIndex < TABS.length - 1 ? (
-          <Btn size="md" onClick={() => setActiveTab(TABS[activeIndex + 1].id)}>
+          <Btn size="md" variant="secondary" onClick={() => setActiveTab(TABS[activeIndex + 1].id)}>
             {TABS[activeIndex + 1].label}
             <ChevronRight size={13} />
           </Btn>

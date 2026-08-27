@@ -104,6 +104,7 @@ export function StringList({
             {itemBadge?.(value)}
             {multiline ? (
               <AutoGrowTextarea
+                rows={1}
                 className={inputClass}
                 value={value}
                 placeholder={placeholder}

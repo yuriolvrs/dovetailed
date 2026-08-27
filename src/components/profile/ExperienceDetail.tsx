@@ -30,6 +30,8 @@ export function ExperienceDetail({
   sections,
   bulletBadge,
   bulletRewrite,
+  autoFocus,
+  onFocused,
 }: {
   entry: ExperienceEntry;
   onChange: (next: ExperienceEntry) => void;
@@ -41,6 +43,8 @@ export function ExperienceDetail({
   sections: string[];
   bulletBadge?: (bulletText: string) => ReactNode;
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
+  autoFocus?: boolean;
+  onFocused?: () => void;
 }) {
   const [namingSection, setNamingSection] = useState(false);
   const currentSection = entry.section?.trim() || sections[0] || 'Experience';
@@ -57,6 +61,8 @@ export function ExperienceDetail({
         noun="position"
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        autoFocus={autoFocus}
+        onFocused={onFocused}
       />
 
       <EntryDetailFields>
@@ -71,7 +77,7 @@ export function ExperienceDetail({
           onChange={(location) => onChange({ ...entry, location })}
         />
 
-        <EntryDetailField label="Section">
+        <EntryDetailField label="Section" hint="The heading this position appears under on your resume.">
           {namingSection ? (
             <input
               autoFocus
@@ -112,13 +118,16 @@ export function ExperienceDetail({
 
         {/* Its own field rather than sharing the Section cell: one label can
             only name one control, and "Section & trimming" named two. */}
-        <EntryDetailField label="If the resume runs long">
+        <EntryDetailField
+          label="If the resume runs long"
+          hint="Positions marked this way are dropped first, oldest first, when a generated resume runs past one page."
+          className="sm:col-span-2 xl:col-span-3"
+        >
           <button
             type="button"
             role="switch"
             aria-checked={isPrunable(entry)}
             onClick={() => onChange({ ...entry, prunable: !isPrunable(entry) })}
-            title="When a generated resume runs past one page, positions marked this way are dropped first. On by default outside your main experience section."
             className={`inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-xs transition-colors ${
               isPrunable(entry)
                 ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'

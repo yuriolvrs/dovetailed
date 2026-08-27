@@ -6,9 +6,9 @@
 // In plain terms: a reusable building block for any list where you can add
 // or remove entries — used all over the Profile page.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Btn, EmptyState } from './ui/primitives';
 
 interface EditableListProps<T> {
@@ -29,6 +29,11 @@ interface EditableListProps<T> {
    */
   variant?: 'card' | 'flat';
 }
+
+// How long a removed row stays recoverable. Long enough to notice a
+// mis-click and act, short enough that the offer isn't still sitting there
+// when you've moved on.
+const UNDO_WINDOW_MS = 8000;
 
 // Small trash-icon button for removing a row -- shared so every "remove this
 // item" affordance in the app looks and behaves identically, whether or not
@@ -73,15 +78,36 @@ export function EditableList<T>({
   const hoverActionClass = flat
     ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100'
     : '';
+  const [undo, setUndo] = useState<{ item: T; index: number } | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  // Cleared on a timer so the offer doesn't linger past the moment the user
+  // would still recognise what was removed.
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), UNDO_WINDOW_MS);
+    return () => clearTimeout(timer);
+  }, [undo]);
 
   function updateAt(index: number, next: T) {
     onChange(items.map((item, i) => (i === index ? next : item)));
   }
 
   function removeAt(index: number) {
+    // Autosave commits on the same tick, so a removal is permanent the
+    // moment it happens. The removed item is kept in state and offered back
+    // for a few seconds rather than being gone on one stray click.
+    setUndo({ item: items[index], index });
     onChange(items.filter((_, i) => i !== index));
+  }
+
+  function restore() {
+    if (!undo) return;
+    const next = items.slice();
+    next.splice(Math.min(undo.index, items.length), 0, undo.item);
+    onChange(next);
+    setUndo(null);
   }
 
   function add() {
@@ -120,7 +146,7 @@ export function EditableList<T>({
 
   return (
     <div className={flat ? 'space-y-0.5' : 'space-y-3'}>
-      {items.length === 0 && <EmptyState>{emptyLabel}</EmptyState>}
+      {items.length === 0 && !undo && <EmptyState>{emptyLabel}</EmptyState>}
       {items.map((item, index) => (
         <div
           key={index}
@@ -157,6 +183,22 @@ export function EditableList<T>({
           </span>
         </div>
       ))}
+      {undo && (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 px-3 py-2 text-xs text-slate-500 dark:text-slate-400"
+        >
+          <span className="flex-1">Removed.</span>
+          <button
+            type="button"
+            onClick={restore}
+            className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400/25 rounded"
+          >
+            <RotateCcw size={12} />
+            Undo
+          </button>
+        </div>
+      )}
       {!hideAddButton && (
         <Btn type="button" size="sm" variant="secondary" onClick={add}>
           <Plus size={13} />

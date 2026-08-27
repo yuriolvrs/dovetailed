@@ -8,8 +8,9 @@
 // they look and behave the same.
 
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Card, Collapsible, CollapsibleSectionHeader, EmptyState } from '../ui/primitives';
+import { Btn, Card, Collapsible, CollapsibleSectionHeader, EmptyState, SavedIndicator } from '../ui/primitives';
 import { EntryRail } from './EntryRail';
 import type { RailGroup, RailRow } from './EntryRail';
 
@@ -19,7 +20,15 @@ export interface DetailActions<T> {
   update: (next: T) => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** True when this entry was just added, so the pane focuses its first field. */
+  autoFocus: boolean;
+  onFocused: () => void;
 }
+
+// Whether each section is expanded, kept outside the component because
+// switching tabs unmounts it -- without this, collapsing a section is
+// forgotten the moment you look at another tab.
+const sectionOpen = new Map<string, boolean>();
 
 export function EntryEditor<T>({
   title,
@@ -40,6 +49,7 @@ export function EntryEditor<T>({
   onAddToGroup,
   onReorder,
   headerActions,
+  saved = false,
   selectedIndex: controlledIndex,
   onSelect: controlledSelect,
 }: {
@@ -64,11 +74,17 @@ export function EntryEditor<T>({
   onAddToGroup?: (label: string) => void;
   onReorder?: (from: number, to: number, label: string) => void;
   headerActions?: ReactNode;
+  /** Autosave confirmation, shown in this section's own header rather than
+   *  only at the top of the page where it is off-screen while you type. */
+  saved?: boolean;
   selectedIndex?: number;
   onSelect?: (index: number) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => sectionOpen.get(title) ?? true);
   const [ownIndex, setOwnIndex] = useState(0);
+  // Set when the user adds an entry, so the detail pane can put the caret in
+  // the new entry's first field instead of leaving focus on the button.
+  const [focusNew, setFocusNew] = useState(false);
 
   const selected = controlledIndex ?? ownIndex;
   const setSelected = controlledSelect ?? setOwnIndex;
@@ -82,8 +98,12 @@ export function EntryEditor<T>({
     groups ?? [{ label: title, items: items.map((entry, index) => ({ entry, index })) }];
 
   function add() {
+    setFocusNew(true);
     if (onAddToGroup) {
-      onAddToGroup(railGroups[0]?.label ?? title);
+      // No label: the destination is the caller's to resolve, since only it
+      // knows which group the selected entry belongs to. Passing the first
+      // group here silently overrode the section the user was working in.
+      onAddToGroup('');
       return;
     }
     onChange([...items, newItem()]);
@@ -124,14 +144,32 @@ export function EntryEditor<T>({
         title={title}
         sub={sub}
         open={open}
-        onToggle={() => setOpen((o) => !o)}
+        onToggle={() =>
+          setOpen((o) => {
+            sectionOpen.set(title, !o);
+            return !o;
+          })
+        }
         onAdd={add}
         addLabel={addLabel}
-        extraActions={headerActions}
+        extraActions={
+          <>
+            <SavedIndicator visible={saved} />
+            {headerActions}
+          </>
+        }
       />
       <Collapsible open={open}>
         {selectedIndex < 0 ? (
-          <EmptyState>{emptyLabel}</EmptyState>
+          <EmptyState role="status">
+            <div className="flex flex-col items-center gap-3">
+              <span>{emptyLabel}</span>
+              <Btn onClick={add}>
+                <Plus size={14} />
+                {addLabel}
+              </Btn>
+            </div>
+          </EmptyState>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
             <EntryRail<T>
@@ -145,13 +183,26 @@ export function EntryEditor<T>({
               searchFields={searchFields}
               searchPlaceholder={searchPlaceholder}
               showGroupHeaders={showGroupHeaders}
-              footer={railFooter}
+              footer={
+                railFooter ?? (
+                  <button
+                    type="button"
+                    onClick={add}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 hover:border-slate-300 hover:text-slate-700 dark:hover:border-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400/25"
+                  >
+                    <Plus size={13} />
+                    {addLabel}
+                  </button>
+                )
+              }
             />
             {renderDetail({
               entry: items[selectedIndex],
               update,
               onDuplicate: duplicateEntry,
               onDelete: deleteEntry,
+              autoFocus: focusNew,
+              onFocused: () => setFocusNew(false),
             })}
           </div>
         )}

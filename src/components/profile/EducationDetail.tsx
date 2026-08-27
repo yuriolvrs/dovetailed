@@ -13,18 +13,22 @@ import {
   EntryDetailHeader,
   EntryDetailListHeader,
 } from './EntryDetailFrame';
-import { FieldInput } from '../ui/primitives';
+import { FieldInput, fieldInputClass } from '../ui/primitives';
 
 export function EducationDetail({
   entry,
   onChange,
   onDuplicate,
   onDelete,
+  autoFocus,
+  onFocused,
 }: {
   entry: EducationEntry;
   onChange: (next: EducationEntry) => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  autoFocus?: boolean;
+  onFocused?: () => void;
 }) {
   const details = entry.details ?? [];
 
@@ -40,6 +44,8 @@ export function EducationDetail({
         noun="school"
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        autoFocus={autoFocus}
+        onFocused={onFocused}
       />
 
       <EntryDetailFields>
@@ -54,19 +60,22 @@ export function EducationDetail({
           onChange={(field) => onChange({ ...entry, field })}
         />
 
-        <FieldInput
-          label="GPA"
-          placeholder="3.8"
-          value={entry.gpa ?? ''}
-          onChange={(gpa) => onChange({ ...entry, gpa })}
-        />
+        <EntryDetailField label="GPA" hint="Include the scale unless it is 4.0 — e.g. 1.75/5.0.">
+          <input
+            value={entry.gpa ?? ''}
+            onChange={(e) => onChange({ ...entry, gpa: e.target.value })}
+            placeholder="3.8"
+            aria-label="GPA"
+            className={`w-full ${fieldInputClass}`}
+          />
+        </EntryDetailField>
       </EntryDetailFields>
 
       <div className="p-5">
         <EntryDetailListHeader
-          label="Details"
+          label="Highlights"
           count={details.length}
-          addLabel="Add detail"
+          addLabel="Add highlight"
           onAdd={() => onChange({ ...entry, details: [...details, ''] })}
         />
         <StringList
@@ -76,7 +85,7 @@ export function EducationDetail({
           multiline
           variant="flat"
           hideAddButton
-          emptyLabel="No details yet."
+          emptyLabel="No highlights yet."
           reorderable
         />
       </div>

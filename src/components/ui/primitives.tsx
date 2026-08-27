@@ -39,7 +39,7 @@ export function SectionTitle({
     <div className="mb-5 flex items-start justify-between gap-2">
       <div>
         <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{children}</h2>
-        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>}
       </div>
       {right}
     </div>
@@ -74,7 +74,7 @@ export function CollapsibleSectionHeader({
     <div className="flex items-start justify-between mb-5">
       <div>
         <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
-        {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>}
       </div>
       <div className="flex items-center gap-2">
         {extraActions}
@@ -377,14 +377,19 @@ export function EmptyState({
   children,
   size = 'sm',
   className = '',
+  role,
 }: {
   children: ReactNode;
   size?: keyof typeof emptyStateSizes;
   className?: string;
+  /** Pass "status" where the list becoming empty (or filling) is worth
+   *  announcing -- otherwise the change is silent to a screen reader. */
+  role?: 'status';
 }) {
   return (
     <div
-      className={`text-center text-slate-300 dark:text-slate-600 border-2 border-dashed border-slate-100 dark:border-slate-800 ${emptyStateSizes[size]} ${className}`}
+      role={role}
+      className={`text-center text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 ${emptyStateSizes[size]} ${className}`}
     >
       {children}
     </div>
@@ -402,7 +407,7 @@ export const fieldInputClass =
 export const fieldInputFlatClass =
   'px-2 py-1.5 rounded-lg border border-transparent bg-transparent text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/25 focus:border-blue-400 focus:bg-white transition-all dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-blue-400/20 dark:focus:border-blue-500 dark:focus:bg-slate-950';
 
-export const fieldLabelClass = 'text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest';
+export const fieldLabelClass = 'text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest';
 
 // Small amber dot + "Unsaved" label -- shown next to a field's label while
 // its on-screen value differs from what's actually persisted, for fields
@@ -427,7 +432,7 @@ export function UnsavedIndicator() {
 export function SavedIndicator({ visible, label = 'Saved' }: { visible: boolean; label?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 normal-case tracking-normal transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      className={`inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 normal-case tracking-normal transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       <Check size={11} />
       {label}
@@ -715,7 +720,7 @@ export function TagInput({
         onDragOver={handleContainerDragOver}
         onDrop={(e) => handleDrop(e, value.length)}
       >
-        {value.length === 0 && <p className="text-xs text-slate-300 dark:text-slate-600 self-center">{emptyLabel}</p>}
+        {value.length === 0 && <p className="text-xs text-slate-500 dark:text-slate-400 self-center">{emptyLabel}</p>}
         {value.map((tag, index) =>
           editingIndex === index ? (
             <input

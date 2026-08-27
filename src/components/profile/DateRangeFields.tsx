@@ -143,6 +143,22 @@ function InlineSelect({
  *
  * In plain terms: the compact date fields on each job or school entry.
  */
+/**
+ * Whether the end date lands before the start date. Only judges when both
+ * are complete enough to compare -- a half-filled range is in progress, not
+ * wrong.
+ * In plain terms: checks you didn't leave a job before you started it.
+ */
+function endsBeforeStart(entry: DateRangeEntry): boolean {
+  if (entry.current) return false;
+  const { startYear, endYear, startMonth, endMonth } = entry;
+  if (!startYear || !endYear) return false;
+  if (endYear !== startYear) return Number(endYear) < Number(startYear);
+  if (!startMonth || !endMonth) return false;
+  const months: readonly string[] = MONTHS;
+  return months.indexOf(endMonth) < months.indexOf(startMonth);
+}
+
 export function DateRangeCompact<T extends DateRangeEntry>({
   entry,
   update,
@@ -153,9 +169,16 @@ export function DateRangeCompact<T extends DateRangeEntry>({
   currentLabel: string;
 }) {
   const rowLabel = 'text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400';
+  const invalid = endsBeforeStart(entry);
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5">
+    <div
+      className={`rounded-xl border bg-white dark:bg-slate-900 p-1.5 ${
+        invalid
+          ? 'border-amber-300 dark:border-amber-500/40'
+          : 'border-slate-200 dark:border-slate-700'
+      }`}
+    >
       <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-1 gap-y-0.5">
         <span className={`${rowLabel} pl-1.5`}>From</span>
         <InlineSelect
@@ -218,6 +241,12 @@ export function DateRangeCompact<T extends DateRangeEntry>({
         <Check size={12} strokeWidth={3} className={entry.current ? '' : 'opacity-0'} />
         {currentLabel}
       </button>
+
+      {invalid && (
+        <p role="alert" className="px-2 pb-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+          The end date is before the start date.
+        </p>
+      )}
     </div>
   );
 }

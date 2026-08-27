@@ -6,7 +6,7 @@
 // that merely resemble each other.
 // In plain terms: the common parts of the right-hand editing pane.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { Btn, fieldLabelClass } from '../ui/primitives';
@@ -25,10 +25,30 @@ const headlineClass =
  */
 function DeleteEntryButton({ noun, onDelete }: { noun: string; onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false);
+  const armedRef = useRef<HTMLDivElement>(null);
+
+  // An armed confirm that outlives the click that armed it is a trap: come
+  // back to the pane later and one press deletes. Disarm on any click or
+  // Escape outside it.
+  useEffect(() => {
+    if (!confirming) return;
+    function onPointerDown(e: MouseEvent) {
+      if (!armedRef.current?.contains(e.target as Node)) setConfirming(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setConfirming(false);
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [confirming]);
 
   if (confirming) {
     return (
-      <div className="flex items-center gap-1.5">
+      <div ref={armedRef} className="flex items-center gap-1.5">
         <span className="text-xs text-slate-500 dark:text-slate-400">Delete this {noun}?</span>
         <Btn
           size="sm"
@@ -74,6 +94,8 @@ export function EntryDetailHeader({
   noun,
   onDuplicate,
   onDelete,
+  autoFocus = false,
+  onFocused,
 }: {
   title: string;
   titlePlaceholder: string;
@@ -87,11 +109,23 @@ export function EntryDetailHeader({
   noun: string;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** Put the caret here: this entry was just added. */
+  autoFocus?: boolean;
+  onFocused?: () => void;
 }) {
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    titleRef.current?.focus();
+    onFocused?.();
+  }, [autoFocus, onFocused]);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-5 border-b border-slate-200 dark:border-slate-800">
       <div className="flex-1 min-w-0">
         <input
+          ref={titleRef}
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder={titlePlaceholder}
@@ -143,10 +177,15 @@ export function EntryDetailFields({ children }: { children: ReactNode }) {
 /** One labelled cell inside EntryDetailFields. */
 export function EntryDetailField({
   label,
+  hint,
   className = '',
   children,
 }: {
   label: string;
+  /** Shown under the control. Anything a user would otherwise have to hover
+   *  a `title` attribute to discover belongs here instead -- hover reaches
+   *  neither touch nor keyboard. */
+  hint?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -154,6 +193,7 @@ export function EntryDetailField({
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <span className={fieldLabelClass}>{label}</span>
       {children}
+      {hint && <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">{hint}</p>}
     </div>
   );
 }

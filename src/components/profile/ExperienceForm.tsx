@@ -88,6 +88,7 @@ export function ExperienceForm({
   onChange,
   bulletBadge,
   bulletRewrite,
+  saved,
 }: {
   value: ExperienceEntry[];
   onChange: (experience: ExperienceEntry[]) => void;
@@ -95,6 +96,7 @@ export function ExperienceForm({
   bulletBadge?: (bulletText: string) => ReactNode;
   /** Optional per-bullet "suggest a rewording" action -- used by ResumeEditor and the Profile page. */
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
+  saved?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
 
@@ -123,6 +125,7 @@ export function ExperienceForm({
       emptyLabel="No experience entries yet."
       searchPlaceholder="Find a position"
       searchFields={(entry) => [entry.title, entry.company, entry.location, entry.section]}
+      saved={saved}
       selectedIndex={selected}
       onSelect={setSelected}
       groups={groupBySection(value)}
@@ -156,10 +159,12 @@ export function ExperienceForm({
           </span>
         ),
       })}
-      renderDetail={({ entry, update, onDuplicate, onDelete }) => (
+      renderDetail={({ entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
         <ExperienceDetail
           entry={entry}
           onChange={update}
+          autoFocus={autoFocus}
+          onFocused={onFocused}
           onSectionChange={(label) => apply(setEntrySection(value, selectedIndex, label))}
           onDuplicate={onDuplicate}
           onDelete={onDelete}

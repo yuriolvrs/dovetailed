@@ -23,18 +23,20 @@ export function ProjectsEditor({
   onChange,
   bulletBadge,
   bulletRewrite,
+  saved,
 }: {
   value: ProjectEntry[];
   onChange: (projects: ProjectEntry[]) => void;
   bulletBadge?: (bulletText: string) => ReactNode;
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
+  saved?: boolean;
 }) {
   const bulletTotal = value.reduce((total, entry) => total + entry.bullets.length, 0);
 
   return (
     <EntryEditor<ProjectEntry>
       title="Projects"
-      sub={`${count(value.length, 'project')} · ${count(bulletTotal, 'bullet')}`}
+      sub={`${count(value.length, 'project')} · ${count(bulletTotal, 'highlight')}`}
       items={value}
       onChange={onChange}
       newItem={newProjectEntry}
@@ -47,6 +49,7 @@ export function ProjectsEditor({
       emptyLabel="No projects yet."
       searchPlaceholder="Find a project"
       searchFields={(entry) => [entry.name, entry.description]}
+      saved={saved}
       row={(entry) => ({
         title: entry.name,
         untitled: 'Untitled project',
@@ -58,10 +61,12 @@ export function ProjectsEditor({
           </span>
         ),
       })}
-      renderDetail={({ entry, update, onDuplicate, onDelete }) => (
+      renderDetail={({ entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
         <ProjectDetail
           entry={entry}
           onChange={update}
+          autoFocus={autoFocus}
+          onFocused={onFocused}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
           bulletBadge={bulletBadge}

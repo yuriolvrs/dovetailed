@@ -7,7 +7,7 @@
 // In plain terms: the sidebar list you click through to edit one entry at a
 // time, shared by the Experience, Education and Projects tabs.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
 import { ChevronDown, GripVertical, Plus, Search } from 'lucide-react';
 import { fieldInputClass } from '../ui/primitives';
@@ -83,6 +83,38 @@ export function EntryRail<T>({
   // drop position, so it's off while a search is narrowing the list.
   const canDrag = query.trim() === '';
   const showSearch = total >= SEARCH_THRESHOLD;
+  const shownIndexes = groups.flatMap((group) =>
+    group.items.filter((item) => matchesQuery(item.entry)).map((item) => item.index),
+  );
+
+  // A search that hides the entry the pane is editing leaves the two halves
+  // of the screen disagreeing, so follow the filter to the first match.
+  useEffect(() => {
+    if (query.trim() === '' || shownIndexes.length === 0) return;
+    if (!shownIndexes.includes(selectedIndex)) onSelect(shownIndexes[0]);
+    // Only when the filter itself changes -- not on every selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, total]);
+
+  // An entry added while a filter is active would be created off-screen.
+  const prevTotal = useRef(total);
+  useEffect(() => {
+    if (total > prevTotal.current) setQuery('');
+    prevTotal.current = total;
+  }, [total]);
+
+  // Stable identity per entry object, so reordering moves rows instead of
+  // remounting them and dropping focus mid-edit.
+  const keys = useRef(new WeakMap<object, string>());
+  const nextKey = useRef(0);
+  function keyFor(entry: T): string {
+    if (entry === null || typeof entry !== 'object') return String(entry);
+    const existing = keys.current.get(entry as object);
+    if (existing) return existing;
+    const created = `e${nextKey.current++}`;
+    keys.current.set(entry as object, created);
+    return created;
+  }
 
   function matchesQuery(entry: T): boolean {
     const q = query.trim().toLowerCase();
@@ -150,7 +182,7 @@ export function EntryRail<T>({
                     type="button"
                     onClick={() => toggle(group.label)}
                     aria-expanded={!isCollapsed}
-                    className="flex flex-1 items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                    className="flex flex-1 items-center gap-1.5 rounded text-left text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
                   >
                     <ChevronDown
                       size={12}
@@ -159,13 +191,15 @@ export function EntryRail<T>({
                     <span className="truncate">{group.label}</span>
                   </button>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {group.items.length}
+                    {shown.length === group.items.length
+                      ? group.items.length
+                      : `${shown.length}/${group.items.length}`}
                   </span>
                   <button
                     type="button"
                     onClick={() => onAdd(group.label)}
                     aria-label={`Add to ${group.label}`}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                    className="rounded text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
                   >
                     <Plus size={13} />
                   </button>
@@ -179,7 +213,7 @@ export function EntryRail<T>({
 
                   return (
                     <div
-                      key={index}
+                      key={keyFor(entry)}
                       onDragOver={canDrag ? (e) => handleDragOver(e, index) : undefined}
                       onDrop={canDrag ? () => handleDrop(index, group.label) : undefined}
                       className={[
@@ -205,7 +239,7 @@ export function EntryRail<T>({
                           className={`shrink-0 mt-0.5 text-slate-400 dark:text-slate-500 transition-opacity ${
                             canDrag
                               ? 'cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100'
-                              : 'opacity-0'
+                              : 'opacity-0 pointer-events-none'
                           }`}
                         >
                           <GripVertical size={13} />
@@ -213,7 +247,23 @@ export function EntryRail<T>({
                         <button
                           type="button"
                           onClick={() => onSelect(index)}
-                          className="flex-1 min-w-0 text-left"
+                          onKeyDown={(e) => {
+                            // Alt+Up/Down reorders, plain Up/Down moves the
+                            // selection: the drag grip has no keyboard
+                            // equivalent, so without this there is no way to
+                            // reorder without a mouse at all.
+                            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                            const delta = e.key === 'ArrowUp' ? -1 : 1;
+                            const target = index + delta;
+                            if (target < 0 || target >= total) return;
+                            e.preventDefault();
+                            if (e.altKey) {
+                              onReorder(index, e.key === 'ArrowDown' ? target + 1 : target, group.label);
+                            } else {
+                              onSelect(target);
+                            }
+                          }}
+                          className="flex-1 min-w-0 text-left rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
                         >
                           <span
                             className={`block truncate text-sm font-medium ${
@@ -244,6 +294,11 @@ export function EntryRail<T>({
         })}
       </div>
 
+      {!canDrag && (
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          Reordering is off while you are searching.
+        </p>
+      )}
       {footer}
     </div>
   );
