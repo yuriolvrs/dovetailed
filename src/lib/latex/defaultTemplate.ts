@@ -8,12 +8,7 @@
 // In plain terms: the sample LaTeX resume template shown by default so
 // there's something to try before you paste your own.
 
-export const DEFAULT_RAW_TEX = String.raw`%-------------------------
-% Resume in Latex
-% Author : Jake Gutierrez
-% Based off of: https://github.com/sb2nov/resume
-% License : MIT
-%------------------------
+export const DEFAULT_RAW_TEX = String.raw`
 
 \documentclass[letterpaper,11pt]{article}
 

@@ -262,12 +262,25 @@ describe('llmErrorMessage', () => {
     expect(message).not.toContain('415');
   });
 
-  it('translates a too-large failure into something readable', () => {
+  it('translates an over-size attachment into something readable', () => {
     const message = llmErrorMessage(
-      new ProxyRequestError(413, 'Document reader', 'Payload too large'),
+      new ProxyRequestError(413, 'Document reader', 'Payload too large', '/extract'),
       'Import',
     );
     expect(message).toContain('too large');
+    expect(message).not.toContain('413');
+  });
+
+  it('does not call a rejected text request a file', () => {
+    // The provider returns the same 413 when a text request exceeds its
+    // per-minute token cap. No file is involved, and saying otherwise sent
+    // the user looking for a file that does not exist.
+    const message = llmErrorMessage(
+      new ProxyRequestError(413, 'LLM proxy', 'tokens per minute (TPM): Limit 8000', '/generate'),
+      'Converting your template (part 1 of 2)',
+    );
+    expect(message).not.toContain('file');
+    expect(message).toContain('per-minute token limit');
     expect(message).not.toContain('413');
   });
 

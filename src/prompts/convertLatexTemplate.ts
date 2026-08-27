@@ -24,11 +24,14 @@
  * sent. Long templates are split into chunks first (splitTemplate.ts), so in
  * normal use nothing reaches this -- it only bites when one indivisible
  * section is itself enormous, which the UI warns about separately. Sized off
- * the round trip: the model echoes its input back as an escaped JSON string,
- * and LaTeX tokenizes densely (~2.5-3 chars/token), so ~6k chars in costs
- * roughly 2.5k tokens out on top of the prompt.
+ * the whole round trip, which has to fit in TPM_BUDGET *together*: the
+ * instructions (~1.2k tokens), the .tex itself, this model's ~2.8k tokens of
+ * reasoning before it writes anything, and then its echo of that same .tex
+ * back as an escaped JSON string. Both times the .tex is counted, so its
+ * length costs roughly twice over -- which is what puts the ceiling this
+ * low.
  */
-export const MAX_TEMPLATE_CHARS = 6_000;
+export const MAX_TEMPLATE_CHARS = 4_200;
 
 /**
  * The conversion is mechanical (copy the LaTeX, swap content for
@@ -41,29 +44,54 @@ export const MAX_TEMPLATE_CHARS = 6_000;
  */
 export const CONVERSION_REASONING_EFFORT = 'low';
 
-const TPM_BUDGET = 8000;
-// Prompt tokens can't be known exactly client-side (no tokenizer here), so
-// this estimates conservatively from the prompt's character count -- the
-// chars-per-token ratio measured live against this exact prompt shape
-// (11,367 chars -> 3112 actual prompt tokens, i.e. ~3.65) -- then leaves a
-// margin so a slightly-off estimate still lands under the real TPM cap
-// rather than getting rejected outright.
-const CHARS_PER_TOKEN_ESTIMATE = 3.65;
-const TPM_SAFETY_MARGIN = 150;
+export const TPM_BUDGET = 8000;
+// Prompt tokens can't be known exactly client-side (there's no tokenizer
+// here), and the provider rejects the whole request when prompt + maxTokens
+// exceeds the cap -- so the estimate must be an UPPER bound on the prompt,
+// never a best guess. It's split in two because the prompt is two different
+// kinds of text: this file's own English instructions, and the user's LaTeX.
+// The ratios below sit deliberately under what either has ever measured
+// (the live sample: 11,367 chars -> 3112 tokens, i.e. ~3.65 blended), so a
+// template that tokenizes worse than that sample still lands inside the cap.
+const CHARS_PER_TOKEN_ENGLISH = 3.5;
+const CHARS_PER_TOKEN_LATEX = 2.9;
+// A flat margin is no use when the thing it guards against scales with the
+// prompt: the old fixed 150 was under 5% of a full-size prompt's tokens, so
+// any template even slightly denser than the one measured sample tipped the
+// request over the cap and was rejected outright (413). Percentage first,
+// with the old flat value as the floor for small prompts.
+const TPM_SAFETY_FRACTION = 0.08;
+const TPM_MIN_SAFETY_MARGIN = 150;
 const MIN_CONVERSION_TOKENS = 2500;
+
+/**
+ * Upper-bound estimate of the prompt's token count. Deliberately pessimistic:
+ * under-counting gets the request rejected, over-counting only costs the
+ * model some answer budget it probably didn't need.
+ * In plain terms: a safely-high guess at how big the question is.
+ */
+export function estimateConversionPromptTokens(prompt: string, tex: string): number {
+  const englishChars = Math.max(0, prompt.length - tex.length);
+  return Math.ceil(englishChars / CHARS_PER_TOKEN_ENGLISH + tex.length / CHARS_PER_TOKEN_LATEX);
+}
 
 /**
  * How large a maxTokens budget the conversion call can ask for without
  * risking Groq's per-minute cap outright rejecting the request -- scales
  * down for a longer pasted template instead of using one fixed number that
  * would be too generous for a big template and needlessly stingy for a
- * small one.
+ * small one. `tex` is the chunk of the user's template inside `prompt`,
+ * which tokenizes differently from the instructions around it.
  * In plain terms: figures out how much room to leave for the AI's answer,
  * based on how long the prompt itself already is.
  */
-export function estimateConversionMaxTokens(prompt: string): number {
-  const estimatedPromptTokens = Math.ceil(prompt.length / CHARS_PER_TOKEN_ESTIMATE);
-  return Math.max(MIN_CONVERSION_TOKENS, TPM_BUDGET - estimatedPromptTokens - TPM_SAFETY_MARGIN);
+export function estimateConversionMaxTokens(prompt: string, tex: string): number {
+  const estimatedPromptTokens = estimateConversionPromptTokens(prompt, tex);
+  const margin = Math.max(
+    TPM_MIN_SAFETY_MARGIN,
+    Math.ceil(estimatedPromptTokens * TPM_SAFETY_FRACTION),
+  );
+  return Math.max(MIN_CONVERSION_TOKENS, TPM_BUDGET - estimatedPromptTokens - margin);
 }
 
 const TRUNCATION_MARKER = '\n%…[truncated]';

@@ -43,7 +43,7 @@ export async function convertTemplate(
     options.onProgress?.({ part: i + 1, total: chunks.length });
     const prompt = buildConvertLatexTemplatePrompt(chunk, { index: i + 1, total: chunks.length });
     const result = await generateStructured(prompt, isLatexConversionResult, {
-      maxTokens: estimateConversionMaxTokens(prompt),
+      maxTokens: estimateConversionMaxTokens(prompt, chunk),
       reasoningEffort: CONVERSION_REASONING_EFFORT,
       signal: options.signal,
     });

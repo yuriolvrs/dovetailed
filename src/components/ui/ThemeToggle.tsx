@@ -1,5 +1,5 @@
 // What this file is: the light/dark theme toggle button shown in the app
-// header on every page.
+// footer on every page.
 // In plain terms: the button that switches the app between light and dark
 // mode.
 

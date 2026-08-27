@@ -21,12 +21,12 @@ import {
   STATUS_LABELS,
 } from '../lib/jobStore';
 import { listGenerationTypesByPosting } from '../lib/genStore';
+import { JobsFirstRun } from '../components/jobs/JobsFirstRun';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import {
   Badge,
   Btn,
   Card,
-  EmptyState,
   FieldInput,
   FieldSelect,
   FieldTextarea,
@@ -34,6 +34,40 @@ import {
   SectionTitle,
   Skeleton,
 } from '../components/ui/primitives';
+
+// The fit score's own color, as text rather than as a badge -- the score is
+// the row's one number worth comparing down the list, so it carries the
+// weight instead of sitting in a pill among other pills. Falls back to the
+// analyzed/not-analyzed state when there is no score yet.
+// In plain terms: picks the color for the "Fit 69%" text on a posting row.
+function fitTextClass(score: number | null, analyzed: boolean): string {
+  if (score === null) {
+    return analyzed
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : 'text-slate-500 dark:text-slate-400';
+  }
+  return {
+    green: 'text-emerald-600 dark:text-emerald-400',
+    amber: 'text-amber-600 dark:text-amber-400',
+    red: 'text-red-600 dark:text-red-400',
+    slate: 'text-slate-500 dark:text-slate-400',
+  }[fitScoreColor(score)];
+}
+
+// One document's done/not-done state on a posting row.
+// In plain terms: the little "Resume" / "Cover letter" tick on each row.
+function DocumentState({ done, label }: { done: boolean; label: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs ${
+        done ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
+      }`}
+    >
+      {done ? <CheckCircle size={11} /> : <Circle size={11} />}
+      {label}
+    </span>
+  );
+}
 
 export default function JobsPage() {
   const navigate = useNavigate();
@@ -87,17 +121,19 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-6 pb-16">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Jobs</h1>
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
             Paste postings, run analysis, tailor your documents
           </p>
         </div>
-        <Btn onClick={openModal}>
-          <Plus size={14} />
-          Add Job Posting
-        </Btn>
+        {postings !== null && postings.length > 0 && (
+          <Btn onClick={openModal}>
+            <Plus size={14} />
+            Add Job Posting
+          </Btn>
+        )}
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-xl max-h-[90vh]">
@@ -163,9 +199,11 @@ export default function JobsPage() {
       </Modal>
 
       <div>
-        <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
-          Saved Postings{postings !== null && ` — ${postings.length}`}
-        </p>
+        {(postings === null || postings.length > 0) && (
+          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+            Saved Postings{postings !== null && ` — ${postings.length}`}
+          </p>
+        )}
         {postings === null ? (
           <div className="space-y-3">
             <Skeleton className="h-24 w-full" />
@@ -173,7 +211,7 @@ export default function JobsPage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : postings.length === 0 ? (
-          <EmptyState size="lg">No postings saved yet</EmptyState>
+          <JobsFirstRun onAddPosting={openModal} onSetUpProfile={() => navigate('/profile')} />
         ) : (
           <div className="space-y-3">
             {postings.map((posting) => {
@@ -188,47 +226,51 @@ export default function JobsPage() {
 
               return (
                 <Link key={posting.id} to={`/jobs/${posting.id}`} className="block">
-                  <Card className="group p-5 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] dark:hover:shadow-none transition-all">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                        {posting.title?.trim() || postingLabel(posting)}
-                      </h3>
-                      {posting.analysis ? (
-                        <Badge color="green">
-                          <CheckCircle size={10} />
-                          Analyzed
-                        </Badge>
-                      ) : (
-                        <Badge color="slate">
-                          <Circle size={10} />
-                          Not analyzed
-                        </Badge>
-                      )}
-                      {fitScore !== null && <Badge color={fitScoreColor(fitScore)}>Fit: {fitScore}%</Badge>}
-                      {posting.status && (
-                        <Badge color={STATUS_COLORS[posting.status]}>{STATUS_LABELS[posting.status]}</Badge>
-                      )}
-                      {posting.deadline && !posting.status && (
-                        <Badge color={deadlineCountdown(posting.deadline).color}>
-                          {deadlineCountdown(posting.deadline).label}
-                        </Badge>
-                      )}
-                      <Badge color={types?.has('resume') ? 'green' : 'slate'}>
-                        {types?.has('resume') ? <CheckCircle size={10} /> : <Circle size={10} />}
-                        Resume
-                      </Badge>
-                      <Badge color={types?.has('coverLetter') ? 'green' : 'slate'}>
-                        {types?.has('coverLetter') ? <CheckCircle size={10} /> : <Circle size={10} />}
-                        Cover Letter
-                      </Badge>
+                  <Card className="group p-4 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] dark:hover:shadow-none transition-all">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-6">
+                      {/* Identity: what this posting is, in three tiers. */}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {posting.title?.trim() || postingLabel(posting)}
+                          </h3>
+                          {/* Only the exceptions get a badge -- an application
+                              you're running, or a deadline running out. */}
+                          {posting.status && (
+                            <Badge color={STATUS_COLORS[posting.status]}>{STATUS_LABELS[posting.status]}</Badge>
+                          )}
+                          {posting.deadline && !posting.status && (
+                            <Badge color={deadlineCountdown(posting.deadline).color}>
+                              {deadlineCountdown(posting.deadline).label}
+                            </Badge>
+                          )}
+                        </div>
+                        {(company || locationArrangement) && (
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 truncate">
+                            {[company, locationArrangement].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                        <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                          Saved {new Date(posting.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      {/* Progress: how far this posting has got, right-aligned
+                          so a list of them reads as one column to compare. */}
+                      <div className="shrink-0 flex flex-col items-start sm:items-end gap-1.5">
+                        <span className={`text-sm font-semibold ${fitTextClass(fitScore, Boolean(posting.analysis))}`}>
+                          {fitScore !== null
+                            ? `Fit ${fitScore}%`
+                            : posting.analysis
+                              ? 'Analyzed'
+                              : 'Not analyzed'}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <DocumentState done={Boolean(types?.has('resume'))} label="Resume" />
+                          <DocumentState done={Boolean(types?.has('coverLetter'))} label="Cover letter" />
+                        </div>
+                      </div>
                     </div>
-                    {company && <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{company}</p>}
-                    {locationArrangement && (
-                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">{locationArrangement}</p>
-                    )}
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                      Saved {new Date(posting.createdAt).toLocaleDateString()}
-                    </p>
                   </Card>
                 </Link>
               );

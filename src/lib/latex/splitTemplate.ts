@@ -7,12 +7,15 @@
 // in one AI request.
 
 /**
- * Target size for one chunk. Sized against the per-request budget: this many
- * chars of LaTeX plus the prompt's own instructions estimates to ~2.5k prompt
- * tokens, leaving enough of the 8k tokens/minute cap for the model to echo
- * the chunk back as escaped JSON.
+ * Target size for one chunk. Sized against the per-request budget, where the
+ * chunk is paid for twice -- once going in, once coming back as the model's
+ * echo of it -- on top of the instructions and this model's own reasoning.
+ * At the old 5,000 the two sides together left almost nothing spare, so a
+ * template whose LaTeX tokenized any denser than the one sample it was
+ * measured against had its request rejected outright (413) rather than
+ * merely running tight. See convertLatexTemplate.ts for the full budget.
  */
-export const MAX_CHUNK_CHARS = 5_000;
+export const MAX_CHUNK_CHARS = 3_500;
 
 // Splits are only ever made where a top-level structure begins -- the
 // preamble/document boundary and each \section. Cutting anywhere else risks

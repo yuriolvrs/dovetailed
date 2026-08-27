@@ -58,6 +58,9 @@ export class ProxyRequestError extends Error {
     readonly status: number,
     readonly label: string,
     body: string,
+    /** Proxy route the call went to -- '/generate' or '/extract'. A status
+     *  means different things on each, so the message depends on it. */
+    readonly path: string = '',
   ) {
     super(`${label} request failed: ${status} ${body}`);
     this.name = 'ProxyRequestError';
@@ -159,7 +162,7 @@ async function postWithRetry(
     }
 
     if (!response.ok) {
-      throw new ProxyRequestError(response.status, label, await response.text());
+      throw new ProxyRequestError(response.status, label, await response.text(), path);
     }
 
     return response.json();
@@ -235,14 +238,19 @@ export function llmErrorMessage(err: unknown, label: string): string {
   if (err instanceof JsonParseError) {
     return `${label} failed: the model returned an unusable response. Try again — the model this app uses is small and occasionally produces malformed output.`;
   }
-  // A raw status code means nothing to the user, so the two the proxy raises
-  // for a bad attachment get spelled out.
+  // A raw status code means nothing to the user, so the ones the proxy
+  // raises get spelled out. 413 means two different things depending on the
+  // route -- an attachment over the size limit, or a text request too big
+  // for the model's per-minute token cap -- and calling the second one a
+  // file is actively misleading, since no file is involved.
   if (err instanceof ProxyRequestError) {
     if (err.status === 415) {
       return `${label} failed: that file type can't be read. Attach a ${SUPPORTED_FILE_HINT} file.`;
     }
     if (err.status === 413) {
-      return `${label} failed: that file is too large to read.`;
+      return err.path === '/extract'
+        ? `${label} failed: that file is too large to read.`
+        : `${label} failed: the request was too big for the model's per-minute token limit. Shorten the text and try again.`;
     }
   }
   if (err instanceof Error) return `${label} failed: ${err.message}`;

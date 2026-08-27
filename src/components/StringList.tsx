@@ -15,7 +15,7 @@ import { fieldInputClass, fieldInputFlatClass } from './ui/primitives';
 // resize or scroll each field individually.
 // In plain terms: a text box that expands as you type instead of hiding the
 // rest of what you wrote behind a scrollbar.
-function AutoGrowTextarea({
+export function AutoGrowTextarea({
   value,
   className,
   ...props

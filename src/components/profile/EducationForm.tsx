@@ -1,17 +1,30 @@
-// What this file is: the editable form for the Education section — a list
-// of schools/degrees with optional extra details.
-// In plain terms: the form where you list your schools and degrees.
+// What this file is: the Education tab -- a rail listing every school next
+// to a detail pane for the one that's selected, so the list stays visible
+// while you edit one entry. Same shell, rail and pane shape as the
+// Experience tab; only the fields differ.
+// In plain terms: the screen where you list your schools and degrees.
 
-import { useState } from 'react';
 import type { EducationEntry } from '../../types';
-import { EditableList } from '../EditableList';
-import { StringList } from '../StringList';
-import { DateRangeFields } from './DateRangeFields';
-import { Card, Collapsible, CollapsibleSectionHeader, FieldInput, fieldLabelClass } from '../ui/primitives';
+import { EntryEditor } from './EntryEditor';
+import { EducationDetail } from './EducationDetail';
+import { formatMonthYear } from '../ui/primitives';
 
 function newEducationEntry(): EducationEntry {
   return { school: '', degree: '', current: false };
 }
+
+/**
+ * One school's date range as a single line, e.g. "Aug 2022 – Present".
+ * In plain terms: the short "from – to" text under a school in the list.
+ */
+function dateSummary(entry: EducationEntry): string {
+  const start = formatMonthYear(entry.startMonth, entry.startYear);
+  const end = entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear);
+  if (!start && !end) return '';
+  return `${start || '?'} – ${end || '?'}`;
+}
+
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 export function EducationForm({
   value,
@@ -20,75 +33,39 @@ export function EducationForm({
   value: EducationEntry[];
   onChange: (education: EducationEntry[]) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const detailTotal = value.reduce((total, entry) => total + (entry.details?.length ?? 0), 0);
 
   return (
-    <Card className="p-6">
-      <CollapsibleSectionHeader
-        title="Education"
-        sub={`${value.length} entr${value.length !== 1 ? 'ies' : 'y'}`}
-        open={open}
-        onToggle={() => setOpen((o) => !o)}
-        onAdd={() => onChange([...value, newEducationEntry()])}
-        addLabel="Add"
-      />
-      <Collapsible open={open}>
-        <EditableList<EducationEntry>
-          items={value}
-          onChange={onChange}
-          newItem={newEducationEntry}
-          emptyLabel="No education entries yet."
-          hideAddButton
-          reorderable
-          renderItem={(entry, update) => (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="col-span-1 sm:col-span-2">
-                  <FieldInput
-                    label="Institution"
-                    placeholder="UC Berkeley"
-                    value={entry.school}
-                    onChange={(school) => update({ ...entry, school })}
-                  />
-                </div>
-                <FieldInput
-                  label="Degree"
-                  placeholder="B.S."
-                  value={entry.degree}
-                  onChange={(degree) => update({ ...entry, degree })}
-                />
-                <FieldInput
-                  label="Field of Study"
-                  placeholder="Computer Science"
-                  value={entry.field ?? ''}
-                  onChange={(field) => update({ ...entry, field })}
-                />
-              </div>
-
-              <DateRangeFields entry={entry} update={update} currentLabel="Currently studying here" />
-
-              <FieldInput
-                label="GPA"
-                placeholder="3.8"
-                value={entry.gpa ?? ''}
-                onChange={(gpa) => update({ ...entry, gpa })}
-                className="max-w-[140px]"
-              />
-
-              <div>
-                <span className={`mb-1 block ${fieldLabelClass}`}>Details</span>
-                <StringList
-                  items={entry.details ?? []}
-                  onChange={(details) => update({ ...entry, details })}
-                  placeholder="e.g. Dean's List, relevant coursework..."
-                  addLabel="Add detail"
-                  emptyLabel="No details yet."
-                />
-              </div>
-            </div>
-          )}
+    <EntryEditor<EducationEntry>
+      title="Education"
+      sub={`${count(value.length, 'school')} · ${count(detailTotal, 'detail')}`}
+      items={value}
+      onChange={onChange}
+      newItem={newEducationEntry}
+      duplicate={(entry) => ({ ...entry, details: [...(entry.details ?? [])] })}
+      addLabel="Add school"
+      emptyLabel="No education entries yet."
+      searchPlaceholder="Find a school"
+      searchFields={(entry) => [entry.school, entry.degree, entry.field]}
+      row={(entry) => ({
+        title: entry.school,
+        untitled: 'Untitled school',
+        subtitle: [entry.degree.trim(), dateSummary(entry)].filter(Boolean).join(' · '),
+        emptySubtitle: 'No details yet',
+        meta: (entry.details?.length ?? 0) > 0 && (
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            {entry.details?.length}
+          </span>
+        ),
+      })}
+      renderDetail={({ entry, update, onDuplicate, onDelete }) => (
+        <EducationDetail
+          entry={entry}
+          onChange={update}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
         />
-      </Collapsible>
-    </Card>
+      )}
+    />
   );
 }

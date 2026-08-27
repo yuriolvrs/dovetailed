@@ -13,7 +13,7 @@ import { loadTemplate } from '../lib/templateStore';
 import { ContactForm } from '../components/profile/ContactForm';
 import { SkillsForm } from '../components/profile/SkillsForm';
 import { ExperienceForm } from '../components/profile/ExperienceForm';
-import { ProjectsForm } from '../components/profile/ProjectsForm';
+import { ProjectsEditor } from '../components/profile/ProjectsEditor';
 import { EducationForm } from '../components/profile/EducationForm';
 import { WritingSamplesForm } from '../components/profile/WritingSamplesForm';
 import { TexTemplateSection } from '../components/profile/TexTemplateSection';
@@ -129,7 +129,7 @@ export default function ProfilePage() {
       <div className="mb-6">
         <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Profile</h1>
         <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
-          Enter your details once — this is the source data every generated resume and cover
+          Enter your details. This is the source data every generated resume and cover
           letter draws from.
         </p>
       </div>
@@ -216,7 +216,7 @@ export default function ProfilePage() {
           />
         )}
         {activeTab === 'projects' && (
-          <ProjectsForm
+          <ProjectsEditor
             value={profile.projects}
             onChange={(projects) => update({ projects })}
             bulletRewrite={bulletRewrite}

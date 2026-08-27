@@ -118,7 +118,7 @@ export default function JobDetailPage() {
     if (!id || !posting || posting === 'missing') return;
     const deleted = posting;
     await deleteJobPosting(id);
-    navigate('/jobs');
+    navigate('/');
     showUndo('Posting deleted.', async () => {
       await saveJobPosting(deleted);
       navigate(`/jobs/${id}`);
@@ -130,7 +130,7 @@ export default function JobDetailPage() {
       <section className="space-y-3">
         <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
         <Link
-          to="/jobs"
+          to="/"
           className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit"
         >
           <ArrowLeft size={15} />

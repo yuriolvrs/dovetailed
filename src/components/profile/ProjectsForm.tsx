@@ -1,5 +1,9 @@
 // What this file is: the editable form for the Projects section — a list
-// of projects, each with a name, description, bullets, and links.
+// of projects, each with a name, description, bullets, and links. Used by
+// the resume editor only: every project is expanded at once because that
+// screen's task is curating one resume (see what's in, add back what's out),
+// not maintaining the profile. The Profile page's own Projects tab is
+// ProjectsEditor.tsx, a rail-and-detail editor matching Experience.
 // In plain terms: the form where you list personal or work projects you've
 // built.
 
