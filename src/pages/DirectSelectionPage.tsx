@@ -234,12 +234,24 @@ export default function DirectSelectionPage() {
             <SectionTitle sub="The angle the AI took across your whole profile for this posting.">
               Why this selection
             </SectionTitle>
-            {/* max-w-prose because this is now real running prose: the prompt
-                asks for 4-6 posting-grounded sentences, and unconstrained it
+            {/* Rendered as separate paragraphs, not one block: the prompt asks
+                for three (what the posting wants, what was chosen, what was
+                left out) separated by blank lines. Splitting on blank lines
+                rather than every newline means a selection saved before this --
+                one unbroken paragraph -- still renders correctly as one.
+                max-w-prose because this is real running prose; unconstrained it
                 set ~140 characters to the line. */}
-            <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed max-w-prose">
-              {selection.overallRationale}
-            </p>
+            <div className="space-y-3 max-w-prose">
+              {selection.overallRationale
+                .split(/\n\s*\n/)
+                .map((para) => para.trim())
+                .filter(Boolean)
+                .map((para, i) => (
+                  <p key={i} className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                    {para}
+                  </p>
+                ))}
+            </div>
             <div className="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 dark:bg-slate-800 px-3 py-2.5">
               <Info size={13} className="shrink-0 mt-0.5 text-slate-600 dark:text-slate-400" aria-hidden />
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">

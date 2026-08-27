@@ -6,7 +6,7 @@
 // at real parts of your profile.
 
 import { describe, expect, it, vi } from 'vitest';
-import { runHolisticSelection, selectHolisticCandidates } from './runHolisticSelection';
+import { runHolisticSelection, selectHolisticCandidates, stripAtomIdReferences } from './runHolisticSelection';
 import { MAX_ATOMS } from '../../prompts/selectProfileHolistic';
 import type { JobPosting, ProfileAtom } from '../../types';
 
@@ -97,5 +97,74 @@ describe('runHolisticSelection', () => {
     expect(selection.roleSummary).toBe('A role.');
     expect(selection.overallRationale).toBe('Led with the real one.');
     expect(selection.createdAt).toBeGreaterThan(0);
+  });
+});
+
+describe('stripAtomIdReferences', () => {
+  // Verbatim shapes from the first live run against the real model, which
+  // ignored the prompt's ban and cited ids throughout its prose.
+  const ids = new Set([
+    'skills-1kxy8cf',
+    'skills-221cdv',
+    'skills-b7xg48',
+    'experience-1oqwfd6',
+    'experience-b4wals',
+  ]);
+
+  it('removes a single parenthesised id and the space before it', () => {
+    expect(
+      stripAtomIdReferences("I chose the project-management skill (skills-1kxy8cf) first.", ids),
+    ).toBe('I chose the project-management skill first.');
+  });
+
+  it('removes a parenthesised list of several ids', () => {
+    expect(
+      stripAtomIdReferences(
+        'Their e-commerce work (skills-b7xg48, experience-1oqwfd6, experience-b4wals) fits the role.',
+        ids,
+      ),
+    ).toBe('Their e-commerce work fits the role.');
+  });
+
+  it('removes an id left bare in a sentence', () => {
+    expect(stripAtomIdReferences('See skills-221cdv for the detail.', ids)).toBe('See for the detail.');
+  });
+
+  it('leaves prose with no ids exactly as written', () => {
+    const clean = 'The posting asks for campaign reporting. This job covers that work.';
+    expect(stripAtomIdReferences(clean, ids)).toBe(clean);
+  });
+
+  it('keeps parentheses that are not id references', () => {
+    const text = 'The posting asks for spreadsheet work (Excel) and slides.';
+    expect(stripAtomIdReferences(text, ids)).toBe(text);
+  });
+
+  it('preserves the blank lines that separate the three paragraphs', () => {
+    const text = 'What it asks for (skills-1kxy8cf).\n\nWhat I chose.\n\nWhat I left out.';
+    expect(stripAtomIdReferences(text, ids)).toBe(
+      'What it asks for.\n\nWhat I chose.\n\nWhat I left out.',
+    );
+  });
+
+  it('is a no-op when no ids were offered', () => {
+    const text = 'Anything (at all) here.';
+    expect(stripAtomIdReferences(text, new Set())).toBe(text);
+  });
+});
+
+describe('stripAtomIdReferences guards against eating real words', () => {
+  it('leaves a short id-like word alone when it is not shaped like an atom id', () => {
+    // buildProfileAtoms always emits `${source}-${hash}`, so an id with no
+    // hyphen cannot be a real one -- and stripping it would cut English.
+    expect(stripAtomIdReferences('Led with the real one.', new Set(['real']))).toBe(
+      'Led with the real one.',
+    );
+  });
+
+  it('still strips a properly shaped id in the same sentence', () => {
+    expect(
+      stripAtomIdReferences('Led with the real one (skills-9ab2).', new Set(['real', 'skills-9ab2'])),
+    ).toBe('Led with the real one.');
   });
 });

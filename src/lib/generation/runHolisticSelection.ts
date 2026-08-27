@@ -20,6 +20,45 @@ import {
 } from '../../prompts/selectProfileHolistic';
 
 /**
+ * Removes evidence ids the model wrote into its prose. The prompt forbids
+ * them, but the first live run against the real model produced a rationale
+ * littered with "(skills-1kxy8cf)" and "(experience-4b2, experience-9cd)" --
+ * reference numbers that mean nothing to the reader, because the review screen
+ * lists the evidence under its own headings and never shows an id. Stripped
+ * here rather than trusted to the instruction, the same way atomIds themselves
+ * are filtered rather than trusted.
+ *
+ * Removes a bracketed group whose whole content is ids and separators, then any
+ * id left loose in a sentence, then tidies the spacing that leaves behind.
+ * In plain terms: deletes the AI's internal reference codes from the
+ * explanation it writes for you.
+ */
+export function stripAtomIdReferences(text: string, ids: Set<string>): string {
+  // Only ids shaped like real ones. buildProfileAtoms always emits
+  // `${source}-${hash}`, so requiring the hyphen costs nothing in production
+  // and stops a short id from eating an ordinary word out of the prose -- a
+  // test atom keyed 'real' had "Led with the real one" cut to "Led with the
+  // one" before this guard existed.
+  const strippable = [...ids].filter((id) => id.includes('-'));
+  if (strippable.length === 0) return text;
+  const idPattern = strippable.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const bracketed = new RegExp(`\\s*[([]\\s*(?:${idPattern})(?:\\s*[,;and]+\\s*(?:${idPattern}))*\\s*[)\\]]`, 'g');
+  const bare = new RegExp(`\\b(?:${idPattern})\\b`, 'g');
+
+  return text
+    .replace(bracketed, '')
+    .replace(bare, '')
+    // An id removed mid-sentence can leave a doubled separator or a space
+    // pushed up against punctuation.
+    .replace(/\(\s*[,;]*\s*\)/g, '')
+    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/([,;])\s*([,.;:])/g, '$2')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
+}
+
+/**
  * Which atoms to offer the model. Education is included here, unlike in
  * requirement matching (see runMatching.ts's `matchable`): that exclusion
  * exists because a degree is not evidence for a specific skill, but this
@@ -89,13 +128,17 @@ export async function runHolisticSelection(
   const keptLabels = new Set(
     candidateAtoms.filter((a) => seen.has(a.id)).map((a) => a.sourceLabel),
   );
-  const groupNotes = result.groupNotes.filter((n) => keptLabels.has(n.sourceLabel));
+  // Every id the model was shown, not just the ones it kept -- it cites the
+  // ones it rejected too, and those read as reference numbers just the same.
+  const groupNotes = result.groupNotes
+    .filter((n) => keptLabels.has(n.sourceLabel))
+    .map((n) => ({ sourceLabel: n.sourceLabel, note: stripAtomIdReferences(n.note, offeredIds) }));
 
   return {
     createdAt: Date.now(),
     atomIds,
     roleSummary: result.roleSummary,
-    overallRationale: result.overallRationale,
+    overallRationale: stripAtomIdReferences(result.overallRationale, offeredIds),
     groupNotes,
   };
 }
