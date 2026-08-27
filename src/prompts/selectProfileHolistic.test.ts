@@ -69,7 +69,9 @@ describe('isHolisticSelectionResult', () => {
   const valid = {
     roleSummary: 'Runs community events.',
     atomIds: ['experience-abc'],
-    overallRationale: 'Led with the events work.',
+    asks: 'The posting asks for event work.',
+    chose: 'I chose the events job.',
+    leftOut: 'I left out the filing tasks.',
     groupNotes: [{ sourceLabel: 'Experience: Lead, Uni', note: 'Speaks to running events.' }],
   };
 
@@ -93,6 +95,18 @@ describe('isHolisticSelectionResult', () => {
     const { roleSummary: _omitted, ...rest } = valid;
     expect(isHolisticSelectionResult(rest)).toBe(false);
   });
+
+  it.each(['asks', 'chose', 'leftOut'] as const)('rejects a missing %s', (field) => {
+    const { [field]: _omitted, ...rest } = valid;
+    expect(isHolisticSelectionResult(rest)).toBe(false);
+  });
+
+  it.each(['asks', 'chose', 'leftOut'] as const)(
+    'rejects a blank %s -- the split exists to stop one field carrying everything',
+    (field) => {
+      expect(isHolisticSelectionResult({ ...valid, [field]: '   ' })).toBe(false);
+    },
+  );
 
   it('rejects a groupNote missing its note', () => {
     expect(isHolisticSelectionResult({ ...valid, groupNotes: [{ sourceLabel: 'Skills' }] })).toBe(false);

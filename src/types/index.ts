@@ -174,6 +174,23 @@ export interface HolisticGroupNote {
 }
 
 /**
+ * The reasoning, in three separate parts. Separate FIELDS rather than one
+ * string with paragraph breaks, because asking the model to format its own
+ * prose does not work: told to write three blank-line-separated paragraphs it
+ * returned a single unbroken block, so the structure has to be something it
+ * fills in rather than something it punctuates. Display-only, all three --
+ * see HolisticGroupNote.note.
+ */
+export interface HolisticRationale {
+  /** What this posting asks for, in the posting's own words. */
+  asks: string;
+  /** What was chosen from the profile, and how it answers those asks. */
+  chose: string;
+  /** What was left out, and why it does not fit this posting. */
+  leftOut: string;
+}
+
+/**
  * The result of one direct-selection pass over a posting: which profile atoms
  * the model chose to feature, and why. Stored on the posting rather than on a
  * generation because both the resume and the cover letter are built from the
@@ -185,8 +202,14 @@ export interface HolisticSelection {
   atomIds: string[];
   /** One or two sentences on the role, so the cover letter has the context the analysis pass would otherwise supply. */
   roleSummary: string;
-  /** The overall angle the model took across the whole profile. Display-only -- see HolisticGroupNote.note. */
-  overallRationale: string;
+  /** The three-part reasoning. Absent on selections saved before it was split -- see overallRationale. */
+  rationale?: HolisticRationale;
+  /**
+   * The single-block reasoning used before the three-part split. Kept readable
+   * rather than migrated: a stored selection is a record of one past pass, and
+   * re-running is the way to get the new shape.
+   */
+  overallRationale?: string;
   /** Per-group reasons, one per featured job/project/skill category. Display-only. */
   groupNotes: HolisticGroupNote[];
 }

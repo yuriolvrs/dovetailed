@@ -24,7 +24,9 @@ function posting(overrides: Partial<JobPosting> = {}): JobPosting {
 const baseResult = {
   roleSummary: 'A role.',
   atomIds: ['real'],
-  overallRationale: 'Led with the real one.',
+  asks: 'The posting asks for Java.',
+  chose: 'I chose the real one.',
+  leftOut: 'I left out nothing.',
   groupNotes: [],
 };
 
@@ -88,15 +90,38 @@ describe('runHolisticSelection', () => {
     expect(selection.groupNotes).toEqual([{ sourceLabel: 'Skills', note: 'Kept.' }]);
   });
 
-  it('carries the roleSummary and rationale through, and stamps createdAt', async () => {
+  it('carries the roleSummary and all three reasoning parts through, and stamps createdAt', async () => {
     const atoms = [atom({ id: 'real' })];
     generateStructuredMock.mockResolvedValueOnce(baseResult);
 
     const selection = await runHolisticSelection(posting(), atoms);
 
     expect(selection.roleSummary).toBe('A role.');
-    expect(selection.overallRationale).toBe('Led with the real one.');
+    expect(selection.rationale).toEqual({
+      asks: 'The posting asks for Java.',
+      chose: 'I chose the real one.',
+      leftOut: 'I left out nothing.',
+    });
     expect(selection.createdAt).toBeGreaterThan(0);
+  });
+
+  it('strips ids out of every reasoning part, not just one', async () => {
+    const atoms = [atom({ id: 'skills-9ab2' })];
+    generateStructuredMock.mockResolvedValueOnce({
+      ...baseResult,
+      atomIds: ['skills-9ab2'],
+      asks: 'It asks for Java (skills-9ab2).',
+      chose: 'I chose Java (skills-9ab2).',
+      leftOut: 'I left out nothing (skills-9ab2).',
+    });
+
+    const selection = await runHolisticSelection(posting(), atoms);
+
+    expect(selection.rationale).toEqual({
+      asks: 'It asks for Java.',
+      chose: 'I chose Java.',
+      leftOut: 'I left out nothing.',
+    });
   });
 });
 

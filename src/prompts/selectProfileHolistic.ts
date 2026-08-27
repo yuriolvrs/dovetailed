@@ -26,7 +26,9 @@ export interface HolisticCandidate {
 export interface HolisticSelectionResult {
   roleSummary: string;
   atomIds: string[];
-  overallRationale: string;
+  asks: string;
+  chose: string;
+  leftOut: string;
   groupNotes: { sourceLabel: string; note: string }[];
 }
 
@@ -135,7 +137,7 @@ cover letter for one specific job${roleTitle ? ` -- the role "${roleTitle}"` : '
 Reply with ONE JSON object and nothing else.
 
 Exact shape (no extra keys, no markdown, no code fences, no commentary):
-{"roleSummary":"…","atomIds":["…"],"overallRationale":"…","groupNotes":[{"sourceLabel":"…","note":"…"}]}
+{"roleSummary":"…","atomIds":["…"],"asks":"…","chose":"…","leftOut":"…","groupNotes":[{"sourceLabel":"…","note":"…"}]}
 
 Rules:
 - roleSummary: one or two sentences describing the role and what it does, drawn only from the
@@ -147,12 +149,13 @@ Rules:
   on this role. If the profile is small, returning most or all of it is correct.
 - Judge relevance on substance, not shared wording. A responsibility described in different words
   than the posting uses still counts, and that is the point of reading everything at once.
-- overallRationale: write EXACTLY THREE paragraphs, separated by one blank line, in this order:
-  (1) what this posting asks for, in its own words;
-  (2) what you chose from the profile, and how it answers those asks;
-  (3) what you left out, and why it does not fit this posting.
-  Each paragraph is 2 to 4 sentences. Keep to the order above -- do not merge the paragraphs and
-  do not add a fourth.
+- asks: what THIS posting asks for, in its own words. 2 to 4 sentences.
+- chose: what you chose from the profile, and how it answers those asks. 2 to 4 sentences.
+- leftOut: what you left out of the profile, and why it does not fit this posting. 1 to 3
+  sentences. If you left nothing out, say so in one sentence.
+- Keep "asks", "chose" and "leftOut" separate. Each is its own field and each is shown to the
+  candidate under its own heading. Do not repeat one inside another, and do not put all three
+  into one of them.
 - groupNotes: one entry per distinct sourceLabel appearing in your atomIds -- per group, never per
   individual item. Use the sourceLabel string exactly as it appears in PROFILE EVIDENCE. Give each
   1 to 3 sentences. Name the thing in the posting that this group answers. Then say what the group
@@ -173,7 +176,8 @@ Rules:
   Ids belong ONLY in the "atomIds" array. Name the job, the project, or the skill group in words
   when you must refer to something -- the candidate sees the evidence listed under its own
   heading, so a reference number helps nobody.
-- Both fields are an explanation of YOUR SELECTION, shown to the candidate to review. The POSTING
+- The reasoning fields and the notes are an explanation of YOUR SELECTION, shown to the candidate
+  to review. The POSTING
   is yours to describe freely: quote it, paraphrase it, name the requirements it lists. The
   CANDIDATE is not. Never state a fact about the candidate that is not written verbatim in the
   evidence you were given -- in particular, never assert years of experience, seniority,
@@ -205,6 +209,10 @@ function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((item) => typeof item === 'string');
 }
 
+function isNonEmptyString(x: unknown): x is string {
+  return typeof x === 'string' && x.trim() !== '';
+}
+
 function isGroupNote(x: unknown): x is { sourceLabel: string; note: string } {
   if (typeof x !== 'object' || x === null) return false;
   const candidate = x as Record<string, unknown>;
@@ -230,7 +238,13 @@ export function isHolisticSelectionResult(x: unknown): x is HolisticSelectionRes
     typeof candidate.roleSummary === 'string' &&
     isStringArray(candidate.atomIds) &&
     candidate.atomIds.length > 0 &&
-    typeof candidate.overallRationale === 'string' &&
+    // Each part must be present AND non-empty: a model that collapses its
+    // reasoning into one field and leaves the others blank produces valid
+    // JSON but exactly the unreadable block this split exists to prevent, so
+    // it is rejected here and generateStructured's retry gets another go.
+    isNonEmptyString(candidate.asks) &&
+    isNonEmptyString(candidate.chose) &&
+    isNonEmptyString(candidate.leftOut) &&
     Array.isArray(candidate.groupNotes) &&
     candidate.groupNotes.every(isGroupNote)
   );

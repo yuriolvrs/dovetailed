@@ -138,7 +138,11 @@ export async function runHolisticSelection(
     createdAt: Date.now(),
     atomIds,
     roleSummary: result.roleSummary,
-    overallRationale: stripAtomIdReferences(result.overallRationale, offeredIds),
+    rationale: {
+      asks: stripAtomIdReferences(result.asks, offeredIds),
+      chose: stripAtomIdReferences(result.chose, offeredIds),
+      leftOut: stripAtomIdReferences(result.leftOut, offeredIds),
+    },
     groupNotes,
   };
 }

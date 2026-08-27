@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Info, Sparkles, X } from 'lucide-react';
-import type { JobPosting, Profile, ProfileAtom } from '../types';
+import type { HolisticRationale, JobPosting, Profile, ProfileAtom } from '../types';
 import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { loadProfile } from '../lib/profileStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
@@ -29,6 +29,15 @@ const SOURCE_BADGE_LABEL: Record<ProfileAtom['source'], string> = {
   education: 'Education',
   additional: 'Additional',
 };
+
+// The three parts of the reasoning, in reading order, with the heading each
+// gets on screen. The headings carry the structure, so the prose does not have
+// to announce what it is about.
+const RATIONALE_PARTS: { key: keyof HolisticRationale; label: string }[] = [
+  { key: 'asks', label: 'What the posting asks for' },
+  { key: 'chose', label: 'What I chose' },
+  { key: 'leftOut', label: 'What I left out' },
+];
 
 /** One featured group: the atoms chosen from it, plus the model's reason for featuring it. */
 interface ChosenGroup {
@@ -234,24 +243,33 @@ export default function DirectSelectionPage() {
             <SectionTitle sub="The angle the AI took across your whole profile for this posting.">
               Why this selection
             </SectionTitle>
-            {/* Rendered as separate paragraphs, not one block: the prompt asks
-                for three (what the posting wants, what was chosen, what was
-                left out) separated by blank lines. Splitting on blank lines
-                rather than every newline means a selection saved before this --
-                one unbroken paragraph -- still renders correctly as one.
-                max-w-prose because this is real running prose; unconstrained it
-                set ~140 characters to the line. */}
-            <div className="space-y-3 max-w-prose">
-              {selection.overallRationale
-                .split(/\n\s*\n/)
-                .map((para) => para.trim())
-                .filter(Boolean)
-                .map((para, i) => (
-                  <p key={i} className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                    {para}
-                  </p>
+            {/* Three labelled parts across the card's width, rather than one
+                column of prose hugging the left edge. Each part comes from its
+                own field, so the separation is structural and does not depend
+                on the model punctuating its own paragraphs -- told to do that,
+                it returned one unbroken block. The heading above each part also
+                means none of them has to restate its own purpose in words. */}
+            {selection.rationale ? (
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-3">
+                {RATIONALE_PARTS.map(({ key, label }) => (
+                  <section key={key}>
+                    <h3 className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
+                      {label}
+                    </h3>
+                    <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                      {selection.rationale![key]}
+                    </p>
+                  </section>
                 ))}
-            </div>
+              </div>
+            ) : (
+              // A selection saved before the reasoning was split into fields.
+              // Left as it was written rather than migrated; re-running the
+              // pass is what produces the three-part shape.
+              <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed max-w-prose">
+                {selection.overallRationale}
+              </p>
+            )}
             <div className="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 dark:bg-slate-800 px-3 py-2.5">
               <Info size={13} className="shrink-0 mt-0.5 text-slate-600 dark:text-slate-400" aria-hidden />
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
