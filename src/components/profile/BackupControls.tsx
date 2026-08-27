@@ -98,7 +98,7 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
         ) : (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-600 dark:text-slate-300">Are you sure? This cannot be undone.</span>
-            <Btn size="sm" onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-500 focus:ring-red-600/30">
+            <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
               Yes, delete everything
             </Btn>
             <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>

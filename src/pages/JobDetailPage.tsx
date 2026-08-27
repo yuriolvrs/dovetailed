@@ -170,11 +170,7 @@ export default function JobDetailPage() {
           ) : (
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-600 dark:text-slate-300">Delete this posting?</span>
-              <Btn
-                size="sm"
-                onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-500 focus:ring-red-600/30"
-              >
+              <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
                 Yes, delete
               </Btn>
               <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>

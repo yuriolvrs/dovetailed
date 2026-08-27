@@ -52,11 +52,11 @@ function DeleteEntryButton({ noun, onDelete }: { noun: string; onDelete: () => v
         <span className="text-xs text-slate-500 dark:text-slate-400">Delete this {noun}?</span>
         <Btn
           size="sm"
+          variant="dangerSolid"
           onClick={() => {
             setConfirming(false);
             onDelete();
           }}
-          className="bg-red-600 text-white hover:bg-red-500 focus:ring-red-600/30 dark:bg-red-600 dark:text-white dark:hover:bg-red-500"
         >
           Yes
         </Btn>

@@ -177,6 +177,13 @@ const buttonVariants = {
     'text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-400/20 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
   danger:
     'text-red-600 border border-red-200 hover:bg-red-50 focus:ring-red-400/20 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10',
+  // Solid destructive, for the confirm step of a two-step delete. It exists
+  // as a variant because appending `bg-red-600` to `primary` does not work:
+  // both set the same property, and `primary`'s own `dark:` classes carry
+  // higher specificity, so the red silently lost and the button rendered
+  // white-on-white in dark mode.
+  dangerSolid:
+    'bg-red-600 text-white hover:bg-red-500 focus:ring-red-600/30 shadow-sm dark:bg-red-600 dark:text-white dark:hover:bg-red-500',
 } as const;
 
 const buttonSizes = {
