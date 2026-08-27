@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gray-on-color",
+        "value": "text-slate-600 on bg-red-50",
+        "createdAt": "2026-08-27T17:29:22.871Z",
+        "reason": "false positive: bg is hover:bg-red-50 and the text is hover:text-red-600 on the same hover, so gray never sits on red; degraded regex parser flattens variant prefixes"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "text-slate-400 on bg-red-50",
+        "createdAt": "2026-08-27T17:29:22.977Z",
+        "reason": "false positive: dark:hover pair of the same destructive-ghost button; dark:hover:text-red-400 applies with the red background"
+      }
+    ]
+  }
+}

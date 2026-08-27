@@ -42,6 +42,8 @@ A privacy-first web app that helps a job seeker tailor their resume and cover le
 
 Application tracker was pulled forward out of this list and built 2026-08-19 by explicit user request (overriding the "do not build yet" deferral) -- see PROGRESS.md.
 
+A second generation route ("direct"/holistic selection) was added 2026-08-28 by explicit user request. It was never in this PRD: the original spec assumes one path (posting -> requirements -> per-requirement matching -> selection). The direct route replaces the middle two steps with a single LLM call that reads the posting and the whole profile and returns the atom ids to feature, plus a display-only explanation of the choice. It does not replace the matched route -- both run on the same posting and their outputs are stored separately so the two can be compared. §7's anti-fabrication rule is unchanged and still holds on this route: the model returns evidence ids, never generated text, and every id is validated against the offered set. The posting flow was rebuilt on 2026-08-28 so the two routes are peers rather than one being grafted onto the other's screens: `/jobs/:id` is a neutral hub that owns only posting-level data and the choice between routes, requirement extraction moved to `/jobs/:id/match/analyze` (Matching's own first screen), and `/jobs/:id/generate` became `/jobs/:id/documents`. See PROGRESS.md.
+
 ## 6. Data model (single source of truth)
 
 All documents are views over typed JSON. Define these as TypeScript types in one shared module.
