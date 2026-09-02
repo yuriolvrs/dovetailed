@@ -378,11 +378,12 @@ export default function MatchingReviewPage() {
       }
       if (existing.atomIds.includes(atomId)) return matches;
       const wasGap = existing.status === 'gap_no_candidates' || existing.status === 'gap_unverified';
+      const remainingConsidered = existing.consideredAtomIds?.filter((id) => id !== atomId);
       const updated: RequirementMatch = {
         ...existing,
         atomIds: [...existing.atomIds, atomId],
         status: wasGap ? 'full' : existing.status,
-        consideredAtomIds: wasGap ? undefined : existing.consideredAtomIds,
+        consideredAtomIds: remainingConsidered?.length ? remainingConsidered : undefined,
       };
       return matches.map((m) => (m.requirementId === selected.id ? updated : m));
     });
@@ -631,7 +632,7 @@ export default function MatchingReviewPage() {
               </EmptyState>
             )}
 
-            {selectedMatch.status === 'gap_unverified' && (selectedMatch.consideredAtomIds?.length ?? 0) > 0 && (
+            {(selectedMatch.consideredAtomIds?.length ?? 0) > 0 && (
               <div className="space-y-2 mb-3">
                 <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
                   Considered but not confirmed
