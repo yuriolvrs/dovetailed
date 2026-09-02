@@ -66,34 +66,33 @@ Exact shape (no extra keys, no markdown, no code fences, no commentary):
 
 Rules:
 - greeting: a short salutation, e.g. "Dear Hiring Manager," -- use the company name if given.
-- paragraphs: EXACTLY 3 or 4 paragraphs of natural, compelling prose -- no bullet points or
-  markdown. Follow this narrative structure:
+- paragraphs: EXACTLY 3 paragraphs of natural, compelling prose -- no bullet points or markdown.
+  Keep the whole letter short: aim for roughly 180-220 words total across all 3 paragraphs, and
+  no more than 3-4 sentences per paragraph. Only add a 4th paragraph if the evidence genuinely
+  needs it to avoid cramming unrelated points into one paragraph -- 3 is the default. Follow this
+  narrative structure:
   1. Interest & positioning: state enthusiasm for this specific role/company and give a brief,
-     1-sentence value proposition summarizing how the candidate's core background fits.
+     1-sentence value proposition summarizing how the candidate's core background fits. 2-3
+     sentences max.
   2. Primary fit: select the candidate's MOST relevant skills/experience for
      "${roleTitle ?? 'this role'}". Anchor this paragraph to the specific employer name and/or job
      title behind that experience (drawn from the evidence's sourceLabel) so the letter reads as
      connected to a real resume, not a vague list of abstract skills. Do not list duties
      chronologically -- group related accomplishments together and frame them around impact,
-     outcomes, and business value.
-  3. Transferable strengths (optional 4th paragraph): complementary skills (e.g. analysis, project
-     management, cross-functional communication, tools) that show well-rounded execution ability.
-     Only draw on evidence that is genuinely relevant to "${roleTitle ?? 'this role'}" -- exclude
-     purely administrative or operational duties with no bearing on the target role (e.g. premium
-     collections, policy issuance, or other back-office insurance/finance/HR admin tasks when
-     applying to a marketing role) even if such an item exists in the evidence list. Focus on
-     project coordination, reporting, and cross-functional communication instead.
-  4. Closing: this paragraph is REQUIRED in every letter regardless of whether it is the 3rd or
-     4th paragraph -- never drop it or fold it into paragraph 3. It must contain BOTH: (a) a
-     thank-you to the reader for their time/consideration in reviewing the application, and (b) a
-     forward-looking line expressing interest in discussing the role/interview next steps (e.g.
-     "Thank you for considering my application. I look forward to discussing how my experience
-     aligns with ${company ? `${company}'s` : `the company's`} goals."). Keep it to 1-2 short
-     sentences -- do not restate qualifications already covered in earlier paragraphs.
+     outcomes, and business value. Cover only the 1-2 most relevant experiences, not a survey of
+     everything in the evidence list.
+  3. Closing: this paragraph is REQUIRED in every letter -- never drop it. It must contain BOTH:
+     (a) a thank-you to the reader for their time/consideration in reviewing the application, and
+     (b) a forward-looking line expressing interest in discussing the role/interview next steps
+     (e.g. "Thank you for considering my application. I look forward to discussing how my
+     experience aligns with ${company ? `${company}'s` : `the company's`} goals."). Keep it to 1-2
+     short sentences -- do not restate qualifications already covered in earlier paragraphs, and do
+     not introduce any new skills or complementary strengths here.
   Writing style: avoid robotic, resume-like cataloging ("My duties included...", "I was
   responsible for...", or listing unrelated tasks back-to-back in one sentence). Avoid run-on
   sentences: keep each sentence to roughly 25-30 words max, and do not chain multiple clauses
-  together with semicolons or repeated "and"/"where" connectors. You may reframe
+  together with semicolons or repeated "and"/"where" connectors. Favor fewer, more concentrated
+  claims over covering many. You may reframe
   operational tasks in terms of their impact (e.g. "edited descriptions and pricing" ->
   "optimized product listings to improve visibility") as long as you add no fact beyond what the
   evidence states -- do not invent outcomes, metrics, or scope that aren't in the evidence.
