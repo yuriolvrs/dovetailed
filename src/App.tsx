@@ -10,6 +10,7 @@ import JobsPage from './pages/JobsPage.tsx';
 import JobDetailPage from './pages/JobDetailPage.tsx';
 import MatchingReviewPage from './pages/MatchingReviewPage.tsx';
 import DirectSelectionPage from './pages/DirectSelectionPage.tsx';
+import BuildPage from './pages/BuildPage.tsx';
 import DocumentsPage from './pages/DocumentsPage.tsx';
 import AnalyzePostingPage from './pages/AnalyzePostingPage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/jobs/:id/match" element={<MatchingReviewPage />} />
             <Route path="/jobs/:id/direct" element={<DirectSelectionPage />} />
             <Route path="/jobs/:id/match/analyze" element={<AnalyzePostingPage />} />
+            <Route path="/jobs/:id/build" element={<BuildPage />} />
             <Route path="/jobs/:id/documents" element={<DocumentsPage />} />
             <Route path="/jobs/:id/generate" element={<LegacyGenerateRedirect />} />
             <Route path="/about" element={<AboutPage />} />
