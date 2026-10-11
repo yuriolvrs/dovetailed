@@ -57,6 +57,9 @@ export function BulletRewriteSuggest({
     setSuggestions([]);
   }
 
+  // Nothing to reword in an empty bullet, so no button for it.
+  if (status === 'idle' && bulletText.trim() === '') return null;
+
   if (status === 'idle') {
     return (
       <button
