@@ -18,7 +18,7 @@ const m = vi.hoisted(() => ({
   generateCoverLetterContent: vi.fn(),
 }));
 vi.mock('../llm', () => ({ generateStructured: m.generateStructured }));
-vi.mock('../jobStore', () => ({ saveJobPosting: m.saveJobPosting }));
+vi.mock('../jobStore', () => ({ saveJobPosting: m.saveJobPosting, fillPostingDetails: (p: unknown) => p }));
 vi.mock('../matching/runMatching', () => ({ runMatching: m.runMatching }));
 vi.mock('../genStore', () => ({
   saveGeneration: m.saveGeneration,

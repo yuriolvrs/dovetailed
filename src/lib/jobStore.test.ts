@@ -6,12 +6,38 @@
 // logic picks a sensible label.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { deadlineCountdown, guessJobTitleAndCompany, postingLabel } from './jobStore';
+import { deadlineCountdown, fillPostingDetails, guessJobTitleAndCompany, postingLabel } from './jobStore';
 import type { JobPosting } from '../types';
 
 function posting(overrides: Partial<JobPosting>): JobPosting {
   return { id: 'x', createdAt: 0, rawText: '', ...overrides };
 }
+
+describe('fillPostingDetails', () => {
+  const rawText = 'Backend Engineer - Northwind Freight (Austin, TX, Hybrid)\n\nWe build shipment tracking.';
+  const found = { title: 'Backend Engineer', company: 'Northwind Freight', location: 'Austin, TX' };
+
+  it('fills empty fields with values found in the posting', () => {
+    expect(fillPostingDetails(posting({ rawText }), found)).toMatchObject(found);
+  });
+
+  it('replaces a title that is still the first-line guess', () => {
+    const guessed = posting({ rawText, title: guessJobTitleAndCompany(rawText).title });
+    expect(fillPostingDetails(guessed, found).title).toBe('Backend Engineer');
+  });
+
+  it('keeps anything the user typed', () => {
+    const typed = posting({ rawText, title: 'Go Engineer', company: 'NW', location: 'Remote' });
+    expect(fillPostingDetails(typed, found)).toMatchObject({ title: 'Go Engineer', company: 'NW', location: 'Remote' });
+  });
+
+  it('ignores values that do not appear in the posting', () => {
+    const result = fillPostingDetails(posting({ rawText }), { title: 'Staff Engineer', company: 'Acme', location: '' });
+    expect(result.title).toBeUndefined();
+    expect(result.company).toBeUndefined();
+    expect(result.location).toBeUndefined();
+  });
+});
 
 describe('postingLabel', () => {
   it('prefers an explicit title over the analysis role summary', () => {

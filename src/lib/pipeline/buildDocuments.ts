@@ -9,7 +9,7 @@
 import type { JobPosting, Profile } from '../../types';
 import { buildAnalyzePostingPrompt, isExtractedAnalysis, toJobAnalysis } from '../../prompts/analyzePosting';
 import { generateStructured } from '../llm';
-import { saveJobPosting } from '../jobStore';
+import { fillPostingDetails, saveJobPosting } from '../jobStore';
 import { buildProfileAtoms } from '../profileAtoms';
 import { runMatching } from '../matching/runMatching';
 import { newGeneration, saveGeneration } from '../genStore';
@@ -58,7 +58,7 @@ export async function buildDocuments(
       maxTokens: 2500,
       signal,
     });
-    posting = { ...posting, analysis: toJobAnalysis(extracted) };
+    posting = { ...fillPostingDetails(posting, extracted), analysis: toJobAnalysis(extracted) };
     await saveJobPosting(posting);
   }
   onStepDone?.('read', posting);
