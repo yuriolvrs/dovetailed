@@ -78,6 +78,12 @@ describe('isExtractedProfile', () => {
     expect(isExtractedProfile({ ...VALID, experience: [{ title: 'Engineer', bullets: [] }] })).toBe(false);
   });
 
+  it('accepts contact links as strings and rejects other shapes', () => {
+    const base = { contact: {}, skills: [], experience: [], projects: [], education: [] };
+    expect(isExtractedProfile({ ...base, contact: { links: ['github.com/x'] } })).toBe(true);
+    expect(isExtractedProfile({ ...base, contact: { links: [{ url: 'x' }] } })).toBe(false);
+  });
+
   it('rejects a contact field of the wrong type', () => {
     expect(isExtractedProfile({ ...VALID, contact: { name: 42 } })).toBe(false);
   });

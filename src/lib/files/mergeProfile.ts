@@ -6,7 +6,7 @@
 // In plain terms: adds what was read from your resume to your profile without
 // throwing away or duplicating what's already there.
 
-import type { EducationEntry, ExperienceEntry, Profile, ProjectEntry, SkillGroup } from '../../types';
+import type { ContactLink, EducationEntry, ExperienceEntry, Profile, ProjectEntry, SkillGroup } from '../../types';
 import type {
   ExtractedEducation,
   ExtractedExperience,
@@ -68,6 +68,25 @@ export function findDuplicates(existing: Profile, extracted: ExtractedProfile): 
   });
 
   return hits;
+}
+
+const KNOWN_LINK_LABELS: Record<string, string> = {
+  'linkedin.com': 'LinkedIn',
+  'github.com': 'GitHub',
+  'gitlab.com': 'GitLab',
+};
+
+/**
+ * Turns a link as a resume prints it ("github.com/name") into a stored link:
+ * a label from the site name, and a URL with "https://" added when the
+ * resume left it off, so exported hyperlinks work.
+ * In plain terms: makes "github.com/you" into a working GitHub link.
+ */
+export function toContactLink(text: string): ContactLink {
+  const trimmed = text.trim();
+  const url = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const host = trimmed.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split('/')[0].replace(/^www\./i, '').toLowerCase();
+  return { label: KNOWN_LINK_LABELS[host] ?? host, url };
 }
 
 // Fills the fields a resume can't supply: a project's links (a resume lists
@@ -162,6 +181,10 @@ export function mergeProfile(
       email: existing.contact.email?.trim() || c.email || existing.contact.email,
       phone: existing.contact.phone?.trim() || c.phone || existing.contact.phone,
       location: existing.contact.location?.trim() || c.location || existing.contact.location,
+      // Links fill only when the user has none, like the single fields above.
+      links: existing.contact.links.some((l) => l.url.trim())
+        ? existing.contact.links
+        : (c.links ?? []).filter((l) => l.trim()).map(toContactLink),
     };
   }
 

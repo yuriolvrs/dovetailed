@@ -153,6 +153,28 @@ describe('mergeProfile', () => {
     expect(merged.contact.phone).toBe('555-1234');
   });
 
+  it('fills contact links from the resume when the user has none', () => {
+    const merged = mergeProfile(
+      baseProfile(),
+      extraction({ contact: { links: ['linkedin.com/in/someone', 'https://github.com/someone', ' '] } }),
+      ['contact'],
+    );
+    expect(merged.contact.links).toEqual([
+      { label: 'LinkedIn', url: 'https://linkedin.com/in/someone' },
+      { label: 'GitHub', url: 'https://github.com/someone' },
+    ]);
+  });
+
+  it('keeps contact links the user already added', () => {
+    const mine = { label: 'Site', url: 'https://me.dev' };
+    const merged = mergeProfile(
+      baseProfile({ contact: { name: 'Existing Name', email: 'me@example.com', links: [mine] } }),
+      extraction({ contact: { links: ['github.com/someone'] } }),
+      ['contact'],
+    );
+    expect(merged.contact.links).toEqual([mine]);
+  });
+
   it('folds skills into an existing category instead of duplicating it', () => {
     const merged = mergeProfile(
       baseProfile(),
