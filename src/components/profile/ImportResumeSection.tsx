@@ -3,8 +3,9 @@
 // file happens here; nothing is written to the profile until the user picks
 // which sections to apply and how to resolve anything that duplicates an
 // entry they already have.
-// In plain terms: attach your old resume, see exactly what was read out of
-// it, then choose what to keep before it touches your profile.
+// The resume can be attached as a file or pasted as text.
+// In plain terms: attach or paste your old resume, see exactly what was read
+// out of it, then choose what to keep before it touches your profile.
 
 import { useState } from 'react';
 import { AlertTriangle, Check, FileText, X } from 'lucide-react';
@@ -21,7 +22,7 @@ import {
 } from '../../lib/files/mergeProfile';
 import { verifyExtractedProfile, type UnverifiedField } from '../../lib/files/verifyExtraction';
 import { FileDropzone } from '../ui/FileDropzone';
-import { Badge, Btn, Card, SectionTitle } from '../ui/primitives';
+import { Badge, Btn, Card, fieldInputClass, fieldLabelClass, SectionTitle } from '../ui/primitives';
 
 // Generous: the extraction returns the whole resume as JSON, and the model
 // spends reasoning tokens against the same budget (see PROGRESS.md's
@@ -66,9 +67,12 @@ function sectionCount(extracted: ExtractedProfile, section: SectionKey): number 
 export function ImportResumeSection({
   profile,
   onImported,
+  bare = false,
 }: {
   profile: Profile;
   onImported: (next: Profile) => void;
+  /** Drops the card and heading, for a page that supplies its own (the profile start screen). */
+  bare?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   // What the dropzone says while working. Kept distinct from `imported` so a
@@ -79,14 +83,19 @@ export function ImportResumeSection({
   const [review, setReview] = useState<Review | null>(null);
   const [selected, setSelected] = useState<Set<SectionKey>>(new Set());
   const [resolutions, setResolutions] = useState<Record<string, DuplicateAction>>({});
+  const [pasted, setPasted] = useState('');
 
-  async function handleFile(file: File) {
+  // Shared by both inputs: gets the resume text, then pulls the profile
+  // fields out of it for review.
+  // In plain terms: the same "read it, sort it into sections" steps for a
+  // file or for pasted text.
+  async function readResume(readText: () => Promise<string>, readingLabel: string) {
     setBusy(true);
     setError(null);
     setImported(false);
-    setStatus('Reading the document…');
+    setStatus(readingLabel);
     try {
-      const documentText = await extractText(file);
+      const documentText = await readText();
       setStatus('Pulling out your details…');
       const extracted = await generateStructured(
         buildExtractProfilePrompt(documentText),
@@ -109,6 +118,9 @@ export function ImportResumeSection({
     }
   }
 
+  const handleFile = (file: File) => readResume(() => extractText(file), 'Reading the document…');
+  const handlePaste = () => readResume(async () => pasted.trim(), 'Reading your resume…');
+
   function toggle(section: SectionKey) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -123,18 +135,15 @@ export function ImportResumeSection({
     const next = mergeProfile(profile, review.extracted, [...selected], resolutions);
     onImported(next);
     setReview(null);
+    setPasted('');
     setImported(true);
   }
 
   const duplicates = review ? findDuplicates(profile, review.extracted) : [];
   const unverifiedCount = review?.unverified.length ?? 0;
 
-  return (
-    <Card className="p-6">
-      <SectionTitle sub="Attach an existing resume to fill this page in. You review everything before it's applied">
-        Import from a Resume
-      </SectionTitle>
-
+  const body = (
+    <>
       {!review && (
         <>
           <FileDropzone
@@ -143,6 +152,24 @@ export function ImportResumeSection({
             busyLabel={status ?? 'Reading…'}
             label="Attach your existing resume"
           />
+          <label className={`mt-4 mb-1.5 block ${fieldLabelClass}`} htmlFor="resume-paste">
+            Or paste your resume text
+          </label>
+          <textarea
+            id="resume-paste"
+            value={pasted}
+            onChange={(ev) => setPasted(ev.target.value)}
+            rows={5}
+            disabled={busy}
+            placeholder="Copy everything from your resume or LinkedIn profile and paste it here."
+            className={`w-full ${fieldInputClass}`}
+          />
+          <div className="mt-2 flex items-center justify-end gap-3">
+            {busy && status && <span className="text-xs text-slate-500 dark:text-slate-400">{status}</span>}
+            <Btn onClick={handlePaste} disabled={busy || pasted.trim() === ''}>
+              Read pasted text
+            </Btn>
+          </div>
           {error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>}
           {imported && (
             <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 inline-flex items-center gap-1">
@@ -265,6 +292,16 @@ export function ImportResumeSection({
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (bare) return body;
+  return (
+    <Card className="p-6">
+      <SectionTitle sub="Attach or paste an existing resume to fill this page in. You review everything before it's applied">
+        Import from a Resume
+      </SectionTitle>
+      {body}
     </Card>
   );
 }

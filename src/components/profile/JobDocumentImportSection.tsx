@@ -66,16 +66,19 @@ function existingEntryLabel(entry: ExperienceEntry | ProjectEntry): string {
 export function JobDocumentImportSection({
   profile,
   onImported,
+  initialKind = 'experience',
 }: {
   profile: Profile;
   onImported: (next: Profile) => void;
+  /** Which kind of entry the draft starts as: the tab it sits on. */
+  initialKind?: 'experience' | 'project';
 }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [importedMessage, setImportedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(null);
-  const [kind, setKind] = useState<'experience' | 'project'>('experience');
+  const [kind, setKind] = useState<'experience' | 'project'>(initialKind);
   // Which existing entry's bullets to overwrite, or null to add a new entry
   // instead -- reset whenever kind changes, since the two kinds draw from
   // different lists (profile.experience vs profile.projects).
