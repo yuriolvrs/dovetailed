@@ -25,6 +25,7 @@ import { AlertTriangle, Sparkles } from 'lucide-react';
 import type { CoverLetterContent, Profile, ProfileAtom, SourceMapEntry } from '../../types';
 import type { CoverLetterNavTarget } from './coverLetterNav';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
+import { isPlainClosing } from '../../lib/generation/plainClosing';
 import { StringList } from '../StringList';
 import { AtomHoverDetail, Badge, Card, FieldInput } from '../ui/primitives';
 
@@ -43,6 +44,7 @@ export function CoverLetterEditor({
   onChange,
   onFocusParagraph,
   navRequest,
+  closingContext,
 }: {
   value: CoverLetterContent;
   sourceMap: SourceMapEntry[];
@@ -53,6 +55,8 @@ export function CoverLetterEditor({
   onFocusParagraph: (index: number | null) => void;
   /** A field clicked in the live preview, to scroll to and flash here -- see CoverLetterPrintView's onNavigate. */
   navRequest?: { target: CoverLetterNavTarget; nonce: number } | null;
+  /** Posting text, role, company and candidate name: a closing that names nothing beyond these is not flagged. */
+  closingContext?: string;
 }) {
   const atomIdsByNormalizedText = useMemo(
     () => new Map(sourceMap.map((e) => [normalizeForMatch(e.generatedText), e.atomIds])),
@@ -113,6 +117,10 @@ export function CoverLetterEditor({
     // the user is fully responsible for, nothing to flag as a broken AI claim.
     if (atomIds === undefined) return null;
     if (atomIds.length === 0) {
+      // The prompt requires the last paragraph to be a claim-free thank-you,
+      // so it never cites evidence; flag it only if it names something.
+      const isLast = paragraph === value.paragraphs[value.paragraphs.length - 1];
+      if (isLast && closingContext !== undefined && isPlainClosing(paragraph, closingContext)) return null;
       return (
         <Badge color="amber">
           <AlertTriangle size={11} />

@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import type { JobPosting, Profile } from '../types';
-import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
+import { fillPostingDetails, loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { buildAnalyzePostingPrompt, isExtractedAnalysis, toJobAnalysis } from '../prompts/analyzePosting';
 import { generateStructured, llmErrorMessage } from '../lib/llm';
@@ -67,7 +67,7 @@ export default function AnalyzePostingPage() {
         // meaty posting) -- widened for headroom on harder postings.
         maxTokens: 2500,
       });
-      update({ analysis: toJobAnalysis(extracted) });
+      update({ ...fillPostingDetails(posting, extracted), analysis: toJobAnalysis(extracted) });
       setStatus('idle');
     } catch (err) {
       setError(llmErrorMessage(err, 'Analysis'));
@@ -96,9 +96,7 @@ export default function AnalyzePostingPage() {
   return (
     <div className="pb-16">
       <JobDetailHeader
-        backHref={`/jobs/${posting.id}`}
-        backLabel="Back to posting"
-        postingId={posting.id}
+        posting={posting}
         current="requirements"
         strategy="matched"
         analysisDone={Boolean(posting.analysis)}

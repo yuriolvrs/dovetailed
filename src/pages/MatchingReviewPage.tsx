@@ -347,9 +347,7 @@ export default function MatchingReviewPage() {
     return (
       <section>
         <JobDetailHeader
-          backHref={`/jobs/${posting.id}/match/analyze`}
-          backLabel="Back to requirements"
-          postingId={posting.id}
+          posting={posting}
           current="matches"
           strategy="matched"
           analysisDone={false}
@@ -443,9 +441,7 @@ export default function MatchingReviewPage() {
   return (
     <div className="pb-16">
       <JobDetailHeader
-        backHref={`/jobs/${posting.id}/match/analyze`}
-        backLabel="Back to requirements"
-        postingId={posting.id}
+        posting={posting}
         current="matches"
         strategy="matched"
         analysisDone={Boolean(posting.analysis)}

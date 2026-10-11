@@ -66,6 +66,45 @@ describe('runMatching', () => {
   });
 });
 
+describe('runMatching batching', () => {
+  it('checks several requirements in one call and maps each answer back by label', async () => {
+    generateStructuredMock.mockReset();
+    const reqs = [requirement({ id: 'r1', text: 'Java experience' }), requirement({ id: 'r2', text: 'Python experience' })];
+    const atoms = [atom({ id: 'java', text: 'Java' }), atom({ id: 'python', text: 'Python' })];
+    generateStructuredMock.mockResolvedValueOnce({
+      results: [
+        { requirement: 'R2', atomIds: ['python'], status: 'partial' },
+        { requirement: 'R1', atomIds: ['java', 'python'], status: 'full' },
+      ],
+    });
+    const progress: number[] = [];
+
+    const result = await runMatching(reqs, atoms, (done) => progress.push(done));
+
+    expect(generateStructuredMock).toHaveBeenCalledTimes(1);
+    expect(result).toEqual([
+      // Python was not a candidate for the Java requirement, so it is dropped.
+      { requirementId: 'r1', status: 'full', atomIds: ['java'] },
+      { requirementId: 'r2', status: 'partial', atomIds: ['python'] },
+    ]);
+    expect(progress).toEqual([2]);
+  });
+
+  it('rechecks on its own a requirement the batched reply left out', async () => {
+    generateStructuredMock.mockReset();
+    const reqs = [requirement({ id: 'r1', text: 'Java experience' }), requirement({ id: 'r2', text: 'Python experience' })];
+    const atoms = [atom({ id: 'java', text: 'Java' }), atom({ id: 'python', text: 'Python' })];
+    generateStructuredMock
+      .mockResolvedValueOnce({ results: [{ requirement: 'R1', atomIds: ['java'], status: 'full' }] })
+      .mockResolvedValueOnce({ atomIds: ['python'], status: 'full' });
+
+    const result = await runMatching(reqs, atoms);
+
+    expect(generateStructuredMock).toHaveBeenCalledTimes(2);
+    expect(result[1]).toEqual({ requirementId: 'r2', status: 'full', atomIds: ['python'] });
+  });
+});
+
 describe('statusAfterReject', () => {
   it('keeps other confirmed atoms if more than one was confirmed', () => {
     const match: RequirementMatch = { requirementId: 'r1', status: 'full', atomIds: ['a', 'b'] };

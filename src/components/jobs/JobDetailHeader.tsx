@@ -1,8 +1,9 @@
-// What this file is: the shared top bar for a posting's route screens
-// (requirements, matches, choices, documents) -- back link pinned left, the
-// JobStageTracker centred, and page-specific actions pinned right, so the
-// stepper never drifts and buttons land in the same spot when moving between
-// stages. An optional second row (subtabs) holds in-page tab switches, like
+// What this file is: the shared top bar for every screen of one job (the
+// posting hub, requirements, matches, choices, documents) -- a back link to
+// all jobs, the job's title and company, page-specific actions, and the
+// JobStageTracker on its own row, so the job's name, the way out and the
+// steps sit in the same place on every screen of the job. The stepper never
+// drifts, and buttons land in the same spot when moving between stages. An optional second row (subtabs) holds in-page tab switches, like
 // Documents' Resume/Cover Letter toggle.
 //
 // Layout is two-tier on purpose. Wide viewports get the three-column grid that
@@ -17,13 +18,24 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import type { GenerationStrategy } from '../../types';
+import type { GenerationStrategy, JobPosting } from '../../types';
+import { postingLabel } from '../../lib/jobStore';
 import { JobStageTracker, type StageKey } from './JobStageTracker';
 
+/**
+ * "Company · Location (Arrangement)", the same line the Jobs list shows
+ * under a posting's title. Empty when none of them is set.
+ * In plain terms: the small line under the job title saying where it is.
+ */
+function postingMeta(posting: JobPosting): string {
+  const location = posting.location?.trim();
+  const place =
+    location && posting.arrangement ? `${location} (${posting.arrangement})` : location || posting.arrangement || '';
+  return [posting.company?.trim(), place].filter(Boolean).join(' · ');
+}
+
 export function JobDetailHeader({
-  backHref,
-  backLabel,
-  postingId,
+  posting,
   current,
   strategy,
   analysisDone,
@@ -32,9 +44,7 @@ export function JobDetailHeader({
   actions,
   subtabs,
 }: {
-  backHref: string;
-  backLabel: string;
-  postingId: string;
+  posting: JobPosting;
   current: StageKey;
   /** Which route's steps the stepper shows. Required -- the stepper only ever renders one route. */
   strategy: GenerationStrategy;
@@ -60,12 +70,15 @@ export function JobDetailHeader({
           reached by either neighbour. */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          {/* Always back to the list: moving between this job's own screens is
+              what the steps below are for, so the back link never has to
+              guess which of them "back" means. */}
           <Link
-            to={backHref}
+            to="/"
             className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <ArrowLeft size={15} />
-            {backLabel}
+            All jobs
           </Link>
           {/* min-w-0 so this can shrink below its content width -- without it a
               flex item stays at max-content, the inner flex-wrap never engages,
@@ -73,6 +86,13 @@ export function JobDetailHeader({
               390px. min-h matches a small Btn exactly, so a screen with no
               actions is the same height as one with them. */}
           <div className="flex min-h-[32px] min-w-0 flex-wrap items-center justify-end gap-2">{actions}</div>
+        </div>
+
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 break-words">{postingLabel(posting)}</h1>
+          {postingMeta(posting) && (
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">{postingMeta(posting)}</p>
+          )}
         </div>
 
         {/* w-max + mx-auto centres the stepper while it fits and falls back to
@@ -86,7 +106,7 @@ export function JobDetailHeader({
             bottom. */}
         <div className="overflow-x-auto py-1.5">
           <JobStageTracker
-            postingId={postingId}
+            postingId={posting.id}
             current={current}
             strategy={strategy}
             analysisDone={analysisDone}

@@ -5,7 +5,7 @@
 // trust an atom id back that we didn't actually offer it.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateCoverLetterContent, selectEvidenceCandidates } from './generateCoverLetterContent';
+import { generateCoverLetterContent, selectEvidenceCandidates, withoutRepeatedGreeting } from './generateCoverLetterContent';
 import type { JobAnalysis, JobPosting, Profile, ProfileAtom } from '../../types';
 
 const { generateStructuredMock } = vi.hoisted(() => ({ generateStructuredMock: vi.fn() }));
@@ -154,5 +154,22 @@ describe('generateCoverLetterContent on the direct route', () => {
     await expect(generateCoverLetterContent(profile(), posting({ analysis: undefined }), [])).rejects.toThrow(
       /no analysis/i,
     );
+  });
+});
+
+describe('withoutRepeatedGreeting', () => {
+  it('drops a salutation the model repeated at the start of the first paragraph', () => {
+    expect(
+      withoutRepeatedGreeting('Dear Hiring Manager at BPI,', ['Dear Hiring Manager at BPI, I am eager to apply.', 'Second.']),
+    ).toEqual(['I am eager to apply.', 'Second.']);
+  });
+
+  it('leaves paragraphs alone when the greeting is not repeated', () => {
+    const paragraphs = ['I am eager to apply.', 'Second.'];
+    expect(withoutRepeatedGreeting('Dear Hiring Manager,', paragraphs)).toBe(paragraphs);
+  });
+
+  it('keeps a first paragraph that is only the greeting rather than emptying it', () => {
+    expect(withoutRepeatedGreeting('Dear Team,', ['Dear Team,'])).toEqual(['Dear Team,']);
   });
 });

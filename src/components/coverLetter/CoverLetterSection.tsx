@@ -365,6 +365,7 @@ export function CoverLetterSection({
               onChange={updateContent}
               onFocusParagraph={setFocusedParagraph}
               navRequest={navRequest}
+              closingContext={[posting.rawText, posting.title, posting.company, profile.contact.name].join('\n')}
             />
             <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
               <CoverLetterPrintView
