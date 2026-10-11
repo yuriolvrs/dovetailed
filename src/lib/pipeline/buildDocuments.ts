@@ -1,7 +1,8 @@
 // What this file is: the one-pass "Build" pipeline. It reads a posting, matches
 // it to the profile, builds the resume and writes the cover letter, saving
-// each result as it finishes. A step that already has a saved result is skipped,
-// so a retry carries on from the step that failed.
+// each result as it finishes. Reading and matching are skipped when the posting
+// already has them, so a retry does not repeat those AI calls. The resume (no AI
+// call) is rebuilt each run; the cover letter is written each run.
 // In plain terms: the code behind the single Build button. It runs every step
 // for you, one after the other.
 
