@@ -1,11 +1,8 @@
-// What this file is: the Projects editor's right pane on the Profile page --
-// the one project selected in the rail: its name/description headline, its
+// What this file is: the editor for one project, opened in place on the
+// Profile page and in the resume editor: its name/description headline, its
 // links, and its list of bullets. Same pane shape as ExperienceDetail and
 // EducationDetail, built from the same EntryDetailFrame pieces.
-// (ProjectsForm.tsx is the different, all-entries-expanded projects editor
-// the resume editor uses, where the task is curating one resume rather than
-// maintaining the profile.)
-// In plain terms: the form for the project you picked in the sidebar.
+// In plain terms: the form for the project you clicked.
 
 import type { ContactLink, ProjectEntry } from '../../types';
 import type { ReactNode } from 'react';
@@ -45,6 +42,10 @@ export function ProjectDetail({
   bulletRewrite,
   autoFocus,
   onFocused,
+  noun,
+  belowBullets,
+  onBulletFocus,
+  onBulletBlur,
 }: {
   entry: ProjectEntry;
   onChange: (next: ProjectEntry) => void;
@@ -54,6 +55,13 @@ export function ProjectDetail({
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
   autoFocus?: boolean;
   onFocused?: () => void;
+  /** What the delete confirm calls this entry; defaults to the profile wording. */
+  noun?: string;
+  /** Shown under the bullets, e.g. the resume editor's "Not included" picker. */
+  belowBullets?: ReactNode;
+  /** Bullet focus and blur, so a live preview can highlight the bullet being edited. */
+  onBulletFocus?: (bulletIndex: number) => void;
+  onBulletBlur?: () => void;
 }) {
   return (
     <div className="flex flex-col">
@@ -65,7 +73,7 @@ export function ProjectDetail({
         subtitlePlaceholder="What it does, your role, and measurable impact"
         onSubtitleChange={(description) => onChange({ ...entry, description })}
         subtitleMultiline
-        noun="project"
+        noun={noun ?? "project"}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
         autoFocus={autoFocus}
@@ -99,7 +107,10 @@ export function ProjectDetail({
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}
+          onItemFocus={onBulletFocus}
+          onItemBlur={onBulletBlur}
         />
+        {belowBullets && <div className="mt-3">{belowBullets}</div>}
       </div>
 
       <EntryMoreDetails summary="Links">

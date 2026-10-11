@@ -1,7 +1,8 @@
-// What this file is: the field-editable form for a generated resume --
-// same section shape as the Profile page (contact/skills/experience/
-// projects/education), reusing the Profile page's own form components since
-// a ResumeContent snapshot has identical field shapes. Sections are ordered
+// What this file is: the field-editable form for a generated resume. It is
+// the Profile page's own sections (ProfileSections.tsx) over this resume's
+// copy of the data: entries read as resume lines and open in place, plus
+// resume-only extras -- match badges, bullets and entries this resume left
+// out, Reset to profile, and opening an entry from a preview click. Sections are ordered
 // to match the printed layout (contact, education, experience, projects,
 // skills -- see ResumePrintView) so the editor and the live preview next to
 // it read top-to-bottom in the same order. Every bullet shown is copied
@@ -20,14 +21,22 @@
 import { useMemo } from 'react';
 import { Check } from 'lucide-react';
 import type { ExperienceEntry, JobAnalysis, Profile, ProjectEntry, ResumeContent, SourceMapEntry } from '../../types';
-import { experienceKey, projectKey, type ResumeFocusTarget, type ResumeNavTarget } from '../../lib/resumeEntryKeys';
-import { SkillsForm } from '../profile/SkillsForm';
-import { ProjectsForm } from '../profile/ProjectsForm';
-import { Badge } from '../ui/primitives';
-import { BulletRewriteSuggest } from './BulletRewriteSuggest';
-import { ResumeContactSection } from './ResumeContactSection';
-import { ResumeExperienceSection } from './ResumeExperienceSection';
-import { ResumeEducationSection } from './ResumeEducationSection';
+import {
+  educationKey,
+  experienceKey,
+  projectKey,
+  type ResumeFocusTarget,
+  type ResumeNavTarget,
+} from '../../lib/resumeEntryKeys';
+import { BulletPicker } from '../BulletPicker';
+import { Badge, ResetButton } from '../ui/primitives';
+import {
+  ContactSection,
+  EducationSection,
+  ExperienceSection,
+  ProjectsSection,
+  SkillsSection,
+} from '../profile/ProfileSections';
 
 // Collapses whitespace, case, and trailing punctuation before comparing
 // bullet text to the sourceMap, so a trivial edit (fixing a typo, tidying
@@ -127,17 +136,6 @@ export function ResumeEditor({
     return map;
   }, [analysis]);
 
-  function bulletBadge(bulletText: string) {
-    const atomIds = atomIdsByNormalizedText.get(normalizeForMatch(bulletText));
-    if (!atomIds || atomIds.length === 0) return null;
-    return (
-      <Badge color="blue">
-        <Check size={11} />
-        {analysis ? 'Matched to this job' : 'Chosen for this job'}
-      </Badge>
-    );
-  }
-
   // Requirement text a bullet is matched to, or null if unmatched -- used by
   // the Work Experience accordion's per-entry badge and per-bullet labels.
   function bulletMatch(bulletText: string): string | null {
@@ -162,78 +160,117 @@ export function ResumeEditor({
     return Boolean(atomIds && atomIds.length > 0);
   }
 
-  function bulletRewrite(bulletText: string, applySuggestion: (next: string) => void) {
-    return <BulletRewriteSuggest bulletText={bulletText} onApply={applySuggestion} />;
+  // The label beside a bullet: the requirement it answers when one can be
+  // named, else "chosen" when the app picked it without naming one.
+  function bulletBadge(bulletText: string) {
+    const requirement = bulletMatch(bulletText);
+    if (!requirement && !bulletChosen(bulletText)) return null;
+    return (
+      <Badge color="green">
+        <Check size={11} />
+        {requirement ? `Matches: ${requirement}` : 'Chosen for this job'}
+      </Badge>
+    );
   }
 
-  // Slices navRequest down to each section's own shape, so a section only
-  // ever sees a request meant for it (and re-renders when its own nonce
-  // changes, not on every unrelated preview click).
+  // How many of an entry's bullets were picked for this job, beside its title.
+  function entryBadge(entry: { bullets: string[] }) {
+    const chosen = entry.bullets.filter(bulletChosen).length;
+    if (chosen === 0) return null;
+    return (
+      <Badge color="green">
+        <Check size={11} />
+        {chosen} matched
+      </Badge>
+    );
+  }
+
+  // Preview clicks name an entry by key; the sections open it by index.
   const target = navRequest?.target;
-  const contactNav = target?.section === 'contact' ? { nonce: navRequest!.nonce } : null;
-  const educationNav = target?.section === 'education' ? { entryKey: target.entryKey, nonce: navRequest!.nonce } : null;
+  const nonce = navRequest?.nonce ?? 0;
+  const navTo = (index: number) => (index >= 0 ? { index, nonce } : null);
+  const educationNav =
+    target?.section === 'education' ? navTo(value.education.findIndex((e) => educationKey(e) === target.entryKey)) : null;
   const experienceNav =
-    target?.section === 'experience'
-      ? { entryKey: target.entryKey, bulletIndex: target.bulletIndex, nonce: navRequest!.nonce }
-      : null;
+    target?.section === 'experience' ? navTo(value.experience.findIndex((e) => experienceKey(e) === target.entryKey)) : null;
   const projectNav =
-    target?.section === 'project'
-      ? { entryKey: target.entryKey, bulletIndex: target.bulletIndex, nonce: navRequest!.nonce }
-      : null;
-  const skillsNav = target?.section === 'skills' ? { groupIndex: target.groupIndex, nonce: navRequest!.nonce } : null;
+    target?.section === 'project' ? navTo(value.projects.findIndex((e) => projectKey(e) === target.entryKey)) : null;
 
   return (
     <div className="space-y-4">
-      <ResumeContactSection
+      <ContactSection
         value={value.contact}
         onChange={(contact) => onChange({ ...value, contact })}
-        navRequest={contactNav}
+        navNonce={target?.section === 'contact' ? nonce : undefined}
       />
 
-      <ResumeEducationSection
+      <EducationSection
         value={value.education}
         onChange={(education) => onChange({ ...value, education })}
-        onReset={() => onChange({ ...value, education: profile.education })}
-        navRequest={educationNav}
+        resume={{
+          actions: <ResetButton onReset={() => onChange({ ...value, education: profile.education })} />,
+          nav: educationNav,
+        }}
       />
 
-      <ResumeExperienceSection
+      <ExperienceSection
         value={value.experience}
         onChange={(experience) => onChange({ ...value, experience })}
-        bulletMatch={bulletMatch}
-        bulletChosen={bulletChosen}
-        bulletRewrite={bulletRewrite}
-        profileBulletsFor={profileBulletsForExperience}
-        excludedEntries={excludedExperience}
-        onAddEntry={(entry) => onChange({ ...value, experience: [...value.experience, entry] })}
-        onFocusBullet={(entry, bulletIndex) =>
-          onFocusBullet(bulletIndex === null ? null : { section: 'experience', entryKey: experienceKey(entry), bulletIndex })
-        }
-        onReset={() => onChange({ ...value, experience: profile.experience })}
-        navRequest={experienceNav}
+        resume={{
+          actions: <ResetButton onReset={() => onChange({ ...value, experience: profile.experience })} />,
+          bulletBadge,
+          entryBadge,
+          belowBullets: (entry, update) => (
+            <BulletPicker
+              allBullets={profileBulletsForExperience(entry)}
+              included={entry.bullets}
+              onAdd={(bullet) => update({ ...entry, bullets: [...entry.bullets, bullet] })}
+              bulletMatch={bulletMatch}
+            />
+          ),
+          excluded: {
+            entries: excludedExperience,
+            label: (entry) => [entry.title || 'Untitled role', entry.company].filter(Boolean).join(' · '),
+            onAdd: (entry) => onChange({ ...value, experience: [...value.experience, entry] }),
+          },
+          onFocusBullet: (entry, bulletIndex) =>
+            onFocusBullet(bulletIndex === null ? null : { section: 'experience', entryKey: experienceKey(entry), bulletIndex }),
+          nav: experienceNav,
+        }}
       />
 
-      <ProjectsForm
+      <ProjectsSection
         value={value.projects}
         onChange={(projects) => onChange({ ...value, projects })}
-        bulletBadge={bulletBadge}
-        bulletRewrite={bulletRewrite}
-        bulletMatch={bulletMatch}
-        profileBulletsFor={profileBulletsForProject}
-        excludedEntries={excludedProjects}
-        onAddEntry={(entry) => onChange({ ...value, projects: [...value.projects, entry] })}
-        onFocusBullet={(entry, bulletIndex) =>
-          onFocusBullet(bulletIndex === null ? null : { section: 'project', entryKey: projectKey(entry), bulletIndex })
-        }
-        onReset={() => onChange({ ...value, projects: profile.projects })}
-        navRequest={projectNav}
+        resume={{
+          actions: <ResetButton onReset={() => onChange({ ...value, projects: profile.projects })} />,
+          bulletBadge,
+          entryBadge,
+          belowBullets: (entry, update) => (
+            <BulletPicker
+              allBullets={profileBulletsForProject(entry)}
+              included={entry.bullets}
+              onAdd={(bullet) => update({ ...entry, bullets: [...entry.bullets, bullet] })}
+              bulletMatch={bulletMatch}
+            />
+          ),
+          excluded: {
+            entries: excludedProjects,
+            label: (entry) => entry.name || 'Untitled project',
+            onAdd: (entry) => onChange({ ...value, projects: [...value.projects, entry] }),
+          },
+          onFocusBullet: (entry, bulletIndex) =>
+            onFocusBullet(bulletIndex === null ? null : { section: 'project', entryKey: projectKey(entry), bulletIndex }),
+          nav: projectNav,
+        }}
       />
 
-      <SkillsForm
+      <SkillsSection
         value={value.skills}
         onChange={(skills) => onChange({ ...value, skills })}
+        actions={<ResetButton onReset={() => onChange({ ...value, skills: profile.skills })} />}
         onReset={() => onChange({ ...value, skills: profile.skills })}
-        navRequest={skillsNav}
+        navNonce={target?.section === 'skills' ? nonce : undefined}
       />
     </div>
   );

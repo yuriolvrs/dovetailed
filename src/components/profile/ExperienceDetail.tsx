@@ -33,6 +33,10 @@ export function ExperienceDetail({
   bulletRewrite,
   autoFocus,
   onFocused,
+  noun,
+  belowBullets,
+  onBulletFocus,
+  onBulletBlur,
 }: {
   entry: ExperienceEntry;
   onChange: (next: ExperienceEntry) => void;
@@ -46,6 +50,13 @@ export function ExperienceDetail({
   bulletRewrite?: (bulletText: string, applySuggestion: (next: string) => void) => ReactNode;
   autoFocus?: boolean;
   onFocused?: () => void;
+  /** What the delete confirm calls this entry; defaults to the profile wording. */
+  noun?: string;
+  /** Shown under the bullets, e.g. the resume editor's "Not included" picker. */
+  belowBullets?: ReactNode;
+  /** Bullet focus and blur, so a live preview can highlight the bullet being edited. */
+  onBulletFocus?: (bulletIndex: number) => void;
+  onBulletBlur?: () => void;
 }) {
   const [namingSection, setNamingSection] = useState(false);
   const currentSection = entry.section?.trim() || sections[0] || 'Experience';
@@ -59,7 +70,7 @@ export function ExperienceDetail({
         subtitle={entry.company}
         subtitlePlaceholder="Company"
         onSubtitleChange={(company) => onChange({ ...entry, company })}
-        noun="position"
+        noun={noun ?? "position"}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
         autoFocus={autoFocus}
@@ -100,7 +111,10 @@ export function ExperienceDetail({
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}
+          onItemFocus={onBulletFocus}
+          onItemBlur={onBulletBlur}
         />
+        {belowBullets && <div className="mt-3">{belowBullets}</div>}
       </div>
 
       <EntryMoreDetails summary="Location, section, trimming">

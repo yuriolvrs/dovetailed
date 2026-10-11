@@ -5,9 +5,13 @@
 // Contact and Skills read as resume lines with an Edit button.
 // Experience and Projects can also open "Describe it instead", which is the
 // existing notes-to-entry flow (JobDocumentImportSection).
-// In plain terms: the jobs, projects and schools parts of your profile.
+// The resume editor uses the same sections on a tailored resume, adding its
+// own extras through ResumeExtras (match badges, left-out bullets and
+// entries, Reset, opening an entry from a preview click).
+// In plain terms: the jobs, projects and schools parts of your profile, and
+// of each tailored resume.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Check, MessageSquareText, Pencil, Plus } from 'lucide-react';
 import type { Contact, EducationEntry, ExperienceEntry, Profile, ProjectEntry, SkillGroup } from '../../types';
@@ -31,6 +35,16 @@ function bulletRewrite(bulletText: string, applySuggestion: (next: string) => vo
 }
 
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+/**
+ * The red flag on an entry with no bullets. On the profile it cannot be
+ * matched to a job; on a resume it is left out of the printed page.
+ * In plain terms: why an entry without bullets is a problem here.
+ */
+function bulletWarning(entry: { bullets: string[] }, resume?: unknown): string | undefined {
+  if (hasBullets(entry)) return undefined;
+  return resume ? 'Not printed: no bullets' : 'No bullets yet';
+}
 
 /**
  * A dated entry's range as one line, e.g. "Nov 2024 – Present".
@@ -133,6 +147,72 @@ function useDescribe(kind: 'experience' | 'project', describe?: DescribeProps) {
   return { button, panel };
 }
 
+/** What the resume editor adds to a section. The Profile page passes none. */
+export interface ResumeExtras<T> {
+  /** Extra header buttons, e.g. Reset to profile. */
+  actions?: ReactNode;
+  /** A label beside a bullet, e.g. "Matched to this job". */
+  bulletBadge?: (bulletText: string) => ReactNode;
+  /** A label beside a closed entry's title, e.g. "2 matched". */
+  entryBadge?: (entry: T) => ReactNode;
+  /** Under an open entry's bullets, e.g. bullets this resume left out. */
+  belowBullets?: (entry: T, update: (next: T) => void) => ReactNode;
+  /** Profile entries this resume left out, offered back. */
+  excluded?: { entries: T[]; label: (entry: T) => string; onAdd: (entry: T) => void };
+  /** Bullet focus (index) or blur (null), so the preview can highlight it. */
+  onFocusBullet?: (entry: T, bulletIndex: number | null) => void;
+  /** A preview click asking to open this entry. */
+  nav?: { index: number; nonce: number } | null;
+}
+
+/**
+ * Opens the entry a preview click points at and scrolls it into view.
+ * In plain terms: clicking a line in the preview opens it here.
+ */
+function useNavOpen(sectionId: string, nav: { index: number; nonce: number } | null | undefined, open: (index: number) => void) {
+  useEffect(() => {
+    if (!nav) return;
+    open(nav.index);
+    const timer = setTimeout(() => {
+      document
+        .getElementById(sectionId)
+        ?.querySelector(`[data-entry-index="${nav.index}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 50);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav?.nonce]);
+}
+
+/**
+ * The resume editor's "Not included" list: profile entries this resume left
+ * out, each one click to add back. Removing an entry from a resume never
+ * deletes it from the profile, so it must stay reachable.
+ * In plain terms: the jobs or projects you can put back on this resume.
+ */
+function ExcludedEntries<T>({ excluded }: { excluded?: ResumeExtras<T>['excluded'] }) {
+  if (!excluded || excluded.entries.length === 0) return null;
+  return (
+    <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
+      <h3 className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">Not on this resume</h3>
+      <ul className="flex flex-col gap-1.5">
+        {excluded.entries.map((entry, i) => (
+          <li key={i}>
+            <button
+              type="button"
+              onClick={() => excluded.onAdd(entry)}
+              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-100"
+            >
+              <Plus size={13} aria-hidden className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{excluded.label(entry)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function newExperienceEntry(): ExperienceEntry {
   return { section: DEFAULT_SECTION, company: '', title: '', current: false, bullets: [] };
 }
@@ -147,15 +227,18 @@ export function ExperienceSection({
   onChange,
   describe,
   title = 'Experience',
+  resume,
 }: {
   value: ExperienceEntry[];
   onChange: (next: ExperienceEntry[]) => void;
   describe?: DescribeProps;
   title?: string;
+  resume?: ResumeExtras<ExperienceEntry>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusNew, setFocusNew] = useState(false);
   const { button, panel } = useDescribe('experience', describe);
+  useNavOpen('experience', resume?.nav, setOpenIndex);
   const groups = groupBySection(value);
   const sections = value.length === 0 ? [DEFAULT_SECTION] : sectionOrder(value);
   const bulletTotal = value.reduce((total, entry) => total + entry.bullets.length, 0);
@@ -176,6 +259,7 @@ export function ExperienceSection({
       meta={value.length > 0 ? `${count(value.length, 'role')} · ${count(bulletTotal, 'bullet')}` : undefined}
       actions={
         <>
+          {resume?.actions}
           {button}
           <Btn size="sm" variant="ghost" onClick={() => add(lastSection)}>
             <Plus size={13} />
@@ -204,6 +288,7 @@ export function ExperienceSection({
                 onChange={onChange}
                 duplicate={(entry) => ({ ...entry, bullets: [...entry.bullets] })}
                 noun="role"
+                compact={Boolean(resume)}
                 openIndex={openIndex}
                 onOpen={setOpenIndex}
                 focusNew={focusNew}
@@ -215,10 +300,16 @@ export function ExperienceSection({
                   subtitle: entry.company,
                   aside: dateRange(entry),
                   bullets: entry.bullets,
-                  warning: hasBullets(entry) ? undefined : 'No bullets yet',
+                  warning: bulletWarning(entry, resume),
+                  badge: resume?.entryBadge?.(entry),
                 })}
                 renderDetail={({ index, entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
                   <ExperienceDetail
+                    noun={resume ? 'role from this resume' : undefined}
+                    bulletBadge={resume?.bulletBadge}
+                    belowBullets={resume?.belowBullets?.(entry, update)}
+                    onBulletFocus={resume?.onFocusBullet && ((i) => resume.onFocusBullet?.(entry, i))}
+                    onBulletBlur={resume?.onFocusBullet && (() => resume.onFocusBullet?.(entry, null))}
                     entry={entry}
                     onChange={update}
                     autoFocus={autoFocus}
@@ -239,6 +330,7 @@ export function ExperienceSection({
           ))}
         </div>
       )}
+      <ExcludedEntries excluded={resume?.excluded} />
     </SheetSection>
   );
 }
@@ -255,14 +347,17 @@ export function ProjectsSection({
   value,
   onChange,
   describe,
+  resume,
 }: {
   value: ProjectEntry[];
   onChange: (next: ProjectEntry[]) => void;
   describe?: DescribeProps;
+  resume?: ResumeExtras<ProjectEntry>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusNew, setFocusNew] = useState(false);
   const { button, panel } = useDescribe('project', describe);
+  useNavOpen('projects', resume?.nav, setOpenIndex);
   const bulletTotal = value.reduce((total, entry) => total + entry.bullets.length, 0);
 
   function add() {
@@ -278,6 +373,7 @@ export function ProjectsSection({
       meta={value.length > 0 ? `${count(value.length, 'project')} · ${count(bulletTotal, 'bullet')}` : undefined}
       actions={
         <>
+          {resume?.actions}
           {button}
           <Btn size="sm" variant="ghost" onClick={add}>
             <Plus size={13} />
@@ -302,6 +398,7 @@ export function ProjectsSection({
             links: entry.links.map((link) => ({ ...link })),
           })}
           noun="project"
+          compact={Boolean(resume)}
           openIndex={openIndex}
           onOpen={setOpenIndex}
           focusNew={focusNew}
@@ -311,10 +408,16 @@ export function ProjectsSection({
             untitled: 'Untitled project',
             subtitle: entry.description,
             bullets: entry.bullets,
-            warning: hasBullets(entry) ? undefined : 'No bullets yet',
+            warning: bulletWarning(entry, resume),
+            badge: resume?.entryBadge?.(entry),
           })}
           renderDetail={({ entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
             <ProjectDetail
+              noun={resume ? 'project from this resume' : undefined}
+              bulletBadge={resume?.bulletBadge}
+              belowBullets={resume?.belowBullets?.(entry, update)}
+              onBulletFocus={resume?.onFocusBullet && ((i) => resume.onFocusBullet?.(entry, i))}
+              onBulletBlur={resume?.onFocusBullet && (() => resume.onFocusBullet?.(entry, null))}
               entry={entry}
               onChange={update}
               autoFocus={autoFocus}
@@ -326,6 +429,7 @@ export function ProjectsSection({
           )}
         />
       )}
+      <ExcludedEntries excluded={resume?.excluded} />
     </SheetSection>
   );
 }
@@ -341,12 +445,15 @@ function newEducationEntry(): EducationEntry {
 export function EducationSection({
   value,
   onChange,
+  resume,
 }: {
   value: EducationEntry[];
   onChange: (next: EducationEntry[]) => void;
+  resume?: Pick<ResumeExtras<EducationEntry>, 'actions' | 'nav'>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusNew, setFocusNew] = useState(false);
+  useNavOpen('education', resume?.nav, setOpenIndex);
 
   function add() {
     onChange([...value, newEducationEntry()]);
@@ -360,10 +467,13 @@ export function EducationSection({
       title="Education"
       meta={value.length > 0 ? count(value.length, 'school') : undefined}
       actions={
-        <Btn size="sm" variant="ghost" onClick={add}>
-          <Plus size={13} />
-          Add a school
-        </Btn>
+        <>
+          {resume?.actions}
+          <Btn size="sm" variant="ghost" onClick={add}>
+            <Plus size={13} />
+            Add a school
+          </Btn>
+        </>
       }
     >
       {value.length === 0 ? (
@@ -411,13 +521,17 @@ export function ContactSection({
   value,
   onChange,
   alwaysEditing = false,
+  navNonce,
 }: {
   value: Contact;
   onChange: (next: Contact) => void;
   /** The guided setup shows only the form, with no Done. */
   alwaysEditing?: boolean;
+  /** Changes when a preview click asks to edit the contact details. */
+  navNonce?: number;
 }) {
   const [editing, setEditing] = useState(() => value.name.trim() === '');
+  useNavOpen('contact', navNonce === undefined ? null : { index: 0, nonce: navNonce }, () => setEditing(true));
 
   if (alwaysEditing) {
     return (
@@ -477,14 +591,30 @@ export function ContactSection({
  * while there are no skills.
  * In plain terms: your skill list, and the button to change it.
  */
-export function SkillsSection({ value, onChange }: { value: SkillGroup[]; onChange: (next: SkillGroup[]) => void }) {
+export function SkillsSection({
+  value,
+  onChange,
+  actions,
+  onReset,
+  navNonce,
+}: {
+  value: SkillGroup[];
+  onChange: (next: SkillGroup[]) => void;
+  /** Extra header buttons while reading, e.g. the resume's Reset. */
+  actions?: ReactNode;
+  /** Passed to the skills editor, which shows its own Reset. */
+  onReset?: () => void;
+  /** Changes when a preview click asks to edit the skills. */
+  navNonce?: number;
+}) {
   const total = value.reduce((sum, group) => sum + group.items.length, 0);
   const [editing, setEditing] = useState(() => total === 0);
+  useNavOpen('skills', navNonce === undefined ? null : { index: 0, nonce: navNonce }, () => setEditing(true));
 
   if (editing) {
     return (
       <div id="skills" className="scroll-mt-20">
-        <SkillsForm value={value} onChange={onChange} />
+        <SkillsForm value={value} onChange={onChange} onReset={onReset} />
         <div className="mt-2 flex justify-end">
           <Btn size="sm" onClick={() => setEditing(false)}>
             <Check size={13} />
@@ -502,10 +632,13 @@ export function SkillsSection({ value, onChange }: { value: SkillGroup[]; onChan
       title="Skills"
       meta={count(total, 'skill')}
       actions={
-        <Btn size="sm" variant="ghost" onClick={() => setEditing(true)} ariaLabel="Edit skills">
-          <Pencil size={13} />
-          Edit
-        </Btn>
+        <>
+          {actions}
+          <Btn size="sm" variant="ghost" onClick={() => setEditing(true)} ariaLabel="Edit skills">
+            <Pencil size={13} />
+            Edit
+          </Btn>
+        </>
       }
     >
       <button

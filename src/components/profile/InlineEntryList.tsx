@@ -32,6 +32,8 @@ export interface EntrySummary {
   bullets: string[];
   /** Shown as a red flag when set, e.g. "No bullets yet". */
   warning?: string;
+  /** Extra status beside the title, e.g. the resume editor's "2 matched". */
+  badge?: ReactNode;
 }
 
 /** How many bullets a closed entry shows before "and N more". */
@@ -56,6 +58,7 @@ export function InlineEntryList<T>({
   focusNew,
   onFocused,
   noun,
+  compact = false,
 }: {
   items: T[];
   indexes?: number[];
@@ -71,6 +74,8 @@ export function InlineEntryList<T>({
   onFocused: () => void;
   /** What one entry is called, for button labels, e.g. "role". */
   noun: string;
+  /** Closed entries show no bullets: for screens with a preview beside them. */
+  compact?: boolean;
 }) {
   const shown = indexes ?? items.map((_, i) => i);
 
@@ -92,7 +97,8 @@ export function InlineEntryList<T>({
           return (
             <li
               key={index}
-              className="rounded-xl border border-blue-300 dark:border-blue-500/60 ring-4 ring-blue-500/10 bg-white dark:bg-slate-950 overflow-hidden"
+              data-entry-index={index}
+              className="scroll-mt-24 rounded-xl border border-blue-300 dark:border-blue-500/60 ring-4 ring-blue-500/10 bg-white dark:bg-slate-950 overflow-hidden"
             >
               {renderDetail({
                 index,
@@ -145,7 +151,7 @@ export function InlineEntryList<T>({
         const s = summary(entry);
         const extra = s.bullets.length - PREVIEW_BULLETS;
         return (
-          <li key={index}>
+          <li key={index} data-entry-index={index} className="scroll-mt-24">
             <button
               type="button"
               onClick={() => onOpen(index)}
@@ -160,6 +166,7 @@ export function InlineEntryList<T>({
                       {s.warning}
                     </span>
                   )}
+                  {s.badge && <span className="ml-2 inline-flex align-middle">{s.badge}</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-sm text-slate-500 dark:text-slate-400 tabular-nums">
                   {s.aside}
@@ -173,7 +180,12 @@ export function InlineEntryList<T>({
               {s.subtitle?.trim() && (
                 <span className="block text-sm text-slate-600 dark:text-slate-400">{s.subtitle}</span>
               )}
-              {s.bullets.length > 0 && (
+              {compact && s.bullets.length > 0 && (
+                <span className="block text-xs text-slate-500 dark:text-slate-400">
+                  {s.bullets.length} bullet{s.bullets.length === 1 ? '' : 's'}
+                </span>
+              )}
+              {!compact && s.bullets.length > 0 && (
                 <span className="mt-1.5 block space-y-0.5 text-sm text-slate-700 dark:text-slate-300">
                   {s.bullets.slice(0, PREVIEW_BULLETS).map((bullet, i) => (
                     <span key={i} className="flex gap-2">
