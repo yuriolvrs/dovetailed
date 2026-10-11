@@ -8,8 +8,9 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { Plus, Scissors } from 'lucide-react';
+import { AlertCircle, Plus, Scissors } from 'lucide-react';
 import type { ExperienceEntry } from '../../types';
+import { hasBullets } from '../../lib/profileStore';
 import {
   DEFAULT_SECTION,
   addEntryToSection,
@@ -151,10 +152,14 @@ export function ExperienceForm({
                 <title>Dropped first if the resume runs past one page</title>
               </Scissors>
             )}
-            {entry.bullets.length > 0 && (
+            {hasBullets(entry) ? (
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 {entry.bullets.length}
               </span>
+            ) : (
+              <AlertCircle size={11} className="shrink-0 text-red-500 dark:text-red-400" role="img">
+                <title>No highlights yet, so this can't be matched to a job</title>
+              </AlertCircle>
             )}
           </span>
         ),

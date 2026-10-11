@@ -4,6 +4,7 @@
 // browser's storage.
 
 import { db } from './db';
+import { buildProfileAtoms } from './profileAtoms';
 import type { Profile, SkillGroup } from '../types';
 
 /**
@@ -62,32 +63,35 @@ export async function saveProfile(profile: Profile): Promise<void> {
   await db.profiles.put(profile);
 }
 
-// Whether the profile has enough content to be worth comparing against a job
-// posting. Used to gate the "Analyze" action so a blank profile can't be sent
+// Whether the profile has anything a job posting can be matched against.
+// Matching only reads profile atoms (skills, bullets, education details,
+// additional info), so a job or project with no bullets doesn't count. Used
+// to gate the "Analyze" action so a profile with no evidence can't be sent
 // to the LLM (it would only ever produce gaps, never matches).
-// In plain terms: checks whether your profile has enough filled in to bother
-// analyzing a job against it.
+// In plain terms: checks whether your profile has anything a job can
+// actually be matched against.
 export function hasProfileContent(profile: Profile): boolean {
-  return (
-    profile.skills.some((group) => group.items.length > 0) ||
-    profile.experience.length > 0 ||
-    profile.projects.length > 0 ||
-    profile.education.length > 0
-  );
+  return buildProfileAtoms(profile).length > 0;
+}
+
+// Whether a job or project has at least one non-blank bullet. Bullets are the
+// only part of an entry that matching reads (see profileAtoms.ts).
+// In plain terms: does this job or project have any highlights written yet?
+export function hasBullets(entry: { bullets: string[] }): boolean {
+  return entry.bullets.some((bullet) => bullet.trim() !== '');
 }
 
 // Equally-weighted checks for the completeness meter shown on the Profile
-// page -- each corresponds to one of the page's sections, so "missing" can
-// double as a punch list of what to fill in next.
-// In plain terms: the list of profile sections that count toward the
-// "N% complete" meter.
+// page. They track what tailoring needs, so "missing" can double as a punch
+// list of what to fill in next. Highlights counts bullets, not entries: a job
+// with no bullets gives matching nothing to use. Projects and education are
+// optional, so neither is required here.
+// In plain terms: the things that count toward the "N% complete" meter.
 const COMPLETENESS_CHECKS: { label: string; done: (profile: Profile) => boolean }[] = [
   { label: 'Name', done: (p) => p.contact.name.trim() !== '' },
   { label: 'Email', done: (p) => p.contact.email.trim() !== '' },
   { label: 'Skills', done: (p) => p.skills.some((group) => group.items.length > 0) },
-  { label: 'Work Experience', done: (p) => p.experience.length > 0 },
-  { label: 'Projects', done: (p) => p.projects.length > 0 },
-  { label: 'Education', done: (p) => p.education.length > 0 },
+  { label: 'Highlights', done: (p) => p.experience.some(hasBullets) || p.projects.some(hasBullets) },
 ];
 
 export interface ProfileCompleteness {

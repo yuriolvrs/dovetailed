@@ -6,8 +6,10 @@
 // of plain text.
 
 import { useLayoutEffect, useRef } from 'react';
+import type { ClipboardEvent, KeyboardEvent } from 'react';
 import type { ReactNode, TextareaHTMLAttributes } from 'react';
 import { EditableList } from './EditableList';
+import { splitBullets } from '../lib/splitBullets';
 import { fieldInputClass, fieldInputFlatClass } from './ui/primitives';
 
 // A textarea that grows to fit its content instead of scrolling internally,
@@ -53,6 +55,13 @@ interface StringListProps {
   onItemFocus?: (index: number) => void;
   /** Fires when an item's field loses focus. */
   onItemBlur?: () => void;
+  /**
+   * Multiline lists only. Enter starts the next item, Shift+Enter keeps a line
+   * break, and pasting several lines splits them into one item per line.
+   * Meant for one list per screen: focus moves by position among all such
+   * fields on the page.
+   */
+  quickEntry?: boolean;
 }
 
 /**
@@ -78,9 +87,47 @@ export function StringList({
   itemExtra,
   onItemFocus,
   onItemBlur,
+  quickEntry = false,
 }: StringListProps) {
   const flat = variant === 'flat';
   const inputClass = `w-full ${flat ? fieldInputFlatClass : fieldInputClass}`;
+
+  // Moves focus `offset` fields after `from` once React has rendered them.
+  // In plain terms: puts the cursor in the bullet you just started.
+  function focusAfter(from: HTMLTextAreaElement, offset: number) {
+    const fields = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]'));
+    const target = fields.indexOf(from) + offset;
+    requestAnimationFrame(() => {
+      document.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]')[target]?.focus();
+    });
+  }
+
+  // Enter splits the bullet at the cursor: the text after it moves to a new
+  // bullet below. Ignored while an IME is composing and with Shift held.
+  function handleEnter(e: KeyboardEvent<HTMLTextAreaElement>, index: number) {
+    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    const { value, selectionStart, selectionEnd } = e.currentTarget;
+    const next = [...items];
+    next.splice(index, 1, value.slice(0, selectionStart).trimEnd(), value.slice(selectionEnd).trimStart());
+    onChange(next);
+    focusAfter(e.currentTarget, 1);
+  }
+
+  // Several pasted lines become several bullets. Single-line pastes use the
+  // browser's normal paste.
+  function handlePaste(e: ClipboardEvent<HTMLTextAreaElement>, index: number) {
+    const pasted = e.clipboardData.getData('text');
+    if (!/\r?\n/.test(pasted.trim())) return;
+    const { value, selectionStart, selectionEnd } = e.currentTarget;
+    const parts = splitBullets(value.slice(0, selectionStart) + pasted + value.slice(selectionEnd));
+    if (parts.length === 0) return;
+    e.preventDefault();
+    const next = [...items];
+    next.splice(index, 1, ...parts);
+    onChange(next);
+    focusAfter(e.currentTarget, parts.length - 1);
+  }
 
   return (
     <EditableList<string>
@@ -114,6 +161,11 @@ export function StringList({
                   onBlurCommit?.(items);
                   onItemBlur?.();
                 }}
+                {...(quickEntry && {
+                  'data-quick-entry': '',
+                  onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => handleEnter(e, index),
+                  onPaste: (e: ClipboardEvent<HTMLTextAreaElement>) => handlePaste(e, index),
+                })}
               />
             ) : (
               <input

@@ -16,6 +16,7 @@ import {
   EntryDetailField,
   EntryDetailHeader,
   EntryDetailListHeader,
+  EntryMoreDetails,
 } from './EntryDetailFrame';
 import { FieldInput } from '../ui/primitives';
 
@@ -71,41 +72,6 @@ export function ProjectDetail({
         onFocused={onFocused}
       />
 
-      <EntryDetailFields>
-        <EntryDetailField label="Links" className="sm:col-span-2 xl:col-span-3">
-          <EditableList<ContactLink>
-            items={entry.links}
-            onChange={(links) => onChange({ ...entry, links })}
-            newItem={() => ({ label: '', url: '' })}
-            addLabel="Add link"
-            emptyLabel="No links yet."
-            variant="flat"
-            reorderable
-            renderItem={(link, updateLink) => (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
-                <FieldInput
-                  placeholder="Label (e.g. Demo)"
-                  value={link.label}
-                  onChange={(label) => updateLink({ ...link, label })}
-                />
-                <div>
-                  <FieldInput
-                    placeholder="https://..."
-                    value={link.url}
-                    onChange={(url) => updateLink({ ...link, url })}
-                  />
-                  {!looksLikeUrl(link.url) && (
-                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                      Doesn't look like a web address — it will be printed as written.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          />
-        </EntryDetailField>
-      </EntryDetailFields>
-
       <div className="p-5">
         <EntryDetailListHeader
           label="Highlights"
@@ -116,16 +82,54 @@ export function ProjectDetail({
         <StringList
           items={entry.bullets}
           onChange={(bullets) => onChange({ ...entry, bullets })}
-          placeholder="Describe an accomplishment..."
+          placeholder="Describe an accomplishment (Enter adds the next one)"
           multiline
           variant="flat"
           hideAddButton
-          emptyLabel="No highlights yet."
+          quickEntry
+          emptyLabel="No highlights yet. Matching only reads highlights, so this project can't be matched to a posting until you add one."
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}
         />
       </div>
+
+      <EntryMoreDetails summary="Links">
+        <EntryDetailFields>
+          <EntryDetailField label="Links" className="sm:col-span-2 xl:col-span-3">
+            <EditableList<ContactLink>
+              items={entry.links}
+              onChange={(links) => onChange({ ...entry, links })}
+              newItem={() => ({ label: '', url: '' })}
+              addLabel="Add link"
+              emptyLabel="No links yet."
+              variant="flat"
+              reorderable
+              renderItem={(link, updateLink) => (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+                  <FieldInput
+                    placeholder="Label (e.g. Demo)"
+                    value={link.label}
+                    onChange={(label) => updateLink({ ...link, label })}
+                  />
+                  <div>
+                    <FieldInput
+                      placeholder="https://..."
+                      value={link.url}
+                      onChange={(url) => updateLink({ ...link, url })}
+                    />
+                    {!looksLikeUrl(link.url) && (
+                      <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                        Doesn't look like a web address — it will be printed as written.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            />
+          </EntryDetailField>
+        </EntryDetailFields>
+      </EntryMoreDetails>
     </div>
   );
 }

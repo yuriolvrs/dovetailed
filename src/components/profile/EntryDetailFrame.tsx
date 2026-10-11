@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Copy, Plus, Trash2 } from 'lucide-react';
 import { Btn, fieldLabelClass } from '../ui/primitives';
 import { AutoGrowTextarea } from '../StringList';
 
@@ -171,6 +171,25 @@ export function EntryDetailFields({ children }: { children: ReactNode }) {
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 p-5 border-b border-slate-200 dark:border-slate-800">
       {children}
     </div>
+  );
+}
+
+/**
+ * EntryDetailFields behind a native disclosure, closed by default, for the
+ * fields people rarely change once set. A native <details> keeps keyboard and
+ * screen-reader behaviour for free.
+ * In plain terms: a "Details" row that opens to show the smaller fields.
+ */
+export function EntryMoreDetails({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className="group border-t border-slate-200 dark:border-slate-800">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 [&::-webkit-details-marker]:hidden">
+        <ChevronRight size={13} className="transition-transform group-open:rotate-90" aria-hidden />
+        Details
+        <span className="font-normal text-slate-500 dark:text-slate-400">{summary}</span>
+      </summary>
+      {children}
+    </details>
   );
 }
 

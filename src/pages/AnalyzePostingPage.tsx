@@ -116,7 +116,7 @@ export default function AnalyzePostingPage() {
         <div className="flex flex-col gap-4 lg:sticky lg:top-[70px] lg:h-[calc(100vh-88px)]">
           {!hasProfileContent(profile) && (
             <p className="text-sm text-slate-600 dark:text-slate-400 shrink-0">
-              Add your experience or skills on the{' '}
+              Add skills, or highlights to a job or project, on the{' '}
               <Link to="/profile" className="underline hover:text-slate-900 dark:hover:text-slate-100">
                 Profile page
               </Link>{' '}

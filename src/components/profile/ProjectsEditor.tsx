@@ -8,7 +8,9 @@
 // In plain terms: the screen where you list the projects you've built.
 
 import type { ReactNode } from 'react';
+import { AlertCircle } from 'lucide-react';
 import type { ProjectEntry } from '../../types';
+import { hasBullets } from '../../lib/profileStore';
 import { EntryEditor } from './EntryEditor';
 import { ProjectDetail } from './ProjectDetail';
 
@@ -55,10 +57,14 @@ export function ProjectsEditor({
         untitled: 'Untitled project',
         subtitle: entry.description.trim(),
         emptySubtitle: 'No description yet',
-        meta: entry.bullets.length > 0 && (
+        meta: hasBullets(entry) ? (
           <span className="text-[11px] text-slate-500 dark:text-slate-400">
             {entry.bullets.length}
           </span>
+        ) : (
+          <AlertCircle size={11} className="shrink-0 text-red-500 dark:text-red-400" role="img">
+            <title>No highlights yet, so this can't be matched to a job</title>
+          </AlertCircle>
         ),
       })}
       renderDetail={({ entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
