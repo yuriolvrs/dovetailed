@@ -60,7 +60,9 @@ function prioritize(
   sourceMap: SourceMapEntry[],
 ): string[] {
   const index = sectionAtomsByText(atoms, label);
-  const withFlags = items.map((item, i) => {
+  // Blank items (an empty bullet left by Enter or "Add highlight") are never
+  // printed; they would otherwise take a slot under the cap.
+  const withFlags = items.flatMap((item, i) => (item.trim() === '' ? [] : [{ item, i }])).map(({ item, i }) => {
     const atom = index.get(item);
     return { item, i, matched: Boolean(atom && matchedIds.has(atom.id)), atomId: atom?.id };
   });

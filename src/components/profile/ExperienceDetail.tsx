@@ -9,7 +9,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ExperienceEntry } from '../../types';
 import { isPrunable } from '../../lib/generation/fitToPage';
-import { StringList } from '../StringList';
+import { focusLastQuickEntry, StringList } from '../StringList';
 import { DateRangeCompact } from './DateRangeFields';
 import {
   EntryDetailField,
@@ -71,7 +71,10 @@ export function ExperienceDetail({
           label="Highlights"
           count={entry.bullets.length}
           addLabel="Add highlight"
-          onAdd={() => onChange({ ...entry, bullets: [...entry.bullets, ''] })}
+          onAdd={() => {
+            onChange({ ...entry, bullets: [...entry.bullets, ''] });
+            focusLastQuickEntry();
+          }}
         />
         <StringList
           // An entry with no bullets still shows one field, so you can start

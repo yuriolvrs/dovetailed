@@ -34,6 +34,16 @@ export function AutoGrowTextarea({
   return <textarea ref={ref} value={value} className={`${className} resize-none overflow-hidden`} {...props} />;
 }
 
+// Puts the cursor in the last quick-entry field once React has rendered it,
+// e.g. right after "Add highlight" appends an empty bullet.
+// In plain terms: jumps to the bullet you just added.
+export function focusLastQuickEntry() {
+  setTimeout(() => {
+    const fields = document.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]');
+    fields[fields.length - 1]?.focus();
+  });
+}
+
 interface StringListProps {
   items: string[];
   onChange: (items: string[]) => void;
@@ -93,11 +103,14 @@ export function StringList({
   const inputClass = `w-full ${flat ? fieldInputFlatClass : fieldInputClass}`;
 
   // Moves focus `offset` fields after `from` once React has rendered them.
+  // A zero-delay timer, not an animation frame: frames wait for the next
+  // paint (and never run in a hidden tab), so fast typing landed in the old
+  // field.
   // In plain terms: puts the cursor in the bullet you just started.
   function focusAfter(from: HTMLTextAreaElement, offset: number) {
     const fields = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]'));
     const target = fields.indexOf(from) + offset;
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       document.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]')[target]?.focus();
     });
   }

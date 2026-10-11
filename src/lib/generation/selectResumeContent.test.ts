@@ -85,6 +85,15 @@ describe('selectResumeContent', () => {
     expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
   });
 
+  it('leaves out blank bullets instead of printing them or letting them take a slot', () => {
+    const bullets = ['', 'Shipped the billing service', '  ', ...Array.from({ length: BULLET_CAP_BASE }, (_, i) => `Bullet ${i}`)];
+    const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
+    expect(content.experience[0].bullets.every((b) => b.trim() !== '')).toBe(true);
+    expect(content.experience[0].bullets[0]).toBe('Shipped the billing service');
+  });
+
   it('caps unmatched bullets per project at BULLET_CAP_BASE when nothing is matched', () => {
     const bullets = Array.from({ length: BULLET_CAP_BASE + 3 }, (_, i) => `Bullet ${i}`);
     const p = profile({ projects: [{ name: 'Alpha', description: '', bullets, links: [] }] });

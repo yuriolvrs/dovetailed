@@ -10,7 +10,7 @@
 import type { ContactLink, ProjectEntry } from '../../types';
 import type { ReactNode } from 'react';
 import { EditableList } from '../EditableList';
-import { StringList } from '../StringList';
+import { focusLastQuickEntry, StringList } from '../StringList';
 import {
   EntryDetailFields,
   EntryDetailField,
@@ -77,7 +77,10 @@ export function ProjectDetail({
           label="Highlights"
           count={entry.bullets.length}
           addLabel="Add highlight"
-          onAdd={() => onChange({ ...entry, bullets: [...entry.bullets, ''] })}
+          onAdd={() => {
+            onChange({ ...entry, bullets: [...entry.bullets, ''] });
+            focusLastQuickEntry();
+          }}
         />
         <StringList
           // An entry with no bullets still shows one field, so you can start
