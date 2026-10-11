@@ -485,7 +485,7 @@ export default function DocumentsPage() {
                               backdrop uses. */}
                           <div className="fixed inset-0 z-40" onClick={() => setShowHistory(false)} />
                           <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-4">
-                            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+                            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">
                               Version history
                             </p>
                             <div className="space-y-1.5">
@@ -652,7 +652,7 @@ export default function DocumentsPage() {
             <>
               {(texExportError || pageFitOverflow || pageFitRemoved.length > 0) && (
                 <Card className="p-4 mb-5 print:hidden">
-                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 px-1">
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 px-1">
                     Notices
                   </p>
                   <div className="divide-y divide-slate-100 dark:divide-slate-800">

@@ -277,7 +277,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
             wrong here before relying on it.
           </p>
           <div>
-            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
               Placeholders used
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-mono break-words">

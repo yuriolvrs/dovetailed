@@ -248,7 +248,7 @@ export function InterviewPrepSection({
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowHistory(false)} />
                       <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-4">
-                        <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+                        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">
                           Version history
                         </p>
                         <div className="space-y-1.5">

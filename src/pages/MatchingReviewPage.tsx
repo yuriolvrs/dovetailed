@@ -547,7 +547,7 @@ export default function MatchingReviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
         <Card className="p-3 lg:sticky lg:top-20">
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2 mb-3">
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-2 mb-3">
             Requirements
           </p>
           <div className="flex gap-1.5 px-1 mb-3 flex-wrap">
@@ -655,7 +655,7 @@ export default function MatchingReviewPage() {
 
             {(selectedMatch.consideredAtomIds?.length ?? 0) > 0 && (
               <div className="space-y-2 mb-3">
-                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">
                   Considered but not confirmed
                 </p>
                 {selectedMatch.consideredAtomIds!.map((atomId) => {

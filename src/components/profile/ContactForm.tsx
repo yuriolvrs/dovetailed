@@ -41,7 +41,7 @@ export function ContactForm({
         </div>
       </div>
       <div>
-        <span className="mb-2 block text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <span className="mb-2 block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
           Links
         </span>
         <EditableList<ContactLink>

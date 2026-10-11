@@ -154,7 +154,7 @@ export function CoverLetterEditor({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
             Paragraphs
           </span>
           <StringList

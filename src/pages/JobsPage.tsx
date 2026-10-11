@@ -264,7 +264,7 @@ export default function JobsPage() {
 
       <div>
         {(postings === null || postings.length > 0) && (
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">
             Saved Postings{postings !== null && ` — ${postings.length}`}
           </p>
         )}
