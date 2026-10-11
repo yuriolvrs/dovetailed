@@ -224,7 +224,7 @@ export async function extractText(file: File, options: GenerateOptions = {}): Pr
 // error message to show the user.
 export function llmErrorMessage(err: unknown, label: string): string {
   if (err instanceof JsonParseError) {
-    return `${label} failed: the model returned an unusable response. Try again — the model this app uses is small and occasionally produces malformed output.`;
+    return `${label} failed: the model returned an unusable response. Try again. The AI sometimes sends back a broken answer, and a second try usually works.`;
   }
   // A raw status code means nothing to the user, so the ones the proxy
   // raises get spelled out. 413 means two different things depending on the

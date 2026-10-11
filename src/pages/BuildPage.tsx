@@ -7,13 +7,24 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle } from 'lucide-react';
 import type { JobPosting, Profile } from '../types';
-import { loadJobPosting, postingLabel } from '../lib/jobStore';
+import { loadJobPosting } from '../lib/jobStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { llmErrorMessage } from '../lib/llm';
 import { buildDocuments, PIPELINE_STEPS, type PipelineProgress, type PipelineStep } from '../lib/pipeline/buildDocuments';
 import { Btn, Card, PageSkeleton, ProgressBar } from '../components/ui/primitives';
+import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
+import type { StageKey } from '../components/jobs/JobStageTracker';
+
+// Which step of the job's stepper each build step belongs to, so the
+// stepper moves along with the build.
+const STEP_STAGE: Record<PipelineStep, StageKey> = {
+  read: 'requirements',
+  match: 'matches',
+  resume: 'documents',
+  coverLetter: 'documents',
+};
 
 const STEP_LABELS: Record<PipelineStep, string> = {
   read: 'Reading the posting',
@@ -104,19 +115,19 @@ export default function BuildPage() {
   const current = progress?.step;
 
   return (
-    <div className="max-w-xl mx-auto pb-16 space-y-4">
-      <Link
-        to={`/jobs/${posting.id}`}
-        className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
-      >
-        <ArrowLeft size={15} />
-        Back to posting
-      </Link>
-      <Card className="p-6 space-y-5">
+    <div className="pb-16">
+      <JobDetailHeader
+        posting={posting}
+        current={current ? STEP_STAGE[current] : 'requirements'}
+        strategy="matched"
+        analysisDone={Boolean(posting.analysis) || doneSteps.has('read')}
+        matchingDone={doneSteps.has('match')}
+      />
+      <Card className="max-w-xl mx-auto p-6 space-y-5">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Building documents for {posting.title?.trim() || postingLabel(posting)}
-          </h1>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Building your resume and cover letter
+          </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Your resume and cover letter use only what is in your profile. Keep this page open until it finishes;
             leaving stops the build, and finished steps are kept.
