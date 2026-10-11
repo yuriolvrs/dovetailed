@@ -16,9 +16,15 @@ export type ExtractedExperience = Omit<ExperienceEntry, 'current'> & { current?:
 export type ExtractedProject = Omit<ProjectEntry, 'links'>;
 export type ExtractedEducation = Omit<EducationEntry, 'current'> & { current?: boolean };
 
+/**
+ * Contact as extracted: links come back as the bare text the resume shows
+ * ("github.com/name"); mergeProfile turns them into labelled links.
+ */
+export type ExtractedContact = Partial<Omit<Contact, 'links'>> & { links?: string[] };
+
 /** What the extractor is allowed to return -- a Profile minus the app-managed fields. */
 export interface ExtractedProfile {
-  contact: Partial<Contact>;
+  contact: ExtractedContact;
   skills: SkillGroup[];
   experience: ExtractedExperience[];
   projects: ExtractedProject[];
@@ -48,15 +54,19 @@ CRITICAL RULES:
 - The document is in markdown. Strip markdown formatting (#, **, -, |) from the values you return, but do not change the words themselves.
 
 FIELD NOTES:
+- "contact.links" lists every web address or profile link in the resume header (e.g. "linkedin.com/in/name", "github.com/name", a portfolio site), copied exactly. An email address is not a link.
 - "skills" groups skills under the document's own category headings (e.g. "Languages", "Tools"). If the resume lists skills without categories, use a single group with category "Skills".
 - "experience" is jobs/roles. "projects" is personal or academic projects. Do not move an item between them.
 - Dates: use a full month name ("March") for the month and a 4-digit string for the year. Omit either if the document doesn't give it. Set "current": true only if the document says the role is ongoing (e.g. "Present").
+- Dates are often at the far right of a line, after the school, degree, company, title or project name. Read them there too: "2022 – Present" on a degree line means startYear "2022" and "current": true.
+- A project's "name" is its full title as written, up to any "|" separator (keep subtitles such as "Name - What it is").
+- A project's "description" is the short text on its name line after the "|" separator, such as a tech stack (e.g. "Python, TensorFlow, OpenCV"), copied exactly. Do not put its dates there. Use "" if there is none.
 - "bullets" is the list of description lines under an entry. If an entry has none, use an empty array.
 - Omit "projects" entries entirely if the document has no projects section; return an empty array.
 
 Return ONLY valid JSON in exactly this shape, with no commentary and no markdown fences:
 {
-  "contact": { "name": "", "email": "", "phone": "", "location": "" },
+  "contact": { "name": "", "email": "", "phone": "", "location": "", "links": [""] },
   "skills": [{ "category": "", "items": [""] }],
   "experience": [{ "company": "", "title": "", "startMonth": "", "startYear": "", "endMonth": "", "endYear": "", "current": false, "location": "", "bullets": [""] }],
   "projects": [{ "name": "", "description": "", "bullets": [""] }],
@@ -98,7 +108,8 @@ export function isExtractedProfile(value: unknown): value is ExtractedProfile {
     !optionalString(contact.name) ||
     !optionalString(contact.email) ||
     !optionalString(contact.phone) ||
-    !optionalString(contact.location)
+    !optionalString(contact.location) ||
+    !(contact.links === undefined || contact.links === null || isStringArray(contact.links))
   ) {
     return false;
   }

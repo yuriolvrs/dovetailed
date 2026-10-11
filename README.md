@@ -22,7 +22,7 @@ PRD §10 requires providers whose terms do not permit training on API data. Two 
 | Provider | Used for | Training on your data |
 | --- | --- | --- |
 | **Groq** (`openai/gpt-oss-120b`) | Text: analysis, matching, cover letters, template conversion | Not used for training |
-| **Mistral** (`mistral-ocr-latest`) | Reading attached files (PDF/DOCX/PPTX/images) into text | Free tier permits it **by default**; opted out via Admin Console → Privacy → "Data usage for improving our services". **Verified disabled 2026-08-16.** |
+| **Mistral** (`mistral-ocr-latest`) | Reading scans and images into text (PDF/DOCX/PPTX with a text layer are read in the browser with pdf.js or a built-in unzip, and never reach it) | Free tier permits it **by default**; opted out via Admin Console → Privacy → "Data usage for improving our services". **Verified disabled 2026-08-16.** |
 
 Two caveats recorded deliberately, because neither is covered by that opt-out:
 
@@ -48,7 +48,7 @@ Deployed and live at https://pimp-my-resume.pages.dev. See [PRD.md](./PRD.md) fo
 
 - **Frontend:** Vite + React + TypeScript (strict), React Router, Tailwind CSS
 - **Local storage:** Dexie.js over IndexedDB
-- **Proxy:** Cloudflare Worker (TypeScript), stateless. Two routes: `/generate` forwards to the text provider (Groq, `openai/gpt-oss-120b`), `/extract` forwards attached files to the document reader (Mistral, `mistral-ocr-latest`)
+- **Proxy:** Cloudflare Worker (TypeScript), stateless. Two routes: `/generate` forwards to the text provider (Groq, `openai/gpt-oss-120b`), `/extract` forwards attached scans and images to the document reader (Mistral, `mistral-ocr-latest`); files with a text layer are read in the browser instead
 - **Testing:** Vitest, LLM calls mocked
 
 ## Getting started

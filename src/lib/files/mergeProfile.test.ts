@@ -55,6 +55,20 @@ describe('findDuplicates', () => {
     expect(hits).toEqual([{ section: 'experience', extractedIndex: 0, existingIndex: 0 }]);
   });
 
+  it('matches the same job and project when dates or the tech-stack line differ', () => {
+    const hits = findDuplicates(
+      baseProfile({ projects: [{ name: 'SokoBot', description: '', bullets: [], links: [] }] }),
+      extraction({
+        experience: [{ company: 'Acme Bank', title: 'Account Officer', startYear: '2019', current: true, bullets: [] }],
+        projects: [{ name: 'SokoBot', description: 'Java, A* Search', bullets: [] }],
+      }),
+    );
+    expect(hits).toEqual([
+      { section: 'experience', extractedIndex: 0, existingIndex: 0 },
+      { section: 'projects', extractedIndex: 0, existingIndex: 0 },
+    ]);
+  });
+
   it('does not match a different role at the same company', () => {
     const hits = findDuplicates(
       baseProfile(),
@@ -130,6 +144,30 @@ describe('mergeProfile', () => {
     expect(merged.experience[0].bullets).toEqual(['Replacement bullet']);
   });
 
+  it('combines a duplicate into the existing entry: new bullets added, empty fields filled', () => {
+    const merged = mergeProfile(
+      baseProfile(),
+      extraction({
+        experience: [
+          {
+            company: 'Acme Bank',
+            title: 'Account Officer',
+            startMonth: 'March',
+            startYear: '2019',
+            location: 'Manila',
+            bullets: ['original bullet', 'A bullet only the second resume has'],
+          },
+        ],
+      }),
+      ['experience'],
+      { 'experience.0': 'combine' },
+    );
+
+    expect(merged.experience).toHaveLength(1);
+    expect(merged.experience[0].bullets).toEqual(['Original bullet', 'A bullet only the second resume has']);
+    expect(merged.experience[0].location).toBe('Manila');
+  });
+
   it('skips an entry resolved as skip', () => {
     const merged = mergeProfile(
       baseProfile(),
@@ -151,6 +189,28 @@ describe('mergeProfile', () => {
     expect(merged.contact.email).toBe('me@example.com');
     // Only the field that was empty gets filled.
     expect(merged.contact.phone).toBe('555-1234');
+  });
+
+  it('fills contact links from the resume when the user has none', () => {
+    const merged = mergeProfile(
+      baseProfile(),
+      extraction({ contact: { links: ['linkedin.com/in/someone', 'https://github.com/someone', ' '] } }),
+      ['contact'],
+    );
+    expect(merged.contact.links).toEqual([
+      { label: 'LinkedIn', url: 'https://linkedin.com/in/someone' },
+      { label: 'GitHub', url: 'https://github.com/someone' },
+    ]);
+  });
+
+  it('keeps contact links the user already added', () => {
+    const mine = { label: 'Site', url: 'https://me.dev' };
+    const merged = mergeProfile(
+      baseProfile({ contact: { name: 'Existing Name', email: 'me@example.com', links: [mine] } }),
+      extraction({ contact: { links: ['github.com/someone'] } }),
+      ['contact'],
+    );
+    expect(merged.contact.links).toEqual([mine]);
   });
 
   it('folds skills into an existing category instead of duplicating it', () => {

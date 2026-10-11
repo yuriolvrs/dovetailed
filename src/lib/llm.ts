@@ -1,13 +1,15 @@
 // What this file is: the one module that knows how to talk to the proxy
 // (CLAUDE.md: no provider-specific code elsewhere). generate() sends a prompt
 // to the Worker and returns the raw text; generateStructured() adds JSON
-// parsing with one retry on failure (PRD §7); extractText() sends an attached
-// file to the document reader and returns its text. Never holds an API key --
+// parsing with one retry on failure (PRD §7); extractText() returns an attached
+// file's text, read in the browser when it has a text layer and sent to the
+// document reader only when it doesn't (scans, images). Never holds an API key --
 // those live only in the Worker.
 // In plain terms: the app's one doorway to asking the AI something or having
 // it read a file.
 
 import { classifyFile, readAttachment, SUPPORTED_FILE_HINT } from './files/readFile';
+import { readTextLocally } from './files/localText';
 import { JsonParseError, parseJson } from './json';
 import { repairText } from './repairText';
 
@@ -184,8 +186,15 @@ interface OcrResponse {
  * kept anywhere.
  */
 export async function extractText(file: File, options: GenerateOptions = {}): Promise<string> {
-  if (classifyFile(file.name, file.type) === 'text') {
+  const kind = classifyFile(file.name, file.type);
+  if (kind === 'text') {
     return repairText(await file.text());
+  }
+  // A PDF/DOCX/PPTX with a text layer never needs the document reader, which
+  // runs on a small shared free quota.
+  if (kind === 'document') {
+    const local = await readTextLocally(file);
+    if (local) return repairText(local);
   }
 
   const { mimeType, base64 } = await readAttachment(file);
@@ -225,6 +234,13 @@ export function llmErrorMessage(err: unknown, label: string): string {
   if (err instanceof ProxyRequestError) {
     if (err.status === 415) {
       return `${label} failed: that file type can't be read. Attach a ${SUPPORTED_FILE_HINT} file.`;
+    }
+    // Still limited after every retry, so the provider's quota is used up
+    // for now. A pasted text skips the document reader entirely.
+    if (err.status === 429) {
+      return err.path === '/extract'
+        ? `${label} failed: the document reader is busy right now (rate limit reached). Wait a minute and try again, or paste the text instead.`
+        : `${label} failed: the AI service is busy right now (rate limit reached). Wait a minute and try again.`;
     }
     if (err.status === 413) {
       return err.path === '/extract'

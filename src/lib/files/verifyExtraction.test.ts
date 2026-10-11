@@ -115,6 +115,13 @@ describe('verifyExtractedProfile', () => {
     expect(result[0].text).toContain('Spring Framework');
   });
 
+  it('flags a contact link that is not in the document', () => {
+    const extracted = { contact: { links: ['github.com/real', 'github.com/fake'] }, skills: [], experience: [], projects: [], education: [] };
+    expect(verifyExtractedProfile(extracted, 'Links: github.com/real')).toEqual([
+      { path: 'contact.links.1', text: 'github.com/fake' },
+    ]);
+  });
+
   it('flags an invented skill', () => {
     const result = verifyExtractedProfile(
       profile({ skills: [{ category: 'Languages', items: ['TypeScript', 'Rust'] }] }),

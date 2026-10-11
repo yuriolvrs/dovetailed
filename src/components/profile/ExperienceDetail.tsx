@@ -9,7 +9,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ExperienceEntry } from '../../types';
 import { isPrunable } from '../../lib/generation/fitToPage';
-import { StringList } from '../StringList';
+import { focusLastQuickEntry, StringList } from '../StringList';
 import { DateRangeCompact } from './DateRangeFields';
 import {
   EntryDetailField,
@@ -71,17 +71,25 @@ export function ExperienceDetail({
           label="Highlights"
           count={entry.bullets.length}
           addLabel="Add highlight"
-          onAdd={() => onChange({ ...entry, bullets: [...entry.bullets, ''] })}
+          onAdd={() => {
+            onChange({ ...entry, bullets: [...entry.bullets, ''] });
+            focusLastQuickEntry();
+          }}
         />
         <StringList
-          items={entry.bullets}
+          // An entry with no bullets still shows one field, so you can start
+          // typing or paste a list straight away. Nothing is saved until you do.
+          items={entry.bullets.length > 0 ? entry.bullets : ['']}
           onChange={(bullets) => onChange({ ...entry, bullets })}
-          placeholder="Describe an accomplishment (Enter adds the next one)"
+          placeholder={
+            entry.bullets.length > 0
+              ? 'Describe an accomplishment (Enter adds the next one)'
+              : 'What did you do here? Type one accomplishment, or paste a list (one per line).'
+          }
           multiline
           variant="flat"
           hideAddButton
           quickEntry
-          emptyLabel="No highlights yet. Matching only reads highlights, so this job can't be matched to a posting until you add one."
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}
