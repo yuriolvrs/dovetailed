@@ -23,6 +23,7 @@ import {
 import { listGenerationTypesByPosting } from '../lib/genStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { JobsFirstRun } from '../components/jobs/JobsFirstRun';
+import { Welcome } from '../components/jobs/Welcome';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import {
   Badge,
@@ -134,6 +135,13 @@ export default function JobsPage() {
     await saveJobPosting(posting);
     setModalOpen(false);
     navigate(build ? `/jobs/${posting.id}/build` : `/jobs/${posting.id}`);
+  }
+
+  // A first visit, with nothing saved anywhere, gets the welcome instead of
+  // an empty list.
+  if (postings !== null && postings.length === 0) {
+    if (profileEmpty === null) return null;
+    if (profileEmpty) return <Welcome onStart={() => navigate('/profile')} />;
   }
 
   return (
