@@ -19,15 +19,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, FileText, ListChecks, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, ListChecks, Mail, MessageCircleQuestion, Sparkles, Trash2 } from 'lucide-react';
 import type { JobPosting } from '../types';
 import { ARRANGEMENTS, deleteJobPosting, loadJobPosting, saveJobPosting } from '../lib/jobStore';
 import { loadGeneration } from '../lib/genStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { ApplicationTracker } from '../components/jobs/ApplicationTracker';
+import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { PostingTextPanel } from '../components/jobs/PostingTextPanel';
 import { useToast } from '../components/ui/Toast';
-import { Btn, Card, FieldInput, FieldSelect, PageSkeleton } from '../components/ui/primitives';
+import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
+import { Badge, Btn, Card, FieldInput, FieldSelect, PageSkeleton } from '../components/ui/primitives';
 
 // Quiet text link used for the secondary ways in.
 const linkClass =
@@ -117,87 +119,117 @@ export default function JobDetailPage() {
   // already exists.
   const started = matchingStarted || directStarted || hasDocuments;
   const noText = posting.rawText.trim() === '';
+  const fit = computeFitScore(posting.analysis);
+  // Requirements met fully or partly, once matching has run.
+  const matchedCount =
+    posting.analysis && posting.analysis.matches.length > 0
+      ? posting.analysis.matches.filter((m) => m.status === 'full' || m.status === 'partial').length
+      : null;
 
   return (
     <div className="pb-16">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <Link
-          to="/"
-          className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-        >
-          <ArrowLeft size={15} />
-          Back to Jobs
-        </Link>
-        {!confirmingDelete ? (
-          <Btn
-            size="sm"
-            variant="ghost"
-            onClick={() => setConfirmingDelete(true)}
-            className="text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
-          >
-            <Trash2 size={13} />
-            Delete posting
-          </Btn>
-        ) : (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-600 dark:text-slate-300">Delete this posting?</span>
-            <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
-              Yes, delete
+      <JobDetailHeader
+        posting={posting}
+        current="posting"
+        // The steps follow the route actually in use; Matching is the default
+        // the Build button runs.
+        strategy={directStarted && !matchingStarted && !hasDocuments ? 'holistic' : 'matched'}
+        analysisDone={matchingStarted}
+        matchingDone={Boolean(posting.analysis && posting.analysis.matches.length > 0)}
+        selectionDone={directStarted}
+        actions={
+          !confirmingDelete ? (
+            <Btn
+              size="sm"
+              variant="ghost"
+              onClick={() => setConfirmingDelete(true)}
+              className="text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+            >
+              <Trash2 size={13} />
+              Delete posting
             </Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
-              Cancel
-            </Btn>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-600 dark:text-slate-300">Delete this posting?</span>
+              <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
+                Yes, delete
+              </Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
+                Cancel
+              </Btn>
+            </div>
+          )
+        }
+      />
 
       {started ? (
         // Return visit: the posting has been read, so it folds away and the
         // documents lead.
         <div className="space-y-4">
+          <Card className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Your documents</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  {hasDocuments
+                    ? 'Open one to edit, check and export it.'
+                    : matchingStarted
+                      ? 'The build stopped before both documents were ready. Finishing it reuses the steps already done.'
+                      : 'Build a resume and cover letter from your matches to this posting.'}
+                </p>
+              </div>
+              {fit !== null && <Badge color={fitScoreColor(fit)}>Fit {fit}%</Badge>}
+            </div>
+            {hasDocuments ? (
+              // One button per document, each opening its own tab, so the
+              // cover letter is one click away instead of behind the resume.
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Btn onClick={() => navigate(`/jobs/${posting.id}/documents`)}>
+                  <FileText size={14} />
+                  Resume
+                </Btn>
+                <Btn variant="secondary" onClick={() => navigate(`/jobs/${posting.id}/documents?tab=coverLetter`)}>
+                  <Mail size={14} />
+                  Cover letter
+                </Btn>
+                <Btn variant="secondary" onClick={() => navigate(`/jobs/${posting.id}/documents?tab=interviewPrep`)}>
+                  <MessageCircleQuestion size={14} />
+                  Interview prep
+                </Btn>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <Btn onClick={() => navigate(`/jobs/${posting.id}/build`)} disabled={noText || !profileReady}>
+                  {matchingStarted ? 'Finish building' : 'Build resume and cover letter'}
+                  <ArrowRight size={14} />
+                </Btn>
+              </div>
+            )}
+            {(matchingStarted || directStarted) && (
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-x-5 gap-y-2">
+                {matchingStarted && (
+                  <Link to={`/jobs/${posting.id}/match`} className={linkClass}>
+                    <ListChecks size={12} />
+                    {matchedCount !== null
+                      ? `Review matches (${matchedCount} of ${posting.analysis!.requirements.length} requirements met)`
+                      : 'Review matches'}
+                  </Link>
+                )}
+                {directStarted && (
+                  <Link to={`/jobs/${posting.id}/direct`} className={linkClass}>
+                    <Sparkles size={12} />
+                    Open the Direct read
+                  </Link>
+                )}
+              </div>
+            )}
+          </Card>
           <PostingTextPanel
             posting={posting}
             variant="summary"
             onLiveChange={(rawText) => updateLive({ rawText })}
             onCommit={() => update({ rawText: posting.rawText })}
           />
-          <Card className="p-5">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Your documents</h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-              {hasDocuments
-                ? 'Edit, compare and export your tailored resume and cover letter.'
-                : matchingStarted
-                  ? 'The build stopped before both documents were ready. Finishing it reuses the steps already done.'
-                  : 'Build a resume and cover letter from your matches to this posting.'}
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {hasDocuments ? (
-                <Btn onClick={() => navigate(`/jobs/${posting.id}/documents`)}>
-                  <FileText size={14} />
-                  Open resume and cover letter
-                </Btn>
-              ) : (
-                <Btn onClick={() => navigate(`/jobs/${posting.id}/build`)} disabled={noText || !profileReady}>
-                  {matchingStarted ? 'Finish building' : 'Build resume and cover letter'}
-                  <ArrowRight size={14} />
-                </Btn>
-              )}
-              {matchingStarted && (
-                <Btn variant="secondary" onClick={() => navigate(`/jobs/${posting.id}/match`)}>
-                  <ListChecks size={14} />
-                  Review matches
-                </Btn>
-              )}
-            </div>
-            {directStarted && (
-              <div className="mt-4">
-                <Link to={`/jobs/${posting.id}/direct`} className={linkClass}>
-                  <Sparkles size={12} />
-                  Open the Direct read
-                </Link>
-              </div>
-            )}
-          </Card>
         </div>
       ) : (
         // First visit: the posting gets the room, next to one action.

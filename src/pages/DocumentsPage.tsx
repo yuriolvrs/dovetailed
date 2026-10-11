@@ -61,7 +61,12 @@ export default function DocumentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const strategy: GenerationStrategy = searchParams.get('route') === 'direct' ? 'holistic' : 'matched';
 
-  const [tab, setTab] = useState<Tab>('resume');
+  // ?tab= lets the posting page open the cover letter or interview prep
+  // directly; it is read once, and switching tabs afterwards is local state.
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = searchParams.get('tab');
+    return requested === 'coverLetter' || requested === 'interviewPrep' ? requested : 'resume';
+  });
   const [posting, setPosting] = useState<JobPosting | null | 'missing'>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [generation, setGeneration] = useState<Generation | null | 'none'>(null);
@@ -288,9 +293,7 @@ export default function DocumentsPage() {
     return (
       <section>
         <JobDetailHeader
-          backHref={`/jobs/${posting.id}/direct`}
-          backLabel="Back to choices"
-          postingId={posting.id}
+          posting={posting}
           current="documents"
           strategy="holistic"
           analysisDone={Boolean(posting.analysis)}
@@ -314,9 +317,7 @@ export default function DocumentsPage() {
     return (
       <section>
         <JobDetailHeader
-          backHref={`/jobs/${posting.id}/match/analyze`}
-          backLabel="Back to requirements"
-          postingId={posting.id}
+          posting={posting}
           current="documents"
           strategy="matched"
           analysisDone={false}
@@ -339,9 +340,7 @@ export default function DocumentsPage() {
     return (
       <section>
         <JobDetailHeader
-          backHref={`/jobs/${posting.id}/match`}
-          backLabel="Back to matches"
-          postingId={posting.id}
+          posting={posting}
           current="documents"
           strategy="matched"
           analysisDone={true}
@@ -371,9 +370,7 @@ export default function DocumentsPage() {
     // alone, can't see it).
     <div className="pb-16 print:pb-0">
       <JobDetailHeader
-        backHref={strategy === 'holistic' ? `/jobs/${posting.id}/direct` : `/jobs/${posting.id}/match`}
-        backLabel={strategy === 'holistic' ? 'Back to choices' : 'Back to matches'}
-        postingId={posting.id}
+        posting={posting}
         current="documents"
         strategy={strategy}
         analysisDone={Boolean(posting.analysis)}
@@ -381,15 +378,19 @@ export default function DocumentsPage() {
         selectionDone={Boolean(posting.holisticSelection)}
         subtabs={
           <>
-            <div className="mb-3">
-              <RouteSwitch
-                current={strategy}
-                onSelect={(next) =>
-                  setSearchParams(next === 'holistic' ? { route: 'direct' } : {}, { replace: true })
-                }
-                hint={`Built by ${strategy === 'holistic' ? 'the direct read' : 'requirement matching'}. Switch to compare — each route keeps its own documents and history.`}
-              />
-            </div>
+            {/* Only offered once both routes have been run; otherwise there
+                is nothing to compare and the choice is just noise. */}
+            {posting.analysis && posting.holisticSelection && (
+              <div className="mb-3">
+                <RouteSwitch
+                  current={strategy}
+                  onSelect={(next) =>
+                    setSearchParams(next === 'holistic' ? { route: 'direct' } : {}, { replace: true })
+                  }
+                  hint={`Built by ${strategy === 'holistic' ? 'the direct read' : 'requirement matching'}. Switch to compare — each route keeps its own documents and history.`}
+                />
+              </div>
+            )}
           <div className="flex border-b border-slate-200 dark:border-slate-700 print:hidden">
             <button
               type="button"

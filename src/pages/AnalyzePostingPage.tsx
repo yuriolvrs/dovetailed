@@ -96,9 +96,7 @@ export default function AnalyzePostingPage() {
   return (
     <div className="pb-16">
       <JobDetailHeader
-        backHref={`/jobs/${posting.id}`}
-        backLabel="Back to posting"
-        postingId={posting.id}
+        posting={posting}
         current="requirements"
         strategy="matched"
         analysisDone={Boolean(posting.analysis)}

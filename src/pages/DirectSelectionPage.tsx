@@ -159,9 +159,7 @@ export default function DirectSelectionPage() {
   return (
     <section className="pb-16">
       <JobDetailHeader
-        backHref={`/jobs/${posting.id}`}
-        backLabel="Back to posting"
-        postingId={posting.id}
+        posting={posting}
         current="choices"
         strategy="holistic"
         analysisDone={Boolean(posting.analysis)}
