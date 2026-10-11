@@ -165,7 +165,7 @@ export function ExperienceDetail({
           multiline
           variant="flat"
           hideAddButton
-          emptyLabel="No highlights yet."
+          emptyLabel="No highlights yet. Matching only reads highlights, so this job can't be matched to a posting until you add one."
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}

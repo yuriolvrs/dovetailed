@@ -7,7 +7,7 @@
 // the new category-grouped shape.
 
 import { describe, expect, it } from 'vitest';
-import { computeProfileCompleteness, emptyProfile, normalizeSkills } from './profileStore';
+import { computeProfileCompleteness, emptyProfile, hasProfileContent, normalizeSkills } from './profileStore';
 
 describe('normalizeSkills', () => {
   it('wraps an old flat string list into one "Skills" category', () => {
@@ -44,7 +44,7 @@ describe('computeProfileCompleteness', () => {
   it('is 0% for a brand-new empty profile, missing every check', () => {
     const { percent, missing } = computeProfileCompleteness(emptyProfile());
     expect(percent).toBe(0);
-    expect(missing).toEqual(['Name', 'Email', 'Skills', 'Work Experience', 'Projects', 'Education']);
+    expect(missing).toEqual(['Name', 'Email', 'Skills', 'Highlights']);
   });
 
   it('is 100% once every check passes', () => {
@@ -57,11 +57,9 @@ describe('computeProfileCompleteness', () => {
           company: 'Acme',
           title: 'Engineer',
           current: true,
-          bullets: [],
+          bullets: ['Shipped the billing rewrite'],
         },
       ],
-      projects: [{ name: 'Project', description: '', bullets: [], links: [] }],
-      education: [{ school: 'U', degree: 'BS', current: false }],
     };
     const { percent, missing } = computeProfileCompleteness(profile);
     expect(percent).toBe(100);
@@ -74,8 +72,46 @@ describe('computeProfileCompleteness', () => {
       contact: { name: 'Alex', email: '', links: [] },
     };
     const { percent, missing } = computeProfileCompleteness(profile);
-    // 1 of 6 checks pass (Name) -> 1/6 rounds to 17%.
-    expect(percent).toBe(17);
-    expect(missing).toEqual(['Email', 'Skills', 'Work Experience', 'Projects', 'Education']);
+    // 1 of 4 checks pass (Name) -> 25%.
+    expect(percent).toBe(25);
+    expect(missing).toEqual(['Email', 'Skills', 'Highlights']);
+  });
+
+  it('does not count a job or project with no bullets as highlights', () => {
+    const profile = {
+      ...emptyProfile(),
+      experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets: ['  '] }],
+      projects: [{ name: 'Project', description: 'A thing', bullets: [], links: [] }],
+    };
+    expect(computeProfileCompleteness(profile).missing).toContain('Highlights');
+  });
+
+  it('counts project bullets alone as highlights', () => {
+    const profile = {
+      ...emptyProfile(),
+      projects: [{ name: 'Project', description: '', bullets: ['Built a parser'], links: [] }],
+    };
+    expect(computeProfileCompleteness(profile).missing).not.toContain('Highlights');
+  });
+});
+
+describe('hasProfileContent', () => {
+  it('is false when entries exist but none has anything matching can read', () => {
+    const profile = {
+      ...emptyProfile(),
+      experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets: [] }],
+      education: [{ school: 'U', degree: 'BS', current: false }],
+    };
+    expect(hasProfileContent(profile)).toBe(false);
+  });
+
+  it('is true once there is a bullet or a skill', () => {
+    expect(
+      hasProfileContent({
+        ...emptyProfile(),
+        experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets: ['Shipped it'] }],
+      }),
+    ).toBe(true);
+    expect(hasProfileContent({ ...emptyProfile(), skills: [{ category: 'Skills', items: ['Go'] }] })).toBe(true);
   });
 });

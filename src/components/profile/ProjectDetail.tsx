@@ -120,7 +120,7 @@ export function ProjectDetail({
           multiline
           variant="flat"
           hideAddButton
-          emptyLabel="No highlights yet."
+          emptyLabel="No highlights yet. Matching only reads highlights, so this project can't be matched to a posting until you add one."
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}

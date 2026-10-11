@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { AlertCircle, Check, ChevronLeft, ChevronRight, CircleDashed } from 'lucide-react';
 import type { Profile } from '../types';
-import { computeProfileCompleteness, loadProfile, saveProfile } from '../lib/profileStore';
+import { computeProfileCompleteness, hasBullets, loadProfile, saveProfile } from '../lib/profileStore';
 import { loadTemplate } from '../lib/templateStore';
 import { ContactForm } from '../components/profile/ContactForm';
 import { SkillsForm } from '../components/profile/SkillsForm';
@@ -36,16 +36,18 @@ function bulletRewrite(bulletText: string, applySuggestion: (next: string) => vo
 // The Profile page's tabs, in order. `checks` names the completeness labels
 // (from computeProfileCompleteness) that belong to a tab, so its badge can
 // flag the ones still missing -- the same information the page's old sidebar
-// showed, now surfaced per tab instead. Import and backup/restore share one
+// showed, now surfaced per tab instead. Experience and Projects share the
+// Highlights check, since bullets in either one satisfy it. Import and
+// backup/restore share one
 // tab ("Import & Data") since they're one-time setup/maintenance actions,
 // not profile content the way the others are.
 // In plain terms: the list of tabs across the top of the Profile page, and
 // what each one needs filled in to not show a warning.
 const TABS = [
   { id: 'contact', label: 'Contact', checks: ['Name', 'Email'] },
-  { id: 'education', label: 'Education', checks: ['Education'] },
-  { id: 'experience', label: 'Experience', checks: ['Work Experience'] },
-  { id: 'projects', label: 'Projects', checks: ['Projects'] },
+  { id: 'education', label: 'Education', checks: [] },
+  { id: 'experience', label: 'Experience', checks: ['Highlights'] },
+  { id: 'projects', label: 'Projects', checks: ['Highlights'] },
   { id: 'skills', label: 'Skills', checks: ['Skills'] },
   { id: 'writing-samples', label: 'Writing Samples', checks: [] },
   { id: 'tex-template', label: '.tex Template', checks: [] },
@@ -125,8 +127,19 @@ export default function ProfilePage() {
   // flagging when empty -- amber, versus red for the required checks above.
   // In plain terms: optional things you haven't filled in yet.
   const optionalEmpty: Record<string, boolean> = {
+    education: profile.education.length === 0,
+    experience: profile.experience.length === 0,
+    projects: profile.projects.length === 0,
     'writing-samples': profile.writingSamples.every((s) => s.trim() === ''),
     'tex-template': hasTemplate === false,
+  };
+  // Entries that exist but have no bullets. Matching never reads a title or
+  // company, so these are flagged red even when another entry has bullets.
+  // In plain terms: jobs or projects you added but haven't written any
+  // highlights for yet.
+  const withoutBullets: Record<string, number> = {
+    experience: profile.experience.filter((e) => !hasBullets(e)).length,
+    projects: profile.projects.filter((e) => !hasBullets(e)).length,
   };
 
   const activeIndex = TABS.findIndex((t) => t.id === activeTab);
@@ -165,6 +178,7 @@ export default function ProfilePage() {
         {TABS.map((tab, i) => {
           const active = tab.id === activeTab;
           const required = tab.checks.filter((c) => completeness.missing.includes(c));
+          const bulletless = withoutBullets[tab.id] ?? 0;
           const flag =
             required.length > 0
               ? ({
@@ -172,9 +186,11 @@ export default function ProfilePage() {
                   state: `missing ${required.join(', ')}`,
                   Icon: AlertCircle,
                 } as const)
-              : optionalEmpty[tab.id]
-                ? ({ color: 'amber', state: 'empty, optional', Icon: CircleDashed } as const)
-                : null;
+              : bulletless > 0
+                ? ({ color: 'red', state: `${bulletless} without highlights`, Icon: AlertCircle } as const)
+                : optionalEmpty[tab.id]
+                  ? ({ color: 'amber', state: 'empty, optional', Icon: CircleDashed } as const)
+                  : null;
 
           return (
             <button
@@ -183,7 +199,9 @@ export default function ProfilePage() {
               role="tab"
               id={`profile-tab-${tab.id}`}
               aria-selected={active}
-              aria-label={flag ? `${tab.label} — ${flag.state}` : `${tab.label} — complete`}
+              aria-label={
+                flag ? `${tab.label} — ${flag.state}` : tab.id === 'import-data' ? tab.label : `${tab.label} — complete`
+              }
               aria-controls="profile-tabpanel"
               // One tab stop for the whole strip: Tab reaches the selected
               // tab, arrows move within it.
@@ -211,7 +229,8 @@ export default function ProfilePage() {
                   aria-hidden
                   className={`w-3.5 h-3.5 shrink-0 ${flag.color === 'red' ? 'text-red-500 dark:text-red-400' : 'text-amber-500 dark:text-amber-400'}`}
                 />
-              ) : (
+              ) : tab.id === 'import-data' ? null : (
+                // Import & Data has nothing to complete, so it gets no tick.
                 <span
                   aria-hidden
                   className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center justify-center shrink-0"
