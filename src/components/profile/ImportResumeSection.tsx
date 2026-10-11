@@ -87,6 +87,11 @@ export function ImportResumeSection({
   const [selected, setSelected] = useState<Set<SectionKey>>(new Set());
   const [resolutions, setResolutions] = useState<Record<string, DuplicateAction>>({});
   const [pasted, setPasted] = useState('');
+  // Several resumes at once: the ones still waiting, and where we are in the
+  // batch. Each is reviewed and applied in turn, so duplicates are checked
+  // against a profile that already holds the earlier ones.
+  const [queue, setQueue] = useState<File[]>([]);
+  const [batch, setBatch] = useState<{ index: number; total: number; name: string } | null>(null);
 
   // Shared by both inputs: gets the resume text, then pulls the profile
   // fields out of it for review.
@@ -115,14 +120,46 @@ export function ImportResumeSection({
       setResolutions({});
     } catch (err) {
       setError(llmErrorMessage(err, 'Reading that resume'));
+      // A failed file should not strand the others behind it.
+      setBatch(null);
+      setQueue([]);
     } finally {
       setBusy(false);
       setStatus(null);
     }
   }
 
-  const handleFile = (file: File) => readResume(() => extractText(file), 'Reading the document…');
-  const handlePaste = () => readResume(async () => pasted.trim(), 'Reading your resume…');
+  // Starts reading one file of a batch, labelled with its place in it.
+  function readFile(file: File, index: number, total: number) {
+    setBatch(total > 1 ? { index, total, name: file.name } : null);
+    void readResume(
+      () => extractText(file),
+      total > 1 ? `Reading ${file.name} (${index + 1} of ${total})…` : 'Reading the document…',
+    );
+  }
+
+  function handleFiles(files: File[]) {
+    setQueue(files.slice(1));
+    readFile(files[0], 0, files.length);
+  }
+
+  const handlePaste = () => {
+    setBatch(null);
+    setQueue([]);
+    void readResume(async () => pasted.trim(), 'Reading your resume…');
+  };
+
+  // After a file is applied or discarded, moves on to the next one waiting.
+  function next() {
+    setReview(null);
+    if (queue.length === 0 || !batch) {
+      setBatch(null);
+      return;
+    }
+    const [file, ...rest] = queue;
+    setQueue(rest);
+    readFile(file, batch.index + 1, batch.total);
+  }
 
   function toggle(section: SectionKey) {
     setSelected((prev) => {
@@ -133,16 +170,27 @@ export function ImportResumeSection({
     });
   }
 
+  const duplicates = review ? findDuplicates(profile, review.extracted) : [];
+  // A duplicate the user has not decided on is combined: their entry is kept
+  // and only new bullets are added, which suits the same job appearing on
+  // several resumes and never removes anything.
+  const resolutionFor = (key: string): DuplicateAction => resolutions[key] ?? 'combine';
+
   function applyImport() {
     if (!review) return;
-    const next = mergeProfile(profile, review.extracted, [...selected], resolutions);
-    onImported(next);
-    setReview(null);
+    const decided = Object.fromEntries(
+      duplicates.map((hit) => {
+        const key = resolutionKey(hit.section, hit.extractedIndex);
+        return [key, resolutionFor(key)];
+      }),
+    );
+    const merged = mergeProfile(profile, review.extracted, [...selected], decided);
+    onImported(merged);
     setPasted('');
     setImported(true);
+    next();
   }
 
-  const duplicates = review ? findDuplicates(profile, review.extracted) : [];
   const unverifiedCount = review?.unverified.length ?? 0;
 
   const body = (
@@ -150,10 +198,10 @@ export function ImportResumeSection({
       {!review && (
         <>
           <FileDropzone
-            onFile={handleFile}
+            onFiles={handleFiles}
             busy={busy}
             busyLabel={status ?? 'Reading…'}
-            label="Attach your existing resume"
+            label="Attach your resume, or several to combine them"
           />
           <label className={`mt-4 mb-1.5 block ${fieldLabelClass}`} htmlFor="resume-paste">
             Or paste your resume text
@@ -188,11 +236,13 @@ export function ImportResumeSection({
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-1.5">
               <FileText size={13} className="text-slate-400 dark:text-slate-500" />
-              Choose what to add. Nothing is changed until you apply.
+              {batch
+                ? `${batch.name} (${batch.index + 1} of ${batch.total}): choose what to add. Nothing is changed until you apply.`
+                : 'Choose what to add. Nothing is changed until you apply.'}
             </p>
             <button
               type="button"
-              onClick={() => setReview(null)}
+              onClick={next}
               aria-label="Discard import"
               className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
@@ -252,13 +302,13 @@ export function ImportResumeSection({
                   {selected.has(section) &&
                     sectionDupes.map((hit) => {
                       const key = resolutionKey(hit.section, hit.extractedIndex);
-                      const action = resolutions[key] ?? 'append';
+                      const action = resolutionFor(key);
                       return (
                         <div key={key} className="mt-2 ml-7 flex items-center gap-2 flex-wrap">
                           <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             Duplicate of an entry you already have:
                           </span>
-                          {(['append', 'replace', 'skip'] as DuplicateAction[]).map((option) => (
+                          {(['combine', 'replace', 'skip', 'append'] as DuplicateAction[]).map((option) => (
                             <button
                               key={option}
                               type="button"
@@ -269,11 +319,13 @@ export function ImportResumeSection({
                                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800'
                               }`}
                             >
-                              {option === 'append'
-                                ? 'Add anyway'
-                                : option === 'replace'
-                                  ? 'Replace mine'
-                                  : 'Skip'}
+                              {option === 'combine'
+                                ? 'Combine'
+                                : option === 'append'
+                                  ? 'Add anyway'
+                                  : option === 'replace'
+                                    ? 'Replace mine'
+                                    : 'Skip'}
                             </button>
                           ))}
                         </div>
@@ -285,12 +337,12 @@ export function ImportResumeSection({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Btn variant="secondary" onClick={() => setReview(null)}>
-              Discard
+            <Btn variant="secondary" onClick={next}>
+              {queue.length > 0 ? 'Skip this file' : 'Discard'}
             </Btn>
             <Btn onClick={applyImport} disabled={selected.size === 0}>
               <Check size={14} />
-              Add to my profile
+              {queue.length > 0 ? 'Add and read the next file' : 'Add to my profile'}
             </Btn>
           </div>
         </div>

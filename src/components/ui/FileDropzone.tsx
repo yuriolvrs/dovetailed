@@ -14,6 +14,7 @@ import { SUPPORTED_FILE_ACCEPT, SUPPORTED_FILE_HINT, validateFile } from '../../
 
 export function FileDropzone({
   onFile,
+  onFiles,
   accept = SUPPORTED_FILE_ACCEPT,
   busy = false,
   busyLabel = 'Reading…',
@@ -22,7 +23,9 @@ export function FileDropzone({
   compact = false,
 }: {
   /** Called only with a file that passed validation. */
-  onFile: (file: File) => void;
+  onFile?: (file: File) => void;
+  /** When set, several files can be picked or dropped at once; called with the ones that passed validation. */
+  onFiles?: (files: File[]) => void;
   accept?: string;
   busy?: boolean;
   busyLabel?: string;
@@ -45,14 +48,32 @@ export function FileDropzone({
       return;
     }
     setError(null);
-    onFile(file);
+    onFile?.(file);
+  }
+
+  // Multi-file mode: passes on every valid file and names the ones skipped,
+  // so one bad file does not block the rest.
+  function acceptFiles(list: FileList | null | undefined) {
+    if (!onFiles) {
+      acceptFile(list?.[0]);
+      return;
+    }
+    const files = [...(list ?? [])];
+    if (files.length === 0) return;
+    const problems = files.flatMap((f) => {
+      const problem = validateFile(f);
+      return problem ? [`${f.name}: ${problem}`] : [];
+    });
+    setError(problems.length > 0 ? problems.join(' ') : null);
+    const valid = files.filter((f) => !validateFile(f));
+    if (valid.length > 0) onFiles(valid);
   }
 
   function handleDrop(e: DragEvent) {
     e.preventDefault();
     setDragging(false);
     if (busy) return;
-    acceptFile(e.dataTransfer.files[0]);
+    acceptFiles(e.dataTransfer.files);
   }
 
   // Only react to drags that actually carry a file -- a tag being dragged
@@ -98,9 +119,10 @@ export function FileDropzone({
         ref={inputRef}
         type="file"
         accept={accept}
+        multiple={Boolean(onFiles)}
         className="hidden"
         onChange={(e) => {
-          acceptFile(e.target.files?.[0]);
+          acceptFiles(e.target.files);
           // Reset so picking the same file twice in a row still fires.
           e.target.value = '';
         }}
