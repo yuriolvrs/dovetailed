@@ -66,6 +66,7 @@ Exact shape (no extra keys, no markdown, no code fences, no commentary):
 
 Rules:
 - greeting: a short salutation, e.g. "Dear Hiring Manager," -- use the company name if given.
+  The greeting is printed on its own line, so never repeat it at the start of a paragraph.
 - paragraphs: EXACTLY 3 paragraphs of natural, compelling prose -- no bullet points or markdown.
   Keep the whole letter short: aim for roughly 180-220 words total across all 3 paragraphs, and
   no more than 3-4 sentences per paragraph. Only add a 4th paragraph if the evidence genuinely

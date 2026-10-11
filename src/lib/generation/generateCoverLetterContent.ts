@@ -124,9 +124,26 @@ export async function generateCoverLetterContent(
 
   const content: CoverLetterContent = {
     greeting: result.greeting,
-    paragraphs: result.paragraphs,
+    paragraphs: withoutRepeatedGreeting(result.greeting, result.paragraphs),
     closing: result.closing,
   };
 
   return { content, sourceMap };
+}
+
+/**
+ * Removes the salutation from the start of the first paragraph when the
+ * model repeated it there ("Dear Hiring Manager at BPI, I am eager..."). The
+ * greeting already prints on its own line, so the letter otherwise opens
+ * with it twice. The rest of the sentence is kept and capitalized.
+ * In plain terms: stops the letter saying "Dear Hiring Manager" twice.
+ */
+export function withoutRepeatedGreeting(greeting: string, paragraphs: string[]): string[] {
+  const salutation = greeting.trim().replace(/[,:;!.]+$/, '');
+  if (!salutation || paragraphs.length === 0) return paragraphs;
+  const first = paragraphs[0].trimStart();
+  if (!first.toLowerCase().startsWith(salutation.toLowerCase())) return paragraphs;
+  const rest = first.slice(salutation.length).replace(/^[\s,:;!.—-]+/, '');
+  if (rest === '') return paragraphs;
+  return [rest.charAt(0).toUpperCase() + rest.slice(1), ...paragraphs.slice(1)];
 }
