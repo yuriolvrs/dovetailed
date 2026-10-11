@@ -16,6 +16,7 @@ import {
   EntryDetailFields,
   EntryDetailHeader,
   EntryDetailListHeader,
+  EntryMoreDetails,
 } from './EntryDetailFrame';
 import { FieldInput, fieldInputClass } from '../ui/primitives';
 
@@ -65,92 +66,6 @@ export function ExperienceDetail({
         onFocused={onFocused}
       />
 
-      <EntryDetailFields>
-        <EntryDetailField label="Dates">
-          <DateRangeCompact entry={entry} update={onChange} currentLabel="Still here" />
-        </EntryDetailField>
-
-        <FieldInput
-          label="Location"
-          placeholder="San Francisco, CA"
-          value={entry.location ?? ''}
-          onChange={(location) => onChange({ ...entry, location })}
-        />
-
-        <EntryDetailField label="Section" hint="The heading this position appears under on your resume.">
-          {namingSection ? (
-            <input
-              autoFocus
-              defaultValue=""
-              placeholder="Section name, then Enter"
-              aria-label="New section name"
-              onBlur={() => setNamingSection(false)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setNamingSection(false);
-                if (e.key !== 'Enter') return;
-                const label = e.currentTarget.value.trim();
-                if (label) onSectionChange(label);
-                setNamingSection(false);
-              }}
-              className={`w-full ${fieldInputClass}`}
-            />
-          ) : (
-            <select
-              value={currentSection}
-              aria-label="Section"
-              onChange={(e) => {
-                if (e.target.value === NEW_SECTION_OPTION) setNamingSection(true);
-                else onSectionChange(e.target.value);
-              }}
-              className={`w-full ${fieldInputClass}`}
-            >
-              {(sections.includes(currentSection) ? sections : [currentSection, ...sections]).map(
-                (label) => (
-                  <option key={label} value={label}>
-                    {label}
-                  </option>
-                ),
-              )}
-              <option value={NEW_SECTION_OPTION}>New section…</option>
-            </select>
-          )}
-        </EntryDetailField>
-
-        {/* Its own field rather than sharing the Section cell: one label can
-            only name one control, and "Section & trimming" named two. */}
-        <EntryDetailField
-          label="If the resume runs long"
-          hint="Positions marked this way are dropped first, oldest first, when a generated resume runs past one page."
-          className="sm:col-span-2 xl:col-span-3"
-        >
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isPrunable(entry)}
-            onClick={() => onChange({ ...entry, prunable: !isPrunable(entry) })}
-            className={`inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-xs transition-colors ${
-              isPrunable(entry)
-                ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
-                : 'border-slate-200 text-slate-500 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <span
-              aria-hidden
-              className={`h-3 w-6 shrink-0 rounded-full transition-colors ${
-                isPrunable(entry) ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
-              }`}
-            >
-              <span
-                className={`block h-2 w-2 rounded-full bg-white transition-transform mt-0.5 ${
-                  isPrunable(entry) ? 'translate-x-3.5' : 'translate-x-0.5'
-                }`}
-              />
-            </span>
-            Drop this first
-          </button>
-        </EntryDetailField>
-      </EntryDetailFields>
-
       <div className="p-5">
         <EntryDetailListHeader
           label="Highlights"
@@ -161,16 +76,105 @@ export function ExperienceDetail({
         <StringList
           items={entry.bullets}
           onChange={(bullets) => onChange({ ...entry, bullets })}
-          placeholder="Describe an accomplishment..."
+          placeholder="Describe an accomplishment (Enter adds the next one)"
           multiline
           variant="flat"
           hideAddButton
+          quickEntry
           emptyLabel="No highlights yet. Matching only reads highlights, so this job can't be matched to a posting until you add one."
           reorderable
           itemBadge={bulletBadge}
           itemExtra={bulletRewrite}
         />
       </div>
+
+      <EntryMoreDetails summary="Dates, location, section, trimming">
+        <EntryDetailFields>
+          <EntryDetailField label="Dates">
+            <DateRangeCompact entry={entry} update={onChange} currentLabel="Still here" />
+          </EntryDetailField>
+
+          <FieldInput
+            label="Location"
+            placeholder="San Francisco, CA"
+            value={entry.location ?? ''}
+            onChange={(location) => onChange({ ...entry, location })}
+          />
+
+          <EntryDetailField label="Section" hint="The heading this position appears under on your resume.">
+            {namingSection ? (
+              <input
+                autoFocus
+                defaultValue=""
+                placeholder="Section name, then Enter"
+                aria-label="New section name"
+                onBlur={() => setNamingSection(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setNamingSection(false);
+                  if (e.key !== 'Enter') return;
+                  const label = e.currentTarget.value.trim();
+                  if (label) onSectionChange(label);
+                  setNamingSection(false);
+                }}
+                className={`w-full ${fieldInputClass}`}
+              />
+            ) : (
+              <select
+                value={currentSection}
+                aria-label="Section"
+                onChange={(e) => {
+                  if (e.target.value === NEW_SECTION_OPTION) setNamingSection(true);
+                  else onSectionChange(e.target.value);
+                }}
+                className={`w-full ${fieldInputClass}`}
+              >
+                {(sections.includes(currentSection) ? sections : [currentSection, ...sections]).map(
+                  (label) => (
+                    <option key={label} value={label}>
+                      {label}
+                    </option>
+                  ),
+                )}
+                <option value={NEW_SECTION_OPTION}>New section…</option>
+              </select>
+            )}
+          </EntryDetailField>
+
+          {/* Its own field rather than sharing the Section cell: one label can
+              only name one control, and "Section & trimming" named two. */}
+          <EntryDetailField
+            label="If the resume runs long"
+            hint="Positions marked this way are dropped first, oldest first, when a generated resume runs past one page."
+            className="sm:col-span-2 xl:col-span-3"
+          >
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPrunable(entry)}
+              onClick={() => onChange({ ...entry, prunable: !isPrunable(entry) })}
+              className={`inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                isPrunable(entry)
+                  ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
+                  : 'border-slate-200 text-slate-500 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              <span
+                aria-hidden
+                className={`h-3 w-6 shrink-0 rounded-full transition-colors ${
+                  isPrunable(entry) ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`block h-2 w-2 rounded-full bg-white transition-transform mt-0.5 ${
+                    isPrunable(entry) ? 'translate-x-3.5' : 'translate-x-0.5'
+                  }`}
+                />
+              </span>
+              Drop this first
+            </button>
+          </EntryDetailField>
+        </EntryDetailFields>
+      </EntryMoreDetails>
     </div>
   );
 }
