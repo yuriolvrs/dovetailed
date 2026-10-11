@@ -499,6 +499,7 @@ export function FieldTextarea({
   rows = 4,
   className = '',
   unsaved = false,
+  autoFocus = false,
 }: {
   label?: string;
   value: string;
@@ -508,6 +509,7 @@ export function FieldTextarea({
   rows?: number;
   className?: string;
   unsaved?: boolean;
+  autoFocus?: boolean;
 }) {
   const id = useId();
   return (
@@ -527,6 +529,7 @@ export function FieldTextarea({
         onBlur={onBlur}
         placeholder={placeholder}
         rows={rows}
+        autoFocus={autoFocus}
         className={`${fieldInputClass} resize-y leading-relaxed`}
       />
     </div>

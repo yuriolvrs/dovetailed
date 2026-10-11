@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, Circle, Plus, X } from 'lucide-react';
+import { CheckCircle, ChevronRight, Circle, Plus, X } from 'lucide-react';
 import type { GenerationType, JobPosting } from '../types';
 import {
   ARRANGEMENTS,
@@ -177,8 +177,8 @@ export default function JobsPage() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-xl max-h-[90vh]">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 shrink-0 flex items-start justify-between gap-3">
-          <SectionTitle sub="Paste the full posting text — nothing is stored on a server">
-            Add a Job Posting
+          <SectionTitle sub="Paste it in. It stays in this browser, not on a server.">
+            Add a job posting
           </SectionTitle>
           <button
             type="button"
@@ -189,44 +189,55 @@ export default function JobsPage() {
             <X size={16} />
           </button>
         </div>
-        <div className="p-5 space-y-3 overflow-y-auto scroll-thin">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FieldInput
-              label="Job Title"
-              value={title}
-              onChange={setTitle}
-              placeholder="Senior Frontend Engineer"
-            />
-            <FieldInput label="Company" value={company} onChange={setCompany} placeholder="Acme Corp" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FieldInput
-              label="Location"
-              value={location}
-              onChange={setLocation}
-              placeholder="San Francisco, CA"
-            />
-            <FieldSelect
-              label="Arrangement"
-              value={arrangement}
-              onChange={setArrangement}
-              options={ARRANGEMENTS}
-              placeholder="Select…"
-            />
-          </div>
+        <div className="p-5 space-y-4 overflow-y-auto scroll-thin">
           <FieldTextarea
             label="Posting Text"
             value={rawText}
             onChange={setRawText}
             onBlur={handleRawTextBlur}
-            placeholder="Paste the full job posting text here — responsibilities, requirements, qualifications, compensation, etc."
-            rows={9}
+            placeholder="Paste the whole posting: the role, responsibilities, requirements, location. Dovetailed reads the rest from it."
+            rows={12}
+            autoFocus
           />
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            Title/company are auto-filled from the posting text when detected — edit either freely.
-          </p>
+          {/* The details are read from the posting, so they stay folded away
+              unless the user wants to set them by hand. */}
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 [&::-webkit-details-marker]:hidden">
+              <ChevronRight size={14} aria-hidden className="transition-transform group-open:rotate-90" />
+              <span className="shrink-0">Edit details</span>
+              <span className="min-w-0 truncate font-normal text-slate-500 dark:text-slate-400">
+                {[title.trim(), company.trim()].filter(Boolean).join(' · ') || 'Title, company and location are read from the posting'}
+              </span>
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FieldInput
+                  label="Job Title"
+                  value={title}
+                  onChange={setTitle}
+                  placeholder="Senior Frontend Engineer"
+                />
+                <FieldInput label="Company" value={company} onChange={setCompany} placeholder="Acme Corp" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FieldInput
+                  label="Location"
+                  value={location}
+                  onChange={setLocation}
+                  placeholder="San Francisco, CA"
+                />
+                <FieldSelect
+                  label="Arrangement"
+                  value={arrangement}
+                  onChange={setArrangement}
+                  options={ARRANGEMENTS}
+                  placeholder="Select…"
+                />
+              </div>
+            </div>
+          </details>
         </div>
-        <div className="p-5 pt-0 flex justify-end gap-2 shrink-0">
+        <div className="p-5 pt-0 flex flex-col-reverse gap-2 shrink-0 sm:flex-row sm:justify-end">
           <Btn variant="secondary" onClick={() => setModalOpen(false)}>
             Cancel
           </Btn>
