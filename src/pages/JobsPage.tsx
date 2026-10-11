@@ -121,7 +121,10 @@ export default function JobsPage() {
     if (company.trim() === '' && guess.company) setCompany(guess.company);
   }
 
-  async function handleSave() {
+  // Saves the pasted posting. With `build` set, goes straight to the Build
+  // screen instead of the posting hub.
+  // In plain terms: stores the posting, then either opens it or starts building.
+  async function handleSave(build = false) {
     const posting = newJobPosting(rawText, {
       title: title.trim() || undefined,
       company: company.trim() || undefined,
@@ -130,7 +133,7 @@ export default function JobsPage() {
     });
     await saveJobPosting(posting);
     setModalOpen(false);
-    navigate(`/jobs/${posting.id}`);
+    navigate(build ? `/jobs/${posting.id}/build` : `/jobs/${posting.id}`);
   }
 
   return (
@@ -227,9 +230,12 @@ export default function JobsPage() {
           <Btn variant="secondary" onClick={() => setModalOpen(false)}>
             Cancel
           </Btn>
-          <Btn onClick={handleSave} disabled={rawText.trim() === ''}>
+          <Btn variant="secondary" onClick={() => handleSave()} disabled={rawText.trim() === ''}>
+            Save without building
+          </Btn>
+          <Btn onClick={() => handleSave(true)} disabled={rawText.trim() === '' || profileEmpty !== false}>
             <Plus size={14} />
-            Save Posting
+            Build resume and cover letter
           </Btn>
         </div>
       </Modal>
