@@ -17,7 +17,7 @@ const validExtracted = {
 
 describe('isExtractedAnalysis', () => {
   it('accepts optional title/company/location strings and rejects other types', () => {
-    expect(isExtractedAnalysis({ ...validExtracted, title: 'X', company: '', location: 'Y' })).toBe(true);
+    expect(isExtractedAnalysis({ ...validExtracted, title: 'X', company: '', location: 'Y', arrangement: 'Hybrid' })).toBe(true);
     expect(isExtractedAnalysis({ ...validExtracted, company: 7 })).toBe(false);
   });
 

@@ -34,11 +34,13 @@ export function buildAnalyzePostingPrompt(rawText: string): string {
 object and nothing else.
 
 Exact shape (no extra keys, no markdown, no code fences, no commentary):
-{"title":"…","company":"…","location":"…","roleSummary":"…","requirements":[{"text":"…","severity":"required"}],"keywords":["…"]}
+{"title":"…","company":"…","location":"…","arrangement":"…","roleSummary":"…","requirements":[{"text":"…","severity":"required"}],"keywords":["…"]}
 
 Rules:
 - title, company, location: the job title, hiring company and job location exactly as the
   posting writes them. Use "" for any the posting does not state. Never guess.
+- location is the place only. Leave out words like Remote, Hybrid or On-site; they go in arrangement.
+- arrangement: "Onsite", "Hybrid" or "Remote" when the posting states it, otherwise "".
 - roleSummary: one or two sentences describing the role and what it does.
 - requirements: at most 8 concrete qualifications a candidate must have to be considered --
   required skills, years of experience, tools, certifications. Postings often
@@ -78,6 +80,7 @@ export interface ExtractedAnalysis {
   title?: string;
   company?: string;
   location?: string;
+  arrangement?: string;
   roleSummary: string;
   requirements: ExtractedRequirement[];
   keywords: string[];
@@ -112,6 +115,7 @@ export function isExtractedAnalysis(x: unknown): x is ExtractedAnalysis {
     optionalString(candidate.title) &&
     optionalString(candidate.company) &&
     optionalString(candidate.location) &&
+    optionalString(candidate.arrangement) &&
     typeof candidate.roleSummary === 'string' &&
     Array.isArray(candidate.requirements) &&
     candidate.requirements.every(isExtractedRequirement) &&

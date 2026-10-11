@@ -6,7 +6,7 @@
 // logic picks a sensible label.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { deadlineCountdown, fillPostingDetails, guessJobTitleAndCompany, postingLabel } from './jobStore';
+import { deadlineCountdown, fillPostingDetails, guessJobTitleAndCompany, postingLabel, splitLocation } from './jobStore';
 import type { JobPosting } from '../types';
 
 function posting(overrides: Partial<JobPosting>): JobPosting {
@@ -36,6 +36,36 @@ describe('fillPostingDetails', () => {
     expect(result.title).toBeUndefined();
     expect(result.company).toBeUndefined();
     expect(result.location).toBeUndefined();
+  });
+
+  it('moves an arrangement written into the location into its own field', () => {
+    const text = 'Associate\nBrightline Learning Co. - Manila (Hybrid)';
+    expect(fillPostingDetails(posting({ rawText: text }), { location: 'Manila (Hybrid)' })).toMatchObject({
+      location: 'Manila',
+      arrangement: 'Hybrid',
+    });
+  });
+
+  it('uses a found arrangement only when the posting says it', () => {
+    expect(fillPostingDetails(posting({ rawText }), { arrangement: 'hybrid' }).arrangement).toBe('Hybrid');
+    expect(fillPostingDetails(posting({ rawText }), { arrangement: 'Remote' }).arrangement).toBeUndefined();
+  });
+
+  it('keeps an arrangement the user picked', () => {
+    const picked = posting({ rawText, arrangement: 'Onsite' });
+    expect(fillPostingDetails(picked, { arrangement: 'Hybrid' }).arrangement).toBe('Onsite');
+  });
+});
+
+describe('splitLocation', () => {
+  it.each([
+    ['Manila (Hybrid)', 'Manila', 'Hybrid'],
+    ['Remote', '', 'Remote'],
+    ['Austin, TX - On-site', 'Austin, TX', 'Onsite'],
+    ['Remote - Philippines', 'Philippines', 'Remote'],
+    ['Cebu City', 'Cebu City', undefined],
+  ])('splits %s', (location, place, arrangement) => {
+    expect(splitLocation(location)).toEqual(arrangement ? { place, arrangement } : { place });
   });
 });
 

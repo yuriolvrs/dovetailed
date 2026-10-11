@@ -139,18 +139,48 @@ export function guessJobTitleAndCompany(rawText: string): { title?: string; comp
   return { title, company };
 }
 
+// How each arrangement is written in a posting.
+const ARRANGEMENT_WORDS: Record<(typeof ARRANGEMENTS)[number], RegExp> = {
+  Onsite: /\bon[- ]?site\b/i,
+  Hybrid: /\bhybrid\b/i,
+  Remote: /\bremote\b/i,
+};
+
 /**
- * Fills a posting's empty title, company and location from what the posting
- * read found. A value is used only when it appears word for word in the
+ * Splits an arrangement word out of a location, e.g. "Manila (Hybrid)"
+ * becomes "Manila" and "Hybrid". Brackets and separators left behind are
+ * trimmed.
+ * In plain terms: pulls "Hybrid" or "Remote" out of the location so each
+ * lands in its own field.
+ */
+export function splitLocation(location: string): { place: string; arrangement?: string } {
+  for (const arrangement of ARRANGEMENTS) {
+    const word = ARRANGEMENT_WORDS[arrangement];
+    if (!word.test(location)) continue;
+    const place = location
+      .replace(word, '')
+      .replace(/\(\s*\)|\[\s*\]/g, '')
+      .replace(/^[\s,\-–|/·]+|[\s,\-–|/·(]+$/g, '')
+      .trim();
+    return { place, arrangement };
+  }
+  return { place: location };
+}
+
+/**
+ * Fills a posting's empty title, company, location and arrangement from what
+ * the posting read found. A value is used only when it appears word for word in the
  * posting text, so nothing invented gets in. A title is also replaced while
  * it is still exactly the Add dialog's first-line guess, since the read gives
- * a cleaner one; anything the user typed is kept.
- * In plain terms: fills in the job title, company and location for you,
- * without touching anything you typed.
+ * a cleaner one; anything the user typed is kept. An arrangement is used
+ * only when the posting says it, and one written into the location
+ * ("Manila (Hybrid)") is moved out of it.
+ * In plain terms: fills in the job title, company, location and arrangement
+ * for you, without touching anything you typed.
  */
 export function fillPostingDetails(
   posting: JobPosting,
-  found: { title?: string; company?: string; location?: string },
+  found: { title?: string; company?: string; location?: string; arrangement?: string },
 ): JobPosting {
   const text = posting.rawText.toLowerCase();
   const usable = (value?: string) => {
@@ -160,13 +190,17 @@ export function fillPostingDetails(
   const isEmpty = (value?: string) => !value?.trim();
   const title = usable(found.title);
   const company = usable(found.company);
-  const location = usable(found.location);
+  const split = splitLocation(usable(found.location) ?? '');
+  const location = split.place || undefined;
+  const named = ARRANGEMENTS.find((a) => a.toLowerCase() === found.arrangement?.trim().toLowerCase());
+  const arrangement = named && ARRANGEMENT_WORDS[named].test(posting.rawText) ? named : split.arrangement;
   const titleIsGuess = posting.title?.trim() === guessJobTitleAndCompany(posting.rawText).title;
   return {
     ...posting,
     ...(title && (isEmpty(posting.title) || titleIsGuess) ? { title } : {}),
     ...(company && isEmpty(posting.company) ? { company } : {}),
     ...(location && isEmpty(posting.location) ? { location } : {}),
+    ...(arrangement && isEmpty(posting.arrangement) ? { arrangement } : {}),
   };
 }
 
