@@ -1,6 +1,6 @@
 // What this file is: the prompt template and response validator for
 // extracting a job posting into a role summary, requirements (with
-// severity), and keywords. Matching those requirements against the user's
+// severity), keywords, and the posting's own title/company/location. Matching those requirements against the user's
 // profile is a separate step (src/lib/matching/) -- this call never sees the
 // profile and never produces evidence, so there's nothing here for a small
 // model to fabricate.
@@ -34,9 +34,11 @@ export function buildAnalyzePostingPrompt(rawText: string): string {
 object and nothing else.
 
 Exact shape (no extra keys, no markdown, no code fences, no commentary):
-{"roleSummary":"…","requirements":[{"text":"…","severity":"required"}],"keywords":["…"]}
+{"title":"…","company":"…","location":"…","roleSummary":"…","requirements":[{"text":"…","severity":"required"}],"keywords":["…"]}
 
 Rules:
+- title, company, location: the job title, hiring company and job location exactly as the
+  posting writes them. Use "" for any the posting does not state. Never guess.
 - roleSummary: one or two sentences describing the role and what it does.
 - requirements: at most 8 concrete qualifications a candidate must have to be considered --
   required skills, years of experience, tools, certifications. Postings often
@@ -71,7 +73,11 @@ interface ExtractedRequirement {
   severity: RequirementSeverity;
 }
 
-interface ExtractedAnalysis {
+export interface ExtractedAnalysis {
+  /** Optional: older or shorter answers may leave these out. */
+  title?: string;
+  company?: string;
+  location?: string;
   roleSummary: string;
   requirements: ExtractedRequirement[];
   keywords: string[];
@@ -101,7 +107,11 @@ export function isExtractedAnalysis(x: unknown): x is ExtractedAnalysis {
   if (typeof x !== 'object' || x === null) return false;
   const candidate = x as Record<string, unknown>;
 
+  const optionalString = (v: unknown) => v === undefined || typeof v === 'string';
   return (
+    optionalString(candidate.title) &&
+    optionalString(candidate.company) &&
+    optionalString(candidate.location) &&
     typeof candidate.roleSummary === 'string' &&
     Array.isArray(candidate.requirements) &&
     candidate.requirements.every(isExtractedRequirement) &&

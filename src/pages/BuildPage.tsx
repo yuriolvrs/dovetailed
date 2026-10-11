@@ -57,7 +57,7 @@ export default function BuildPage() {
         // fetch rejects with a TypeError when nothing answers at all, which
         // reads as "Failed to fetch" -- say what actually happened instead.
         setError(
-          err instanceof TypeError
+          err instanceof TypeError && /fetch|network|load failed/i.test(err.message)
             ? 'Could not reach the AI service. Check your connection, then use Retry from here. Steps that finished are kept.'
             : llmErrorMessage(err, 'Building your documents'),
         );
@@ -118,13 +118,14 @@ export default function BuildPage() {
             Building documents for {posting.title?.trim() || postingLabel(posting)}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Your resume and cover letter use only what is in your profile.
+            Your resume and cover letter use only what is in your profile. Keep this page open until it finishes;
+            leaving stops the build, and finished steps are kept.
           </p>
         </div>
 
         {!hasProfileContent(profile) ? (
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Your profile is empty, so there is nothing to match this job against.{' '}
+            Your profile has nothing to match this job against yet.{' '}
             <Link to="/profile" className="underline hover:text-slate-900 dark:hover:text-slate-100">
               Set up your profile
             </Link>{' '}

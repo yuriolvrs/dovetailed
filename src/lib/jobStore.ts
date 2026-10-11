@@ -139,6 +139,37 @@ export function guessJobTitleAndCompany(rawText: string): { title?: string; comp
   return { title, company };
 }
 
+/**
+ * Fills a posting's empty title, company and location from what the posting
+ * read found. A value is used only when it appears word for word in the
+ * posting text, so nothing invented gets in. A title is also replaced while
+ * it is still exactly the Add dialog's first-line guess, since the read gives
+ * a cleaner one; anything the user typed is kept.
+ * In plain terms: fills in the job title, company and location for you,
+ * without touching anything you typed.
+ */
+export function fillPostingDetails(
+  posting: JobPosting,
+  found: { title?: string; company?: string; location?: string },
+): JobPosting {
+  const text = posting.rawText.toLowerCase();
+  const usable = (value?: string) => {
+    const v = value?.trim();
+    return v && text.includes(v.toLowerCase()) ? v : undefined;
+  };
+  const isEmpty = (value?: string) => !value?.trim();
+  const title = usable(found.title);
+  const company = usable(found.company);
+  const location = usable(found.location);
+  const titleIsGuess = posting.title?.trim() === guessJobTitleAndCompany(posting.rawText).title;
+  return {
+    ...posting,
+    ...(title && (isEmpty(posting.title) || titleIsGuess) ? { title } : {}),
+    ...(company && isEmpty(posting.company) ? { company } : {}),
+    ...(location && isEmpty(posting.location) ? { location } : {}),
+  };
+}
+
 // A short display label for a posting: prefers the analysis's role summary,
 // falls back to the first non-empty line of the pasted text, then to a
 // generic placeholder for a blank posting. Truncated so it fits on one line

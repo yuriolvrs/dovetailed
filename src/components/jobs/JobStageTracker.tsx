@@ -118,7 +118,9 @@ export function JobStageTracker({
         // changed as the current step moved and the centred stepper shifted a
         // pixel on every navigation. Hue carries the emphasis instead, which is
         // the stronger cue anyway next to the blue circle.
-        const labelClass = `text-xs font-medium whitespace-nowrap ${
+        // On a phone only the current step keeps its label (the others stay
+        // readable to screen readers), so all steps fit without scrolling.
+        const labelClass = `text-xs font-medium whitespace-nowrap ${isCurrent ? '' : 'sr-only sm:not-sr-only'} ${
           isCurrent
             ? 'text-slate-900 dark:text-slate-100'
             : reachable

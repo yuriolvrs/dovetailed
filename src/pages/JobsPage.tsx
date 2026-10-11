@@ -155,9 +155,9 @@ export default function JobsPage() {
 
       <Modal open={gateOpen} onClose={() => setGateOpen(false)} className="max-w-md">
         <div className="p-5 space-y-2">
-          <SectionTitle sub="A posting needs something to be matched against">Your profile is empty</SectionTitle>
+          <SectionTitle sub="A posting needs something to be matched against">Your profile isn't ready yet</SectionTitle>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Add your experience, projects, skills or education first. Without them, every requirement in a posting shows
+            Add your skills, or bullets for a job or project, first. Without them, every requirement in a posting shows
             as a gap.
           </p>
         </div>
