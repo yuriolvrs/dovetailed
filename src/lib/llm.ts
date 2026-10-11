@@ -226,6 +226,13 @@ export function llmErrorMessage(err: unknown, label: string): string {
     if (err.status === 415) {
       return `${label} failed: that file type can't be read. Attach a ${SUPPORTED_FILE_HINT} file.`;
     }
+    // Still limited after every retry, so the provider's quota is used up
+    // for now. A pasted text skips the document reader entirely.
+    if (err.status === 429) {
+      return err.path === '/extract'
+        ? `${label} failed: the document reader is busy right now (rate limit reached). Wait a minute and try again, or paste the text instead.`
+        : `${label} failed: the AI service is busy right now (rate limit reached). Wait a minute and try again.`;
+    }
     if (err.status === 413) {
       return err.path === '/extract'
         ? `${label} failed: that file is too large to read.`

@@ -271,6 +271,17 @@ describe('llmErrorMessage', () => {
     expect(message).not.toContain('413');
   });
 
+  it('explains a rate limit that outlasted the retries', () => {
+    const body = '{"object":"error","message":"Rate limit exceeded","type":"rate_limited"}';
+    const reader = llmErrorMessage(new ProxyRequestError(429, 'Document reader', body, '/extract'), 'Import');
+    expect(reader).toContain('rate limit');
+    expect(reader).toContain('paste the text');
+    expect(reader).not.toContain('429');
+    const model = llmErrorMessage(new ProxyRequestError(429, 'LLM proxy', body, '/generate'), 'Matching');
+    expect(model).toContain('rate limit');
+    expect(model).not.toContain('paste');
+  });
+
   it('does not call a rejected text request a file', () => {
     // The provider returns the same 413 when a text request exceeds its
     // per-minute token cap. No file is involved, and saying otherwise sent
