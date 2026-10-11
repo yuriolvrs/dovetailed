@@ -55,8 +55,10 @@ export default function AboutPage() {
             <strong>Groq</strong> when you run analysis, matching, or generation.
           </li>
           <li>
-            <strong>Files you attach</strong> are sent to <strong>Mistral</strong> to be read into
-            text. They are sent inline and are never uploaded to a provider's file-storage service,
+            <strong>PDF, Word and PowerPoint files</strong> are read in your browser when they
+            contain text, so the file itself is not sent anywhere. Only{' '}
+            <strong>scans and images</strong> (and files the browser can't read) are sent to{' '}
+            <strong>Mistral</strong> to be read into text. They are sent inline and are never uploaded to a provider's file-storage service,
             so no copy is kept there. This app does not save the file either. It is read once and
             dropped, and only the extracted text reaches your profile.
           </li>
