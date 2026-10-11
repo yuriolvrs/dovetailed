@@ -1,18 +1,19 @@
-// What this file is: the Build progress screen (/jobs/:id/build). It runs the
-// buildDocuments pipeline for a posting, shows each step as it happens, and
+// What this file is: the Build progress screen (/jobs/:id/build). It starts
+// the posting's build through buildRunner, shows each step as it happens, and
 // opens the finished documents. A failed step shows its error and a retry
-// that resumes there. Stop uses the same abort signal matching already takes.
+// that resumes there. The build keeps running if the user leaves this screen.
 // In plain terms: the screen you watch after pressing Build. It ticks off the
 // steps and takes you to your resume and cover letter when they are ready.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle, Circle } from 'lucide-react';
 import type { JobPosting, Profile } from '../types';
 import { loadJobPosting } from '../lib/jobStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { llmErrorMessage } from '../lib/llm';
-import { buildDocuments, PIPELINE_STEPS, type PipelineProgress, type PipelineStep } from '../lib/pipeline/buildDocuments';
+import { PIPELINE_STEPS, type PipelineStep } from '../lib/pipeline/buildDocuments';
+import { getBuild, startBuild, stopBuild, subscribeBuild, type BuildState } from '../lib/pipeline/buildRunner';
 import { Btn, Card, PageSkeleton, ProgressBar } from '../components/ui/primitives';
 import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import type { StageKey } from '../components/jobs/JobStageTracker';
@@ -33,78 +34,66 @@ const STEP_LABELS: Record<PipelineStep, string> = {
   coverLetter: 'Writing your cover letter',
 };
 
+// Puts a failed build's error into words. fetch rejects with a TypeError
+// when nothing answers at all, which reads as "Failed to fetch", so that case
+// says what actually happened instead.
+// In plain terms: the message shown when a build fails.
+function buildErrorMessage(err: unknown): string {
+  return err instanceof TypeError && /fetch|network|load failed/i.test(err.message)
+    ? 'Could not reach the AI service. Check your connection, then use Retry from here. Steps that finished are kept.'
+    : llmErrorMessage(err, 'Building your documents');
+}
+
 export default function BuildPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [posting, setPosting] = useState<JobPosting | null | 'missing'>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [status, setStatus] = useState<'running' | 'error' | 'stopped'>('running');
-  const [progress, setProgress] = useState<PipelineProgress | null>(null);
-  const [doneSteps, setDoneSteps] = useState<Set<PipelineStep>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const startedRef = useRef(false);
+  const [build, setBuild] = useState<BuildState | null>(null);
 
-  // Runs the pipeline from the posting as saved. Finished work is saved, so
-  // calling this again after an error or a stop resumes at the step that failed.
-  // In plain terms: starts the build, or carries on after a failure.
-  const run = useCallback(async (p: JobPosting, prof: Profile) => {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setError(null);
-    setStatus('running');
-    setDoneSteps(new Set());
-    try {
-      await buildDocuments(p, prof, {
-        signal: controller.signal,
-        onProgress: setProgress,
-        onStepDone: (step) => setDoneSteps((prev) => new Set(prev).add(step)),
-      });
-      navigate(`/jobs/${p.id}/documents`, { replace: true });
-    } catch (err) {
-      if (controller.signal.aborted) {
-        setStatus('stopped');
-      } else {
-        // fetch rejects with a TypeError when nothing answers at all, which
-        // reads as "Failed to fetch" -- say what actually happened instead.
-        setError(
-          err instanceof TypeError && /fetch|network|load failed/i.test(err.message)
-            ? 'Could not reach the AI service. Check your connection, then use Retry from here. Steps that finished are kept.'
-            : llmErrorMessage(err, 'Building your documents'),
-        );
-        setStatus('error');
-      }
-    }
-  }, [navigate]);
+  // Watches this posting's build. The build itself lives in buildRunner, so
+  // leaving this screen does not stop it.
+  useEffect(() => {
+    if (!id) return;
+    return subscribeBuild(id, setBuild);
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([loadJobPosting(id), loadProfile()]).then(([p, prof]) => {
       setPosting(p ?? 'missing');
       setProfile(prof);
+      // Join a build already running (the user came back to this screen);
+      // otherwise start one. Finished steps are saved, so a fresh start
+      // resumes where the last one ended.
+      const existing = getBuild(id);
+      if (existing?.status === 'running') setBuild(existing);
+      else if (p && hasProfileContent(prof)) startBuild(p, prof);
     });
-    return () => abortRef.current?.abort();
   }, [id]);
 
   useEffect(() => {
-    if (startedRef.current || !posting || posting === 'missing' || !profile) return;
-    startedRef.current = true;
-    if (hasProfileContent(profile)) void run(posting, profile);
-  }, [posting, profile, run]);
+    if (id && build?.status === 'done') navigate(`/jobs/${id}/documents`, { replace: true });
+  }, [build?.status, id, navigate]);
 
   // Reloads the posting first, so a retry starts from what the failed run saved.
   // In plain terms: tries again from the step that stopped.
   async function handleRetry() {
     if (!id || !profile) return;
     const fresh = await loadJobPosting(id);
-    if (fresh) void run(fresh, profile);
+    if (fresh) startBuild(fresh, profile);
   }
+
+  const status = build?.status ?? 'running';
+  const progress = build?.progress ?? null;
+  const doneSteps = new Set(build?.doneSteps ?? []);
+  const error = build?.status === 'error' ? buildErrorMessage(build.error) : null;
 
   if (posting === 'missing') {
     return (
       <p className="text-sm text-slate-600 dark:text-slate-400">
         That job posting no longer exists.{' '}
-        <Link to="/" className="underline hover:text-slate-900 dark:hover:text-slate-100">
+        <Link to="/jobs" className="underline hover:text-slate-900 dark:hover:text-slate-100">
           Back to jobs.
         </Link>
       </p>
@@ -129,8 +118,8 @@ export default function BuildPage() {
             Building your resume and cover letter
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Your resume and cover letter use only what is in your profile. Keep this page open until it finishes;
-            leaving stops the build, and finished steps are kept.
+            Your resume and cover letter use only what is in your profile. You can look at other pages while it
+            runs; keep this tab open until it finishes.
           </p>
         </div>
 
@@ -176,7 +165,7 @@ export default function BuildPage() {
         {hasProfileContent(profile) && (
           <div className="flex gap-2">
             {status === 'running' ? (
-              <Btn variant="secondary" onClick={() => abortRef.current?.abort()}>
+              <Btn variant="secondary" onClick={() => id && stopBuild(id)}>
                 Stop
               </Btn>
             ) : (
