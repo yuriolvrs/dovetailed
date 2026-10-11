@@ -1,13 +1,15 @@
-// What this file is: the "add a job/project from a document" entry point on
-// the Profile page. Attaching an old job description, offer letter, role
-// summary, or project brief generates one new Experience or Project entry
+// What this file is: the "add a job/project from a document or notes" entry
+// point on the Profile page. Attaching an old job description, offer letter,
+// role summary, or project brief -- or pasting rough notes about a role --
+// generates one new Experience or Project entry
 // with ATS-ready bullets -- unlike ImportResumeSection's verbatim
 // transcription, the bullets here are reworded, so the review screen flags
 // any generated bullet that isn't backed by the document (see
 // verifyGeneratedEntry.ts) and nothing is written to the profile until the
 // user applies it.
-// In plain terms: attach a document about a job or project you had, review
-// the resume-ready entry it makes from it, then add it to your profile.
+// In plain terms: attach a document or paste notes about a job or project you
+// had, review the resume-ready entry it makes from it, then add it to your
+// profile.
 
 import { useState } from 'react';
 import { AlertTriangle, Briefcase, Check, FolderGit2, X } from 'lucide-react';
@@ -78,14 +80,18 @@ export function JobDocumentImportSection({
   // instead -- reset whenever kind changes, since the two kinds draw from
   // different lists (profile.experience vs profile.projects).
   const [targetIndex, setTargetIndex] = useState<number | null>(null);
+  const [notes, setNotes] = useState('');
 
-  async function handleFile(file: File) {
+  // Shared by both inputs: gets the source text, then drafts one entry from it.
+  // In plain terms: the same "read it, write an entry" steps for a file or for
+  // pasted notes.
+  async function draftEntry(readText: () => Promise<string>, readingLabel: string) {
     setBusy(true);
     setError(null);
     setImportedMessage(null);
-    setStatus('Reading the document…');
+    setStatus(readingLabel);
     try {
-      const documentText = await extractText(file);
+      const documentText = await readText();
       setStatus('Writing an entry from it…');
       const entry = await generateStructured(buildGenerateEntryFromDocumentPrompt(documentText), isGeneratedEntry, {
         maxTokens: GENERATE_MAX_TOKENS,
@@ -102,6 +108,9 @@ export function JobDocumentImportSection({
       setStatus(null);
     }
   }
+
+  const handleFile = (file: File) => draftEntry(() => extractText(file), 'Reading the document…');
+  const handleNotes = () => draftEntry(async () => notes.trim(), 'Reading your notes…');
 
   function applyImport() {
     if (!review) return;
@@ -129,6 +138,7 @@ export function JobDocumentImportSection({
     }
     onImported(next);
     setReview(null);
+    setNotes('');
     setImportedMessage(targetIndex === null ? 'Added to your profile.' : 'Bullets overwritten.');
   }
 
@@ -138,9 +148,8 @@ export function JobDocumentImportSection({
 
   return (
     <Card className="p-6">
-      <SectionTitle sub="Attach an old job description, offer letter, or project brief to add it as a new entry, 
-                         or overwrite the bullet points of an existing entry. You review it before it's applied">
-        Add a Job or Project from a Document
+      <SectionTitle sub="Attach an old job description, offer letter, or project brief, or paste rough notes, to add it as a new entry, or overwrite the bullet points of an existing entry. You review it before it's applied">
+        Add a Job or Project from a Document or Notes
       </SectionTitle>
 
       {!review && (
@@ -151,6 +160,24 @@ export function JobDocumentImportSection({
             busyLabel={status ?? 'Reading…'}
             label="Attach a job or project document"
           />
+          <label className={`mt-4 mb-1.5 block ${fieldLabelClass}`} htmlFor="job-notes">
+            Or paste notes
+          </label>
+          <textarea
+            id="job-notes"
+            value={notes}
+            onChange={(ev) => setNotes(ev.target.value)}
+            rows={5}
+            disabled={busy}
+            placeholder="A job description, old resume lines, or rough notes about what you did and where."
+            className={`w-full ${fieldInputClass}`}
+          />
+          <div className="mt-2 flex items-center justify-end gap-3">
+            {busy && status && <span className="text-xs text-slate-500 dark:text-slate-400">{status}</span>}
+            <Btn onClick={handleNotes} disabled={busy || notes.trim() === ''}>
+              Draft an entry
+            </Btn>
+          </div>
           {error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>}
           {importedMessage && (
             <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 inline-flex items-center gap-1">
