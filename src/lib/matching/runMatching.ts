@@ -1,6 +1,7 @@
 // What this file is: orchestrates the two-step matching pass (cheap local
-// retrieval, then a focused per-requirement LLM verification call) across
-// every requirement in a job analysis, and the pure recalculation used when
+// retrieval, then LLM verification of up to BATCH_SIZE requirements per
+// call) across every requirement in a job analysis, and the pure
+// recalculation used when
 // the user rejects a matched atom in the review UI.
 // In plain terms: for each requirement, finds likely profile evidence, asks
 // the AI to confirm it, and figures out what happens if the user says "no,
@@ -8,7 +9,14 @@
 
 import type { ProfileAtom, Requirement, RequirementMatch } from '../../types';
 import { retrieveCandidates } from './retrieval';
-import { buildMatchRequirementPrompt, isMatchVerification, type MatchCandidate } from '../../prompts/matchRequirement';
+import {
+  buildBatchMatchPrompt,
+  buildMatchRequirementPrompt,
+  isBatchMatchVerification,
+  isMatchVerification,
+  type MatchCandidate,
+  type MatchVerification,
+} from '../../prompts/matchRequirement';
 import { generateStructured } from '../llm';
 
 // How many verification calls are allowed in flight at once. Kept low
@@ -17,6 +25,13 @@ import { generateStructured } from '../llm';
 // firing them in a bigger batch just makes them collide on the same cap
 // together instead of spacing naturally.
 const CONCURRENCY = 2;
+
+// Requirements checked per call. One call per requirement repeated the
+// instructions and the model's warm-up reasoning every time; measured on two
+// real postings, checking six or seven together used about half the tokens
+// with the same results within the run-to-run noise of single calls. The
+// free tier's daily token budget is what a busy day runs out of first.
+const BATCH_SIZE = 6;
 
 // Education isn't eligible evidence for requirement matching -- a degree
 // doesn't demonstrate a skill or requirement the way a skill/experience/
@@ -57,25 +72,15 @@ function toCandidateList(candidates: { atom: ProfileAtom }[]): MatchCandidate[] 
   return candidates.map((c) => ({ id: c.atom.id, text: c.atom.text, sourceLabel: c.atom.sourceLabel }));
 }
 
-async function matchOneRequirement(
-  requirement: Requirement,
-  atoms: ProfileAtom[],
-  signal?: AbortSignal,
-): Promise<RequirementMatch> {
-  const candidates = retrieveCandidates(requirement.text, matchable(atoms));
-  if (candidates.length === 0) {
-    return { requirementId: requirement.id, status: 'gap_no_candidates', atomIds: [] };
-  }
+interface Prepared {
+  requirement: Requirement;
+  candidates: { atom: ProfileAtom }[];
+}
 
+// Turns the model's answer for one requirement into a match, trusting only
+// ids from that requirement's own candidate list.
+function toMatch({ requirement, candidates }: Prepared, verification: MatchVerification): RequirementMatch {
   const candidateIds = new Set(candidates.map((c) => c.atom.id));
-  const prompt = buildMatchRequirementPrompt(requirement.text, toCandidateList(candidates));
-  // 300 was enough for the previous model, but openai/gpt-oss-120b's own
-  // chain-of-thought (billed as "reasoning" tokens, still deducted from
-  // max_tokens) alone can exceed that -- confirmed live, it was cutting the
-  // JSON off mid-response (finish_reason "length") before any usable content
-  // came out.
-  const verification = await generateStructured(prompt, isMatchVerification, { temperature: 0.1, maxTokens: 1200, signal });
-
   const confirmedIds = verification.atomIds.filter((id) => candidateIds.has(id));
   if (confirmedIds.length === 0) {
     return {
@@ -87,6 +92,51 @@ async function matchOneRequirement(
   }
 
   return { requirementId: requirement.id, status: verification.status, atomIds: confirmedIds };
+}
+
+async function verifyOne(item: Prepared, signal?: AbortSignal): Promise<RequirementMatch> {
+  const prompt = buildMatchRequirementPrompt(item.requirement.text, toCandidateList(item.candidates));
+  // 300 was enough for the previous model, but openai/gpt-oss-120b's own
+  // chain-of-thought (billed as "reasoning" tokens, still deducted from
+  // max_tokens) alone can exceed that -- confirmed live, it was cutting the
+  // JSON off mid-response (finish_reason "length") before any usable content
+  // came out.
+  const verification = await generateStructured(prompt, isMatchVerification, { temperature: 0.1, maxTokens: 1200, signal });
+  return toMatch(item, verification);
+}
+
+/**
+ * Verifies several requirements in one call. A requirement the reply leaves
+ * out is checked again on its own, so a short answer never turns into a
+ * silent gap.
+ * In plain terms: asks about a handful of requirements at once, and asks
+ * again about any the AI skipped.
+ */
+async function verifyBatch(batch: Prepared[], signal?: AbortSignal): Promise<RequirementMatch[]> {
+  if (batch.length === 1) return [await verifyOne(batch[0], signal)];
+
+  const labelled = batch.map((item, i) => ({ item, label: `R${i + 1}` }));
+  const prompt = buildBatchMatchPrompt(
+    labelled.map(({ item, label }) => ({
+      label,
+      requirementText: item.requirement.text,
+      candidates: toCandidateList(item.candidates),
+    })),
+  );
+  const reply = await generateStructured(prompt, isBatchMatchVerification, {
+    temperature: 0.1,
+    // The single-call budget, plus room for each extra requirement's answer
+    // and reasoning.
+    maxTokens: 1200 + 300 * batch.length,
+    signal,
+  });
+
+  return Promise.all(
+    labelled.map(({ item, label }) => {
+      const answer = reply.results.find((r) => r.requirement === label);
+      return answer ? toMatch(item, answer) : verifyOne(item, signal);
+    }),
+  );
 }
 
 /**
@@ -106,13 +156,40 @@ export async function runMatching(
   onProgress?: (done: number, total: number) => void,
   signal?: AbortSignal,
 ): Promise<RequirementMatch[]> {
-  return mapWithConcurrency(
-    requirements,
+  const pool = matchable(atoms);
+  const prepared = requirements.map((requirement) => ({
+    requirement,
+    candidates: retrieveCandidates(requirement.text, pool),
+  }));
+
+  // Requirements with no candidates are gaps straight away, with no call.
+  const byId = new Map<string, RequirementMatch>();
+  for (const { requirement, candidates } of prepared) {
+    if (candidates.length === 0) {
+      byId.set(requirement.id, { requirementId: requirement.id, status: 'gap_no_candidates', atomIds: [] });
+    }
+  }
+  const toVerify = prepared.filter((p) => p.candidates.length > 0);
+  const batches: Prepared[][] = [];
+  for (let i = 0; i < toVerify.length; i += BATCH_SIZE) batches.push(toVerify.slice(i, i + BATCH_SIZE));
+
+  // Progress still counts requirements, so the bar means the same thing.
+  let done = byId.size;
+  if (done > 0) onProgress?.(done, requirements.length);
+  await mapWithConcurrency(
+    batches,
     CONCURRENCY,
-    (requirement) => matchOneRequirement(requirement, atoms, signal),
-    onProgress,
+    async (batch) => {
+      const matches = await verifyBatch(batch, signal);
+      for (const match of matches) byId.set(match.requirementId, match);
+      done += batch.length;
+      onProgress?.(done, requirements.length);
+    },
+    undefined,
     signal,
   );
+
+  return requirements.map((r) => byId.get(r.id)!);
 }
 
 /**

@@ -5,7 +5,12 @@
 // well-shaped answers.
 
 import { describe, expect, it } from 'vitest';
-import { buildMatchRequirementPrompt, isMatchVerification } from './matchRequirement';
+import {
+  buildBatchMatchPrompt,
+  buildMatchRequirementPrompt,
+  isBatchMatchVerification,
+  isMatchVerification,
+} from './matchRequirement';
 
 describe('buildMatchRequirementPrompt', () => {
   it('embeds the requirement and each candidate id/label/text', () => {
@@ -42,5 +47,27 @@ describe('isMatchVerification', () => {
 
   it('rejects atomIds that is a bare string instead of an array', () => {
     expect(isMatchVerification({ atomIds: 'a', status: 'full' })).toBe(false);
+  });
+});
+
+describe('buildBatchMatchPrompt', () => {
+  it('lists each requirement under its label with only its own candidates', () => {
+    const prompt = buildBatchMatchPrompt([
+      { label: 'R1', requirementText: 'Java', candidates: [{ id: 'skills-java', text: 'Java', sourceLabel: 'Skills' }] },
+      { label: 'R2', requirementText: 'Python', candidates: [{ id: 'skills-py', text: 'Python', sourceLabel: 'Skills' }] },
+    ]);
+    const r1 = prompt.slice(prompt.indexOf('=== R1 ==='), prompt.indexOf('=== R2 ==='));
+    expect(r1).toContain('skills-java');
+    expect(r1).not.toContain('skills-py');
+    expect(prompt).toContain('(R1, R2)');
+  });
+});
+
+describe('isBatchMatchVerification', () => {
+  it('accepts labelled results and rejects malformed ones', () => {
+    expect(isBatchMatchVerification({ results: [{ requirement: 'R1', atomIds: [], status: 'full' }] })).toBe(true);
+    expect(isBatchMatchVerification({ results: [{ atomIds: [], status: 'full' }] })).toBe(false);
+    expect(isBatchMatchVerification({ results: [{ requirement: 'R1', atomIds: 'x', status: 'full' }] })).toBe(false);
+    expect(isBatchMatchVerification({})).toBe(false);
   });
 });
