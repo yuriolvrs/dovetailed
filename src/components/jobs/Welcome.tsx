@@ -393,7 +393,7 @@ export function Welcome({ onStart, onTypeIn }: { onStart: () => void; onTypeIn: 
             }}
             className="mt-12 hidden items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 lg:flex dark:text-slate-400 dark:hover:text-slate-100"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 motion-safe:animate-bounce motion-safe:[animation-iteration-count:3] dark:border-slate-700">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 motion-safe:[animation:nudge-down_1.2s_cubic-bezier(0.25,1,0.5,1)_3] dark:border-slate-700">
               <ArrowDown size={14} aria-hidden />
             </span>
             See how it works

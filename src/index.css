@@ -75,3 +75,9 @@ textarea::-webkit-scrollbar-thumb:hover,
 .dark .scroll-thin::-webkit-scrollbar-thumb:hover {
   background-color: #475569;
 }
+
+/* A small downward nudge for the landing page's "See how it works" arrow. */
+@keyframes nudge-down {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
