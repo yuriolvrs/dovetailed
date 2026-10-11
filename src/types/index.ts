@@ -140,6 +140,12 @@ export interface JobAnalysis {
   keywords: string[];
   /** One entry per requirement, always present. */
   matches: RequirementMatch[];
+  /**
+   * True once the user rejects, swaps, or adds evidence after the last
+   * matching run. A re-run asks for confirmation only when this is set.
+   * Absent on older saved postings, which counts as false.
+   */
+  matchesEdited?: boolean;
 }
 
 // ---------------------------------------------------------------------------

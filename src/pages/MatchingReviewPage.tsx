@@ -6,7 +6,8 @@
 // already confirmed) or an explicit empty state for gaps, plus an
 // always-visible "Additional information" section for evidence not tied to
 // any one requirement. Evidence is always a ProfileAtom reference -- never
-// free text -- so there's nothing here to hallucinate.
+// free text -- so there's nothing here to hallucinate. Matching runs on its
+// own when you arrive with freshly extracted (still unmatched) requirements.
 // In plain terms: the screen where you check the AI's read on how well your
 // profile covers each requirement, and fix it up where needed.
 
@@ -15,7 +16,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, FileText, Sparkles } from 'lucide-react';
 import type { JobPosting, MatchStatus, Profile, ProfileAtom, RequirementMatch } from '../types';
 import { loadJobPosting, saveJobPosting } from '../lib/jobStore';
-import { loadProfile, saveProfile } from '../lib/profileStore';
+import { hasProfileContent, loadProfile, saveProfile } from '../lib/profileStore';
 import { buildProfileAtoms } from '../lib/profileAtoms';
 import { runMatching, statusAfterReject } from '../lib/matching/runMatching';
 import { computeFitScore } from '../lib/matching/fitScore';
@@ -93,6 +94,7 @@ export default function MatchingReviewPage() {
   const [rematchProgress, setRematchProgress] = useState<{ done: number; total: number } | null>(null);
   const [expandedAtomIds, setExpandedAtomIds] = useState<Set<string>>(new Set());
   const rematchAbortRef = useRef<AbortController | null>(null);
+  const autoMatchCheckedRef = useRef(false);
   // Rail filter -- narrows the requirement list to one status bucket so a
   // long posting's gaps/partials can be triaged without scrolling past
   // everything that's already fine. 'gap' covers both gap statuses (no
@@ -230,7 +232,7 @@ export default function MatchingReviewPage() {
     setPosting((prev) => {
       if (!prev || prev === 'missing' || !prev.analysis) return prev;
       const matches = updater(prev.analysis.matches);
-      const next = { ...prev, analysis: { ...prev.analysis, matches } };
+      const next = { ...prev, analysis: { ...prev.analysis, matches, matchesEdited: true } };
       void saveJobPosting(next);
       return next;
     });
@@ -247,9 +249,11 @@ export default function MatchingReviewPage() {
     pulse();
   }
 
-  // Re-runs the full matching pass from scratch -- an explicit action (not
-  // triggered by navigation) since it overwrites any manual reject/swap/add-
-  // evidence edits with a fresh auto-match.
+  // Runs the full matching pass from scratch and replaces every match. It
+  // runs on its own only when no matches exist yet (see the effect below);
+  // otherwise the user starts it, with a confirmation first if they have
+  // manual reject/swap/add-evidence edits that it would overwrite.
+  // In plain terms: matches your profile against every requirement again.
   async function handleRematch() {
     if (!posting || posting === 'missing' || !posting.analysis || !profile) return;
     setRematchError(null);
@@ -265,7 +269,7 @@ export default function MatchingReviewPage() {
         (done, total) => setRematchProgress({ done, total }),
         controller.signal,
       );
-      const next = { ...posting, analysis: { ...posting.analysis, matches } };
+      const next = { ...posting, analysis: { ...posting.analysis, matches, matchesEdited: false } };
       await saveJobPosting(next);
       setPosting(next);
       setRematchStatus('idle');
@@ -275,7 +279,7 @@ export default function MatchingReviewPage() {
         setRematchStatus('idle');
         setConfirmingRematch(false);
       } else {
-        setRematchError(llmErrorMessage(err, 'Re-matching'));
+        setRematchError(llmErrorMessage(err, 'Matching'));
         setRematchStatus('error');
       }
     } finally {
@@ -283,6 +287,21 @@ export default function MatchingReviewPage() {
       rematchAbortRef.current = null;
     }
   }
+
+  // Starts matching once, on first load, when the requirements have never
+  // been matched (fresh from extraction or re-extraction). The ref keeps it
+  // from firing again after "Clear matches" empties the list on this visit.
+  // In plain terms: you no longer have to press a button to see your matches.
+  useEffect(() => {
+    if (autoMatchCheckedRef.current || !posting || posting === 'missing' || !profile) return;
+    autoMatchCheckedRef.current = true;
+    const analysis = posting.analysis;
+    if (analysis && analysis.requirements.length > 0 && analysis.matches.length === 0 && hasProfileContent(profile)) {
+      void handleRematch();
+    }
+    // handleRematch reads the same posting/profile this effect just checked.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posting, profile]);
 
   function handleCancelRematch() {
     rematchAbortRef.current?.abort();
@@ -293,12 +312,13 @@ export default function MatchingReviewPage() {
   async function handleClearMatches() {
     if (!posting || posting === 'missing' || !posting.analysis) return;
     const previousMatches = posting.analysis.matches;
-    const next = { ...posting, analysis: { ...posting.analysis, matches: [] } };
+    const previousEdited = posting.analysis.matchesEdited;
+    const next = { ...posting, analysis: { ...posting.analysis, matches: [], matchesEdited: false } };
     await saveJobPosting(next);
     setPosting(next);
     setConfirmingClear(false);
     showUndo('Matches cleared.', async () => {
-      const restored = { ...next, analysis: { ...next.analysis!, matches: previousMatches } };
+      const restored = { ...next, analysis: { ...next.analysis!, matches: previousMatches, matchesEdited: previousEdited } };
       await saveJobPosting(restored);
       setPosting(restored);
     });
@@ -437,9 +457,14 @@ export default function MatchingReviewPage() {
               <Btn size="sm" variant="danger" onClick={() => setConfirmingClear(true)}>
                 Clear matches
               </Btn>
-              <Btn size="sm" variant="secondary" onClick={() => setConfirmingRematch(true)} disabled={rematchStatus === 'loading'}>
+              <Btn
+                size="sm"
+                variant="secondary"
+                onClick={() => (posting.analysis?.matchesEdited ? setConfirmingRematch(true) : void handleRematch())}
+                disabled={rematchStatus === 'loading'}
+              >
                 <Sparkles size={13} />
-                Re-run matching
+                {rematchStatus === 'loading' ? 'Matching…' : 'Re-run matching'}
               </Btn>
             </>
           ) : confirmingClear ? (
