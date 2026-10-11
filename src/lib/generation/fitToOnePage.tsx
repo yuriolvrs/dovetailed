@@ -20,7 +20,12 @@ import { applyTrim, nextTrim, type TrimStep } from './fitToPage';
 const CONTENT_WIDTH = '7.4in';
 const CONTENT_HEIGHT = '9.9in';
 
-function overflowsOnePage(content: ResumeContent): Promise<boolean> {
+/**
+ * Renders `content` off-screen at the printed page size and reports whether
+ * it runs past one page.
+ * In plain terms: checks if the resume still fits on one sheet.
+ */
+export function overflowsOnePage(content: ResumeContent): Promise<boolean> {
   return new Promise((resolve) => {
     const host = document.createElement('div');
     host.style.position = 'absolute';

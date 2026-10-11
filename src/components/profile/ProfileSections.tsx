@@ -43,7 +43,7 @@ const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
  */
 function bulletWarning(entry: { bullets: string[] }, resume?: unknown): string | undefined {
   if (hasBullets(entry)) return undefined;
-  return resume ? 'Not printed: no bullets' : 'No bullets yet';
+  return resume ? 'Not printed: no highlights' : 'No highlights yet';
 }
 
 /**
@@ -59,8 +59,9 @@ function dateRange(entry: {
 }): string {
   const start = formatMonthYear(entry.startMonth, entry.startYear);
   const end = entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear);
-  if (!start && !end) return '';
-  return `${start || '?'} – ${end || '?'}`;
+  // A missing side shows the other alone, as on the printed resume.
+  if (!start || !end) return start || end;
+  return `${start} – ${end}`;
 }
 
 /** What "Describe it instead" needs: the profile it adds to, and where the result goes. */
@@ -153,7 +154,7 @@ export interface ResumeExtras<T> {
   actions?: ReactNode;
   /** A label beside a bullet, e.g. "Matched to this job". */
   bulletBadge?: (bulletText: string) => ReactNode;
-  /** A label beside a closed entry's title, e.g. "2 matched". */
+  /** A label beside a closed entry's title, e.g. "2 chosen". */
   entryBadge?: (entry: T) => ReactNode;
   /** Under an open entry's bullets, e.g. bullets this resume left out. */
   belowBullets?: (entry: T, update: (next: T) => void) => ReactNode;
@@ -256,7 +257,7 @@ export function ExperienceSection({
     <SheetSection
       id="experience"
       title={title}
-      meta={value.length > 0 ? `${count(value.length, 'role')} · ${count(bulletTotal, 'bullet')}` : undefined}
+      meta={value.length > 0 ? `${count(value.length, 'role')} · ${count(bulletTotal, 'highlight')}` : undefined}
       actions={
         <>
           {resume?.actions}
@@ -370,7 +371,7 @@ export function ProjectsSection({
     <SheetSection
       id="projects"
       title="Projects"
-      meta={value.length > 0 ? `${count(value.length, 'project')} · ${count(bulletTotal, 'bullet')}` : undefined}
+      meta={value.length > 0 ? `${count(value.length, 'project')} · ${count(bulletTotal, 'highlight')}` : undefined}
       actions={
         <>
           {resume?.actions}

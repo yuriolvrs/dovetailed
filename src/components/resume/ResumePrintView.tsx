@@ -10,13 +10,13 @@
 // dependency needed" default HTML path.
 // On the 'preview' variant, every field is also clickable (contact block,
 // each education/experience/project entry, each bullet, each skills group)
-// -- clicking calls onNavigate with a ResumeNavTarget, which GeneratePage
+// -- clicking it, or pressing Enter or Space on it, calls onNavigate with a ResumeNavTarget, which GeneratePage
 // uses to scroll the editor to and open that same field.
 // In plain terms: the plain, print-friendly layout of your resume -- shown
 // live as a preview while editing (click anything in it to jump to that
 // field in the editor), and used as-is when you print or "Save as PDF."
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import type { ExperienceEntry, ResumeContent } from '../../types';
 import { educationKey, experienceKey, projectKey, type ResumeFocusTarget, type ResumeNavTarget } from '../../lib/resumeEntryKeys';
 import { formatMonthYear } from '../ui/primitives';
@@ -25,7 +25,8 @@ import { withRenderableEntries } from '../../lib/renderableResume';
 // Shared styling for a clickable preview region -- only applied on the
 // 'preview' variant (the print/measure variants render the exact same
 // content non-interactively).
-const navClickableClass = 'cursor-pointer rounded transition-colors hover:bg-slate-50 -mx-1 px-1';
+const navClickableClass =
+  'cursor-pointer rounded transition-colors hover:bg-slate-50 -mx-1 px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
 
 // Data-attribute value identifying one bullet's spot in the preview, so a
 // focused editor field (see ResumeEditor's onFocusBullet) can be found and
@@ -93,6 +94,31 @@ export function ResumePrintView({
   // renderableResume.ts. Done here rather than on the stored content so the
   // editor keeps the entry and can bring it back with a bullet.
   const content = withRenderableEntries(rawContent);
+  const interactive = variant === 'preview' && Boolean(onNavigate);
+
+  /**
+   * Makes a preview region act as a button: click, Enter or Space opens the
+   * matching field in the editor. Inner regions (bullets) stop the event so
+   * the entry around them does not also fire.
+   * In plain terms: lets you open any part of the preview with mouse or keyboard.
+   */
+  function navProps(target: ResumeNavTarget) {
+    if (!interactive) return {};
+    const go = (e: MouseEvent | KeyboardEvent) => {
+      e.stopPropagation();
+      onNavigate?.(target);
+    };
+    return {
+      role: 'button',
+      tabIndex: 0,
+      onClick: go,
+      onKeyDown: (e: KeyboardEvent) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        go(e);
+      },
+    };
+  }
 
   useEffect(() => {
     if (!focusedTarget || variant !== 'preview' || !rootRef.current) return;
@@ -112,8 +138,8 @@ export function ResumePrintView({
       {variant === 'print' && <style>{'@page { size: letter; margin: 0.55in; }'}</style>}
 
       <div
-        className={`text-center mb-3 ${variant === 'preview' && onNavigate ? navClickableClass : ''}`}
-        onClick={variant === 'preview' ? () => onNavigate?.({ section: 'contact' }) : undefined}
+        className={`text-center mb-3 ${interactive ? navClickableClass : ''}`}
+        {...navProps({ section: 'contact' })}
       >
         <p className="text-[18px] font-bold tracking-wide">{content.contact.name}</p>
         <p className="text-[15px] mt-1">
@@ -134,8 +160,8 @@ export function ResumePrintView({
           {content.education.map((entry, i) => (
             <div
               key={i}
-              className={`mb-1 ${variant === 'preview' && onNavigate ? navClickableClass : ''}`}
-              onClick={variant === 'preview' ? () => onNavigate?.({ section: 'education', entryKey: educationKey(entry) }) : undefined}
+              className={`mb-1 ${interactive ? navClickableClass : ''}`}
+              {...navProps({ section: 'education', entryKey: educationKey(entry) })}
             >
               <div className="flex justify-between">
                 <div>
@@ -174,10 +200,8 @@ export function ResumePrintView({
           {entries.map((entry, i) => (
             <div
               key={i}
-              className={`mb-2 ${variant === 'preview' && onNavigate ? navClickableClass : ''}`}
-              onClick={
-                variant === 'preview' ? () => onNavigate?.({ section: 'experience', entryKey: experienceKey(entry) }) : undefined
-              }
+              className={`mb-2 ${interactive ? navClickableClass : ''}`}
+              {...navProps({ section: 'experience', entryKey: experienceKey(entry) })}
             >
               <div className="flex justify-between">
                 <p className="font-bold">{entry.title}</p>
@@ -201,17 +225,10 @@ export function ResumePrintView({
                       <li
                         key={j}
                         data-focus-key={bulletFocusKey(target)}
-                        onClick={
-                          variant === 'preview'
-                            ? (e) => {
-                                e.stopPropagation();
-                                onNavigate?.({ section: 'experience', entryKey: experienceKey(entry), bulletIndex: j });
-                              }
-                            : undefined
-                        }
+                        {...navProps(target)}
                         className={[
                           focused ? 'bg-emerald-100' : '',
-                          variant === 'preview' && onNavigate ? navClickableClass : 'transition-colors',
+                          interactive ? navClickableClass : 'transition-colors',
                         ].join(' ')}
                       >
                         {bullet}
@@ -231,8 +248,8 @@ export function ResumePrintView({
           {content.projects.map((entry, i) => (
             <div
               key={i}
-              className={`mb-2 ${variant === 'preview' && onNavigate ? navClickableClass : ''}`}
-              onClick={variant === 'preview' ? () => onNavigate?.({ section: 'project', entryKey: projectKey(entry) }) : undefined}
+              className={`mb-2 ${interactive ? navClickableClass : ''}`}
+              {...navProps({ section: 'project', entryKey: projectKey(entry) })}
             >
               <p>
                 <span className="font-bold">{entry.name}</span>
@@ -247,17 +264,10 @@ export function ResumePrintView({
                       <li
                         key={j}
                         data-focus-key={bulletFocusKey(target)}
-                        onClick={
-                          variant === 'preview'
-                            ? (e) => {
-                                e.stopPropagation();
-                                onNavigate?.({ section: 'project', entryKey: projectKey(entry), bulletIndex: j });
-                              }
-                            : undefined
-                        }
+                        {...navProps(target)}
                         className={[
                           focused ? 'bg-emerald-100' : '',
-                          variant === 'preview' && onNavigate ? navClickableClass : 'transition-colors',
+                          interactive ? navClickableClass : 'transition-colors',
                         ].join(' ')}
                       >
                         {bullet}
@@ -277,8 +287,8 @@ export function ResumePrintView({
           {content.skills.map((group, i) => (
             <p
               key={i}
-              className={variant === 'preview' && onNavigate ? navClickableClass : ''}
-              onClick={variant === 'preview' ? () => onNavigate?.({ section: 'skills', groupIndex: i }) : undefined}
+              className={interactive ? navClickableClass : ''}
+              {...navProps({ section: 'skills', groupIndex: i })}
             >
               {group.category && <span className="font-bold">{group.category}: </span>}
               {group.items.join(', ')}

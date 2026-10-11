@@ -30,7 +30,7 @@ export function BulletPicker({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Not included</p>
+      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Not on this resume</p>
       {excluded.map((bullet, i) => {
         const requirement = bulletMatch(bullet);
         return (
@@ -45,7 +45,7 @@ export function BulletPicker({
             {requirement && (
               <Badge color="green">
                 <Check size={11} />
-                Matched
+                Matches: {requirement}
               </Badge>
             )}
           </button>

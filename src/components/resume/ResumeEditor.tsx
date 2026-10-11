@@ -2,7 +2,7 @@
 // the Profile page's own sections (ProfileSections.tsx) over this resume's
 // copy of the data: entries read as resume lines and open in place, plus
 // resume-only extras -- match badges, bullets and entries this resume left
-// out, Reset to profile, and opening an entry from a preview click. Sections are ordered
+// out, Reset to the tailored version, and opening an entry from a preview click. Sections are ordered
 // to match the printed layout (contact, education, experience, projects,
 // skills -- see ResumePrintView) so the editor and the live preview next to
 // it read top-to-bottom in the same order. Every bullet shown is copied
@@ -59,6 +59,7 @@ export function ResumeEditor({
   sourceMap,
   analysis,
   profile,
+  tailored,
   onChange,
   onFocusBullet,
   navRequest,
@@ -75,6 +76,8 @@ export function ResumeEditor({
   analysis?: JobAnalysis;
   /** The full source profile, used only to offer back bullets the automatic selection left out (see BulletPicker). */
   profile: Profile;
+  /** The resume as the app built it for this job, before your edits. Each section's Reset goes back to it. */
+  tailored: ResumeContent;
   onChange: (content: ResumeContent) => void;
   /** Reports which bullet field has focus (or null on blur), so the live preview can highlight it. */
   onFocusBullet: (target: ResumeFocusTarget | null) => void;
@@ -180,7 +183,7 @@ export function ResumeEditor({
     return (
       <Badge color="green">
         <Check size={11} />
-        {chosen} matched
+        {chosen} chosen
       </Badge>
     );
   }
@@ -208,7 +211,7 @@ export function ResumeEditor({
         value={value.education}
         onChange={(education) => onChange({ ...value, education })}
         resume={{
-          actions: <ResetButton onReset={() => onChange({ ...value, education: profile.education })} />,
+          actions: <ResetButton onReset={() => onChange({ ...value, education: tailored.education })} />,
           nav: educationNav,
         }}
       />
@@ -217,7 +220,7 @@ export function ResumeEditor({
         value={value.experience}
         onChange={(experience) => onChange({ ...value, experience })}
         resume={{
-          actions: <ResetButton onReset={() => onChange({ ...value, experience: profile.experience })} />,
+          actions: <ResetButton onReset={() => onChange({ ...value, experience: tailored.experience })} />,
           bulletBadge,
           entryBadge,
           belowBullets: (entry, update) => (
@@ -243,7 +246,7 @@ export function ResumeEditor({
         value={value.projects}
         onChange={(projects) => onChange({ ...value, projects })}
         resume={{
-          actions: <ResetButton onReset={() => onChange({ ...value, projects: profile.projects })} />,
+          actions: <ResetButton onReset={() => onChange({ ...value, projects: tailored.projects })} />,
           bulletBadge,
           entryBadge,
           belowBullets: (entry, update) => (
@@ -268,8 +271,8 @@ export function ResumeEditor({
       <SkillsSection
         value={value.skills}
         onChange={(skills) => onChange({ ...value, skills })}
-        actions={<ResetButton onReset={() => onChange({ ...value, skills: profile.skills })} />}
-        onReset={() => onChange({ ...value, skills: profile.skills })}
+        actions={<ResetButton onReset={() => onChange({ ...value, skills: tailored.skills })} />}
+        onReset={() => onChange({ ...value, skills: tailored.skills })}
         navNonce={target?.section === 'skills' ? nonce : undefined}
       />
     </div>

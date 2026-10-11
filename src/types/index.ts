@@ -323,6 +323,12 @@ export interface Generation {
   removedForPageFit?: ExperienceEntry[];
   /** True when page-fit trimming ran out of allowed cuts and the resume is still over one page. */
   pageFitOverflow?: boolean;
+  /**
+   * The resume as built, before any edits, so Reset can go back to it.
+   * Absent on resumes saved before this existed; the editor rebuilds the
+   * selection then.
+   */
+  builtContent?: ResumeContent;
 }
 
 /**

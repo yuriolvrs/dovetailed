@@ -87,6 +87,7 @@ export async function buildDocuments(
     ...newGeneration(posting.id, 'resume', content, selected.sourceMap, 'matched'),
     removedForPageFit: removedExperience,
     pageFitOverflow: !fits,
+    builtContent: content,
   });
   onStepDone?.('resume', posting);
 

@@ -22,7 +22,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Info, Mail, MessageCircleQuestion, Sparkles } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Check, Download, FileCode, FileText, History, Info, Mail, MessageCircleQuestion, Sparkles } from 'lucide-react';
 import type { ExperienceEntry, Generation, GenerationSnapshot, GenerationStrategy, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
 import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
@@ -35,7 +35,7 @@ import {
   selectResumeContent,
   selectResumeContentHolistic,
 } from '../lib/generation/selectResumeContent';
-import { fitToOnePage } from '../lib/generation/fitToOnePage';
+import { fitToOnePage, overflowsOnePage } from '../lib/generation/fitToOnePage';
 import { buildLatexContext } from '../lib/latex/templateContext';
 import { fillLatexTemplate } from '../lib/latex/fillTemplate';
 import { resumeToMarkdown } from '../lib/export/toMarkdown';
@@ -105,6 +105,10 @@ export default function DocumentsPage() {
   // re-requested by clicking it again (a plain target object wouldn't
   // change, so an effect keyed on it wouldn't re-fire).
   const [navRequest, setNavRequest] = useState<{ target: ResumeNavTarget; nonce: number } | null>(null);
+  // On narrow screens the editor and preview take turns; wide screens show both.
+  const [pane, setPane] = useState<'edit' | 'preview'>('edit');
+  // Whether the resume as edited runs past one printed page; null until measured.
+  const [overflows, setOverflows] = useState<boolean | null>(null);
   // DOM node inside the shared header's actions slot that CoverLetterSection
   // and InterviewPrepSection portal their own action buttons into, so they
   // land in the exact same header position as the resume tab's actions
@@ -131,6 +135,22 @@ export default function DocumentsPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Re-measures the page fit a moment after edits stop, so typing stays smooth.
+  const resumeContent = generation && generation !== 'none' ? (generation.content as ResumeContent) : null;
+  useEffect(() => {
+    if (!resumeContent) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      overflowsOnePage(resumeContent).then((result) => {
+        if (!cancelled) setOverflows(result);
+      });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [resumeContent]);
 
   // Sets the print header's document title to the candidate's name while
   // this page is open (browsers default the print header to document.title),
@@ -168,6 +188,7 @@ export default function DocumentsPage() {
       ...newGeneration(id, 'resume', content, selected.sourceMap, strategy),
       removedForPageFit: removedExperience,
       pageFitOverflow: !fits,
+      builtContent: content,
     };
     await saveGeneration(next);
     setGeneration(next);
@@ -204,6 +225,7 @@ export default function DocumentsPage() {
       sourceMap: snapshot.sourceMap,
       removedForPageFit: [],
       pageFitOverflow: false,
+      builtContent: snapshot.content as ResumeContent,
     };
     await saveGeneration(restored);
     setGeneration(restored);
@@ -362,6 +384,17 @@ export default function DocumentsPage() {
   // a reload instead of needing a regenerate to see again.
   const pageFitRemoved = generation !== 'none' ? (generation.removedForPageFit ?? []) : [];
   const pageFitOverflow = generation !== 'none' && Boolean(generation.pageFitOverflow);
+  // What each section's Reset goes back to: the resume as built. Resumes
+  // saved before builtContent existed rebuild the selection instead.
+  const tailored: ResumeContent | null =
+    generation === 'none'
+      ? null
+      : (generation.builtContent ??
+        (strategy === 'holistic'
+          ? posting.holisticSelection &&
+            selectResumeContentHolistic(profile, posting.holisticSelection, buildProfileAtoms(profile)).content
+          : posting.analysis && selectResumeContent(profile, posting.analysis, buildProfileAtoms(profile)).content) ??
+        null);
 
   return (
     // print:pb-0 -- the on-screen bottom padding must not survive printing, or
@@ -395,7 +428,7 @@ export default function DocumentsPage() {
             <button
               type="button"
               onClick={() => setTab('resume')}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'resume'
                   ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -407,7 +440,7 @@ export default function DocumentsPage() {
             <button
               type="button"
               onClick={() => setTab('coverLetter')}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'coverLetter'
                   ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -419,7 +452,7 @@ export default function DocumentsPage() {
             <button
               type="button"
               onClick={() => setTab('interviewPrep')}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'interviewPrep'
                   ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -678,22 +711,67 @@ export default function DocumentsPage() {
                   </div>
                 </Card>
               )}
+              <div
+                role="group"
+                aria-label="Show"
+                className="mb-4 flex w-fit rounded-xl bg-slate-100 p-0.5 lg:hidden print:hidden dark:bg-slate-800"
+              >
+                {(['edit', 'preview'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={pane === option}
+                    onClick={() => setPane(option)}
+                    className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-colors ${
+                      pane === option
+                        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    {option === 'edit' ? 'Edit' : 'Preview'}
+                  </button>
+                ))}
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start print:hidden">
-                <ResumeEditor
-                  value={generation.content as ResumeContent}
-                  sourceMap={generation.sourceMap}
-                  analysis={posting.analysis}
-                  profile={profile}
-                  onChange={updateContent}
-                  onFocusBullet={setFocusedTarget}
-                  navRequest={navRequest}
-                />
-                <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
+                <div className={`min-w-0 ${pane === 'edit' ? '' : 'hidden lg:block'}`}>
+                  <ResumeEditor
+                    value={generation.content as ResumeContent}
+                    sourceMap={generation.sourceMap}
+                    analysis={posting.analysis}
+                    profile={profile}
+                    tailored={tailored ?? (generation.content as ResumeContent)}
+                    onChange={updateContent}
+                    onFocusBullet={setFocusedTarget}
+                    navRequest={navRequest}
+                  />
+                </div>
+                <div
+                  className={`min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin ${
+                    pane === 'preview' ? '' : 'hidden lg:block'
+                  }`}
+                >
+                  {overflows !== null && (
+                    <p
+                      aria-live="polite"
+                      className={`mb-2 flex items-center gap-1.5 text-xs font-medium ${
+                        overflows ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'
+                      }`}
+                    >
+                      {overflows ? <AlertTriangle size={13} /> : <Check size={13} />}
+                      {overflows ? 'Runs past one page. Shorten or remove a line.' : 'Fits on one page'}
+                    </p>
+                  )}
+                  <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
+                    Select any part of the preview to edit it there.
+                  </p>
                   <ResumePrintView
                     content={generation.content as ResumeContent}
                     variant="preview"
                     focusedTarget={focusedTarget}
-                    onNavigate={(target) => setNavRequest({ target, nonce: Date.now() })}
+                    onNavigate={(target) => {
+                      setPane('edit');
+                      setNavRequest({ target, nonce: Date.now() });
+                    }}
                   />
                 </div>
               </div>
