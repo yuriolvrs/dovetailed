@@ -90,6 +90,7 @@ export function verifyExtractedProfile(
   check('contact.email', extracted.contact?.email);
   check('contact.phone', extracted.contact?.phone);
   check('contact.location', extracted.contact?.location);
+  extracted.contact?.links?.forEach((link, i) => check(`contact.links.${i}`, link));
 
   extracted.skills?.forEach((group, g) => {
     group.items?.forEach((item, i) => check(`skills.${g}.items.${i}`, item));

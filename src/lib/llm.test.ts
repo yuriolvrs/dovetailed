@@ -6,6 +6,7 @@
 // gives a flaky AI response exactly one more chance before giving up.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Document, Packer, Paragraph } from 'docx';
 import { extractText, generate, generateStructured, llmErrorMessage, ProxyRequestError } from './llm';
 
 interface Hello {
@@ -219,7 +220,23 @@ describe('extractText', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('POSTs a PDF to /extract as mimeType + base64', async () => {
+  it('reads a Word file with text locally without any network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const doc = new Document({
+      sections: [{ children: [new Paragraph('Software Engineer at Brightline Logistics. Built a route-planning service in Go that cut delivery planning time by 40%.')] }],
+    });
+    const file = new File([new Uint8Array(await Packer.toBuffer(doc))], 'cv.docx', {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+
+    expect(await extractText(file)).toContain('route-planning service');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // 'ABC' has no text layer, so the local read gives up and the document
+  // reader gets it -- the path a scanned PDF takes.
+  it('POSTs a PDF with no readable text to /extract as mimeType + base64', async () => {
     const fetchMock = vi.fn().mockResolvedValue(ocrResponse([{ index: 0, markdown: 'page one' }]));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -269,6 +286,17 @@ describe('llmErrorMessage', () => {
     );
     expect(message).toContain('too large');
     expect(message).not.toContain('413');
+  });
+
+  it('explains a rate limit that outlasted the retries', () => {
+    const body = '{"object":"error","message":"Rate limit exceeded","type":"rate_limited"}';
+    const reader = llmErrorMessage(new ProxyRequestError(429, 'Document reader', body, '/extract'), 'Import');
+    expect(reader).toContain('rate limit');
+    expect(reader).toContain('paste the text');
+    expect(reader).not.toContain('429');
+    const model = llmErrorMessage(new ProxyRequestError(429, 'LLM proxy', body, '/generate'), 'Matching');
+    expect(model).toContain('rate limit');
+    expect(model).not.toContain('paste');
   });
 
   it('does not call a rejected text request a file', () => {

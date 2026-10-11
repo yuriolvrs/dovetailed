@@ -1,13 +1,15 @@
 // What this file is: the Profile route's page component. Loads the profile
 // from Dexie on mount, composes all the section forms plus BackupControls,
 // and autosaves edits (on every change, except the two large free-text
-// fields which save on blur).
+// fields which save on blur). An empty profile opens on ProfileStart instead
+// of the tabs, and a "Ready to tailor" checklist sits above the tabs.
 // In plain terms: the whole "Profile" screen you see when you go to the
 // Profile tab.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { AlertCircle, Check, ChevronLeft, ChevronRight, CircleDashed } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowRight, Check, CheckCircle, ChevronLeft, ChevronRight, CircleDashed } from 'lucide-react';
 import type { Profile } from '../types';
 import { computeProfileCompleteness, hasBullets, loadProfile, saveProfile } from '../lib/profileStore';
 import { loadTemplate } from '../lib/templateStore';
@@ -21,6 +23,7 @@ import { TexTemplateSection } from '../components/profile/TexTemplateSection';
 import { ImportResumeSection } from '../components/profile/ImportResumeSection';
 import { JobDocumentImportSection } from '../components/profile/JobDocumentImportSection';
 import { BackupControls } from '../components/profile/BackupControls';
+import { ProfileStart } from '../components/profile/ProfileStart';
 import { BulletRewriteSuggest } from '../components/resume/BulletRewriteSuggest';
 import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
 import { Btn, PageSkeleton, SavedIndicator } from '../components/ui/primitives';
@@ -56,9 +59,34 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
+// How each readiness check reads in the "To tailor to a job, add ..." line.
+const MISSING_LABELS: Record<string, string> = {
+  Name: 'your name',
+  Email: 'your email',
+  Skills: 'a skill',
+  Highlights: 'a bullet on a job or project',
+};
+
+// True when nothing at all has been entered yet, which is when the start
+// screen shows instead of the tabs.
+// In plain terms: is this a brand-new, untouched profile?
+function isBlankProfile(profile: Profile): boolean {
+  return (
+    profile.contact.name.trim() === '' &&
+    profile.contact.email.trim() === '' &&
+    profile.experience.length === 0 &&
+    profile.projects.length === 0 &&
+    profile.education.length === 0 &&
+    profile.skills.every((group) => group.items.length === 0)
+  );
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('contact');
+  // Set when the user leaves the start screen without importing anything.
+  const [skipStart, setSkipStart] = useState(false);
+  const navigate = useNavigate();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   // Only needed for the tab badge's "still empty" flag -- the .tex section
   // owns its own copy of the template; null means we haven't looked yet.
@@ -122,6 +150,24 @@ export default function ProfilePage() {
     return <PageSkeleton cards={4} />;
   }
 
+  if (!skipStart && isBlankProfile(profile)) {
+    return (
+      <ProfileStart
+        profile={profile}
+        onImported={(next) => {
+          setProfile(next);
+          void saveProfile(next);
+          setActiveTab('experience');
+        }}
+        onStartBlank={() => setSkipStart(true)}
+        onRestore={() => {
+          setSkipStart(true);
+          setActiveTab('import-data');
+        }}
+      />
+    );
+  }
+
   const completeness = computeProfileCompleteness(profile);
   // Tabs that don't count toward the completeness meter but are still worth
   // flagging when empty -- amber, versus red for the required checks above.
@@ -154,20 +200,43 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-            Complete
-          </span>
-          <SavedIndicator visible={saved} />
-        </div>
-        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{completeness.percent}%</span>
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-slate-900 dark:bg-slate-100 transition-[width] duration-300 ease-out"
-          style={{ width: `${completeness.percent}%` }}
-        />
+      {/* Ready to tailor: what is still needed, each one a link to its tab. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3">
+        {completeness.missing.length === 0 ? (
+          <>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1.5">
+              <CheckCircle size={15} />
+              Ready to tailor
+              <SavedIndicator visible={saved} />
+            </p>
+            <Btn size="sm" onClick={() => navigate('/')}>
+              Tailor to a job
+              <ArrowRight size={13} />
+            </Btn>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <span>To tailor to a job, add</span>
+              {completeness.missing.map((label, i) => {
+                const tab = TABS.find((t) => (t.checks as readonly string[]).includes(label));
+                return (
+                  <span key={label}>
+                    <button
+                      type="button"
+                      onClick={() => tab && setActiveTab(tab.id)}
+                      className="font-medium text-slate-900 dark:text-slate-100 underline hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      {MISSING_LABELS[label] ?? label}
+                    </button>
+                    {i < completeness.missing.length - 1 ? ',' : '.'}
+                  </span>
+                );
+              })}
+            </p>
+            <SavedIndicator visible={saved} />
+          </>
+        )}
       </div>
 
       <div
@@ -267,6 +336,20 @@ export default function ProfilePage() {
             saved={saved}
           />
         )}
+        {(activeTab === 'experience' || activeTab === 'projects') && (
+          // Keyed by tab so switching tabs resets it to that tab's kind.
+          <div className="mt-4">
+            <JobDocumentImportSection
+              key={activeTab}
+              profile={profile}
+              initialKind={activeTab === 'experience' ? 'experience' : 'project'}
+              onImported={(next) => {
+                setProfile(next);
+                void saveProfile(next);
+              }}
+            />
+          </div>
+        )}
         {activeTab === 'skills' && (
           <SkillsForm value={profile.skills} onChange={(skills) => update({ skills })} />
         )}
@@ -287,15 +370,6 @@ export default function ProfilePage() {
                 void saveProfile(next);
               }}
             />
-            <div className="mt-4">
-              <JobDocumentImportSection
-                profile={profile}
-                onImported={(next) => {
-                  setProfile(next);
-                  void saveProfile(next);
-                }}
-              />
-            </div>
             <div className="mt-4">
               <BackupControls onDataChanged={refresh} />
             </div>
