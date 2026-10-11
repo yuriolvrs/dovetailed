@@ -151,63 +151,6 @@ export default function JobDetailPage() {
         )}
       </div>
 
-      <Card className="p-4 mb-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <FieldInput
-            label="Job Title"
-            value={posting.title ?? ''}
-            onChange={(title) => {
-              updateLive({ title });
-              markDirty('title');
-            }}
-            onBlur={() => {
-              update({ title: posting.title });
-              markClean('title');
-            }}
-            placeholder="Senior Frontend Engineer"
-            unsaved={dirtyFields.has('title')}
-          />
-          <FieldInput
-            label="Company"
-            value={posting.company ?? ''}
-            onChange={(company) => {
-              updateLive({ company });
-              markDirty('company');
-            }}
-            onBlur={() => {
-              update({ company: posting.company });
-              markClean('company');
-            }}
-            placeholder="Acme Corp"
-            unsaved={dirtyFields.has('company')}
-          />
-          <FieldInput
-            label="Location"
-            value={posting.location ?? ''}
-            onChange={(location) => {
-              updateLive({ location });
-              markDirty('location');
-            }}
-            onBlur={() => {
-              update({ location: posting.location });
-              markClean('location');
-            }}
-            placeholder="San Francisco, CA"
-            unsaved={dirtyFields.has('location')}
-          />
-          <FieldSelect
-            label="Arrangement"
-            value={posting.arrangement ?? ''}
-            onChange={(arrangement) => update({ arrangement })}
-            options={ARRANGEMENTS}
-            placeholder="Select…"
-          />
-        </div>
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <ApplicationTracker posting={posting} onChange={update} />
-        </div>
-      </Card>
-
       {started ? (
         // Return visit: the posting has been read, so it folds away and the
         // documents lead.
@@ -310,6 +253,64 @@ export default function JobDetailPage() {
           </Card>
         </div>
       )}
+      {/* The posting's own details come after the main action, so on a phone
+          the Build / Open button is not a screen and a half down. */}
+      <Card className="p-4 mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <FieldInput
+            label="Job Title"
+            value={posting.title ?? ''}
+            onChange={(title) => {
+              updateLive({ title });
+              markDirty('title');
+            }}
+            onBlur={() => {
+              update({ title: posting.title });
+              markClean('title');
+            }}
+            placeholder="Senior Frontend Engineer"
+            unsaved={dirtyFields.has('title')}
+          />
+          <FieldInput
+            label="Company"
+            value={posting.company ?? ''}
+            onChange={(company) => {
+              updateLive({ company });
+              markDirty('company');
+            }}
+            onBlur={() => {
+              update({ company: posting.company });
+              markClean('company');
+            }}
+            placeholder="Acme Corp"
+            unsaved={dirtyFields.has('company')}
+          />
+          <FieldInput
+            label="Location"
+            value={posting.location ?? ''}
+            onChange={(location) => {
+              updateLive({ location });
+              markDirty('location');
+            }}
+            onBlur={() => {
+              update({ location: posting.location });
+              markClean('location');
+            }}
+            placeholder="San Francisco, CA"
+            unsaved={dirtyFields.has('location')}
+          />
+          <FieldSelect
+            label="Arrangement"
+            value={posting.arrangement ?? ''}
+            onChange={(arrangement) => update({ arrangement })}
+            options={ARRANGEMENTS}
+            placeholder="Select…"
+          />
+        </div>
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <ApplicationTracker posting={posting} onChange={update} />
+        </div>
+      </Card>
     </div>
   );
 }
