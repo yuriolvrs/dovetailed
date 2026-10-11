@@ -23,7 +23,7 @@ function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
   if (!start) return end;
   if (!end) return start;
-  return `${start} -- ${end}`;
+  return `${start} – ${end}`;
 }
 
 const HEADING_SPACING = { before: 240, after: 80 };

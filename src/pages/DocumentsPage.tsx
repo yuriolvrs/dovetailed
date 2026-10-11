@@ -398,7 +398,7 @@ export default function DocumentsPage() {
               className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'resume'
                   ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               <FileText size={14} />
@@ -410,7 +410,7 @@ export default function DocumentsPage() {
               className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'coverLetter'
                   ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               <Mail size={14} />
@@ -422,7 +422,7 @@ export default function DocumentsPage() {
               className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
                 tab === 'interviewPrep'
                   ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                  : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
               <MessageCircleQuestion size={14} />

@@ -34,9 +34,11 @@ function bulletFocusKey(target: ResumeFocusTarget): string {
   return `${target.section}:${target.entryKey}:${target.bulletIndex}`;
 }
 
+// "Start – End" with a real en dash. "--" is LaTeX's spelling of one and
+// printed literally here. A missing side shows the other alone.
 function dateRange(start: string, end: string): string {
-  if (!start && !end) return '';
-  return `${start} -- ${end}`;
+  if (!start || !end) return start || end;
+  return `${start} – ${end}`;
 }
 
 const DEFAULT_EXPERIENCE_SECTION = 'Experience';
