@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Profile setup mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#020617;--panel:#0f172a;--line:#1e293b;--ink:#f8fafc;--text:#cbd5e1;--muted:#94a3b8;--accent:#3b82f6;--ok:#34d399;--warn:#fbbf24}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{color:var(--text);font:16px/1.6 Outfit,system-ui,sans-serif;padding:56px 24px 96px}
+::selection{background:rgba(59,130,246,.35);color:#fff}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:40px;line-height:1.15;color:var(--ink);font-weight:600;letter-spacing:-.02em;max-width:22ch}
+.lede{font-size:18px;color:var(--muted);max-width:66ch;margin:14px 0 8px}
+.jump{display:flex;gap:10px;flex-wrap:wrap;margin:26px 0 8px}
+.jump a{color:var(--ink);text-decoration:none;border:1px solid #334155;border-radius:12px;padding:8px 14px;font-weight:500}
+.jump a:hover{border-color:var(--accent)}
+.jump a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.idea{margin-top:72px}
+.head{display:flex;align-items:center;gap:14px}
+.letter{width:36px;height:36px;border-radius:11px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:700}
+h2{font-size:28px;color:var(--ink);font-weight:600;letter-spacing:-.01em}
+.what{max-width:70ch;margin:12px 0 22px}
+.frame{position:relative;width:100%;aspect-ratio:1440/900;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#000}
+.frame iframe{position:absolute;top:0;left:0;width:1440px;height:900px;border:0;transform-origin:0 0;transform:scale(var(--s,0.8))}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:22px}
+h3{font-size:14px;color:var(--ink);font-weight:600;margin-bottom:6px}
+.pc ul{padding-left:18px}
+.pc li{margin:4px 0}
+.pc div:first-child li::marker{color:var(--ok)}
+.pc div:last-child li::marker{color:var(--warn)}
+.rec{margin-top:80px;border-top:1px solid var(--line);padding-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.rec h2{margin-bottom:12px}
+.rec ol{padding-left:20px}
+.rec li{margin:8px 0}
+.rec strong{color:var(--ink);font-weight:600}
+.settings{margin-top:72px}
+@media (max-width:760px){h1{font-size:30px}.pc,.rec{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>Setting up your profile, three ways</h1>
+<p class="lede">Today the profile is eight tabs of empty forms. These mockups show three replacements for setting it up by hand. In all three, Writing samples, the .tex template and backups move out to a new Settings page, so Profile holds only what goes on a resume.</p>
+<p class="lede">Mockups use your real profile and Dovetailed's current look. They are pictures, not working screens.</p>
+<nav class="jump" aria-label="Ideas"><a href="#guided">A · Guided steps</a><a href="#onepage">B · One page</a><a href="#talk">C · Talk it through</a><a href="#settings">Settings</a><a href="#pick">My recommendation</a></nav>
+
+<section class="idea" id="guided">
+  <div class="head"><span class="letter">A</span><h2>Guided steps</h2></div>
+  <p class="what">A first-time setup that asks one thing per screen: you, work, projects, skills, education, then a check. The resume on the right fills in as you type, with the newest line highlighted, so you see what each answer is for.</p>
+  <div class="frame"><iframe title="Guided steps mockup" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;Guided setup&lt;/title&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;background:#020617;color:#e2e8f0;font:15px/1.5 Outfit,system-ui,sans-serif}
+.top{height:64px;border-bottom:1px solid #1e293b;display:flex;align-items:center;padding:0 40px;gap:14px;background:#0b1222}
+.logo{width:34px;height:34px;border-radius:10px;background:#fff}
+.brand{font-weight:700;font-size:17px;color:#f8fafc}
+.nav{margin-left:auto;display:flex;gap:6px}
+.nav a{padding:7px 14px;border-radius:10px;color:#94a3b8;font-size:14px;font-weight:500}
+.nav a.on{background:#1e293b;color:#f8fafc}
+.wrap{display:grid;grid-template-columns:250px 1fr 470px;height:836px}
+.rail{border-right:1px solid #1e293b;padding:32px 24px}
+.rail h2{font-size:13px;color:#94a3b8;font-weight:500;margin-bottom:18px}
+.step{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;margin-bottom:4px;color:#94a3b8;font-weight:500}
+.dot{width:24px;height:24px;border-radius:50%;border:1.5px solid #334155;display:grid;place-items:center;font-size:12px}
+.step.done{color:#cbd5e1}.step.done .dot{background:#e2e8f0;border-color:#e2e8f0;color:#0f172a}
+.step.cur{background:#0f172a;color:#f8fafc}.step.cur .dot{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 0 0 4px rgba(59,130,246,.22)}
+.step small{display:block;font-size:12px;color:#8a99b0;font-weight:400}
+.later{margin-top:28px;padding-top:20px;border-top:1px solid #1e293b;font-size:13px;color:#8a99b0}
+.main{padding:36px 56px;overflow:hidden}
+.count{font-size:13px;color:#94a3b8}
+h1{font-size:30px;font-weight:600;color:#f8fafc;margin:6px 0 6px;letter-spacing:-.01em}
+.lede{color:#94a3b8;max-width:60ch;margin-bottom:26px}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:18px;padding:24px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-size:12px;font-weight:600;color:#94a3b8;letter-spacing:.04em;margin-bottom:6px}
+.in{height:44px;border:1px solid #334155;border-radius:12px;padding:0 14px;display:flex;align-items:center;color:#f1f5f9;background:#020617}
+.in.ph{color:#7c8aa0}
+.hl{margin-top:18px}
+.b{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border:1px solid #334155;border-radius:12px;margin-bottom:8px;background:#020617;color:#e2e8f0}
+.b::before{content:&quot;&quot;;width:5px;height:5px;border-radius:50%;background:#8a99b0;margin-top:9px;flex:none}
+.b.typing{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
+.caret{display:inline-block;width:1.5px;height:17px;background:#93c5fd;vertical-align:-3px;margin-left:1px}
+.hint{font-size:12.5px;color:#8a99b0;margin-top:6px}
+kbd{font:500 11px Outfit;border:1px solid #334155;border-radius:6px;padding:1px 6px;color:#cbd5e1}
+.another{border:1.5px dashed #334155;border-radius:14px;padding:14px;text-align:center;color:#94a3b8;font-weight:500}
+.foot{display:flex;align-items:center;gap:12px;margin-top:22px}
+.btn{height:44px;padding:0 22px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.pri{background:#f8fafc;color:#0f172a}.sec{border:1px solid #334155;color:#e2e8f0}.ghost{color:#94a3b8;margin-left:auto}
+.prev{background:#0b1222;border-left:1px solid #1e293b;padding:30px 34px}
+.prev h2.ph{font-size:13px;color:#94a3b8;font-weight:500;display:flex;justify-content:space-between;margin-bottom:14px}
+.live{color:#34d399}
+.paper{background:#fbfbf9;color:#111;border-radius:6px;padding:30px 30px;height:690px;box-shadow:0 18px 40px -12px rgba(0,0,0,.6);font-family:Georgia,serif;font-size:11px;line-height:1.45}
+.paper .nm{font-size:20px;text-align:center;font-weight:700}
+.paper .ct{text-align:center;font-size:11px;color:#333;margin-bottom:10px}
+.sec2{font-variant:small-caps;font-size:12px;border-bottom:1px solid #222;margin:10px 0 5px}
+.row{display:flex;justify-content:space-between;font-weight:700}
+.it{font-style:italic;color:#333}
+.paper ul{padding-left:14px;margin:3px 0 6px}
+.new{background:#dbeafe;outline:2px solid #3b82f6;outline-offset:1px;border-radius:2px}
+.ghostline{height:7px;background:#e7e5e4;border-radius:3px;margin:5px 0}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;div class=&quot;top&quot;&gt;&lt;div class=&quot;logo&quot;&gt;&lt;/div&gt;&lt;div class=&quot;brand&quot;&gt;Dovetailed&lt;/div&gt;
+&lt;div class=&quot;nav&quot;&gt;&lt;a&gt;Jobs&lt;/a&gt;&lt;a class=&quot;on&quot;&gt;Profile&lt;/a&gt;&lt;a&gt;Settings&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;wrap&quot;&gt;
+&lt;aside class=&quot;rail&quot;&gt;&lt;h2&gt;Set up your profile&lt;/h2&gt;
+&lt;div class=&quot;step done&quot;&gt;&lt;span class=&quot;dot&quot;&gt;&lt;svg width=&quot;10&quot; height=&quot;10&quot; viewBox=&quot;0 0 10 10&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M2 5.2 4.1 7.3 8 2.8&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;&lt;span&gt;You&lt;small&gt;Name, email, links&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;step cur&quot;&gt;&lt;span class=&quot;dot&quot;&gt;2&lt;/span&gt;&lt;span&gt;Work&lt;small&gt;1 job so far&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;step&quot;&gt;&lt;span class=&quot;dot&quot;&gt;3&lt;/span&gt;&lt;span&gt;Projects&lt;small&gt;Optional&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;step&quot;&gt;&lt;span class=&quot;dot&quot;&gt;4&lt;/span&gt;&lt;span&gt;Skills&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;step&quot;&gt;&lt;span class=&quot;dot&quot;&gt;5&lt;/span&gt;&lt;span&gt;Education&lt;small&gt;Optional&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;step&quot;&gt;&lt;span class=&quot;dot&quot;&gt;6&lt;/span&gt;&lt;span&gt;Check it over&lt;/span&gt;&lt;/div&gt;
+&lt;p class=&quot;later&quot;&gt;Have a resume file? &lt;u&gt;Read it instead&lt;/u&gt;. It fills these steps for you.&lt;/p&gt;
+&lt;/aside&gt;
+&lt;main class=&quot;main&quot;&gt;
+&lt;p class=&quot;count&quot;&gt;Step 2 of 6&lt;/p&gt;
+&lt;h1&gt;Where have you worked?&lt;/h1&gt;
+&lt;p class=&quot;lede&quot;&gt;Start with your most recent role. Jobs, internships, org positions and volunteer work all count. Dovetailed only ever uses what you write here.&lt;/p&gt;
+&lt;div class=&quot;card&quot;&gt;
+&lt;div class=&quot;grid&quot;&gt;
+&lt;div&gt;&lt;label&gt;COMPANY OR ORGANISATION&lt;/label&gt;&lt;div class=&quot;in&quot;&gt;Viridis Arcus Esports&lt;/div&gt;&lt;/div&gt;
+&lt;div&gt;&lt;label&gt;YOUR ROLE&lt;/label&gt;&lt;div class=&quot;in&quot;&gt;Assistant Director for Internals&lt;/div&gt;&lt;/div&gt;
+&lt;div&gt;&lt;label&gt;STARTED&lt;/label&gt;&lt;div class=&quot;in&quot;&gt;November 2024&lt;/div&gt;&lt;/div&gt;
+&lt;div&gt;&lt;label&gt;ENDED&lt;/label&gt;&lt;div class=&quot;in&quot;&gt;Still here&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;hl&quot;&gt;&lt;label&gt;WHAT YOU DID&lt;/label&gt;
+&lt;div class=&quot;b&quot;&gt;Planned and executed events as project head, including tournaments and general assemblies&lt;/div&gt;
+&lt;div class=&quot;b typing&quot;&gt;Handled documentation, proposals and post-event reports&lt;span class=&quot;caret&quot;&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;p class=&quot;hint&quot;&gt;&lt;kbd&gt;Enter&lt;/kbd&gt; starts the next bullet · paste a list and each line becomes one&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;another&quot;&gt;+ Add another job&lt;/div&gt;
+&lt;div class=&quot;foot&quot;&gt;&lt;span class=&quot;btn sec&quot;&gt;Back&lt;/span&gt;&lt;span class=&quot;btn pri&quot;&gt;Continue to projects →&lt;/span&gt;&lt;span class=&quot;ghost&quot;&gt;Skip for now&lt;/span&gt;&lt;/div&gt;
+&lt;/main&gt;
+&lt;aside class=&quot;prev&quot;&gt;&lt;h2 class=&quot;ph&quot;&gt;Your resume, so far &lt;span class=&quot;live&quot;&gt;● Updating as you type&lt;/span&gt;&lt;/h2&gt;
+&lt;div class=&quot;paper&quot;&gt;
+&lt;div class=&quot;nm&quot;&gt;Marc Yuri G. Olivares&lt;/div&gt;
+&lt;div class=&quot;ct&quot;&gt;+639175340608 · yuri.olivares0608@gmail.com · github.com/yuriolvrs&lt;/div&gt;
+&lt;div class=&quot;sec2&quot;&gt;Experience&lt;/div&gt;
+&lt;div class=&quot;row&quot;&gt;&lt;span&gt;Viridis Arcus Esports&lt;/span&gt;&lt;span&gt;Nov. 2024 – Present&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;it&quot;&gt;Assistant Director for Internals&lt;/div&gt;
+&lt;ul&gt;&lt;li&gt;Planned and executed events as project head, including tournaments and general assemblies&lt;/li&gt;
+&lt;li class=&quot;new&quot;&gt;Handled documentation, proposals and post-event reports&lt;/li&gt;&lt;/ul&gt;
+&lt;div class=&quot;sec2&quot;&gt;Projects&lt;/div&gt;&lt;div class=&quot;ghostline&quot; style=&quot;width:70%&quot;&gt;&lt;/div&gt;&lt;div class=&quot;ghostline&quot;&gt;&lt;/div&gt;&lt;div class=&quot;ghostline&quot; style=&quot;width:85%&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;sec2&quot;&gt;Skills&lt;/div&gt;&lt;div class=&quot;ghostline&quot; style=&quot;width:60%&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;sec2&quot;&gt;Education&lt;/div&gt;&lt;div class=&quot;ghostline&quot; style=&quot;width:75%&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;&lt;/aside&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;
+
+"></iframe></div>
+  <div class="pc"><div><h3>Good</h3><ul><li>Nobody faces eight empty tabs: there is always exactly one next thing.</li><li>The live resume answers "why are you asking me this?"</li><li>Projects and Education are marked optional, and every step can be skipped.</li></ul></div>
+  <div><h3>Watch out</h3><ul><li>Slow for quick edits later, so returning users still need another view.</li></ul></div></div>
+</section>
+<section class="idea" id="onepage">
+  <div class="head"><span class="letter">B</span><h2>One page, edit in place</h2></div>
+  <p class="what">No tabs at all. Your profile is one sheet that reads like your resume. Click any entry and it opens for editing right where it sits; the outline on the left jumps between sections and flags anything missing, like a project with no bullets.</p>
+  <div class="frame"><iframe title="One page, edit in place mockup" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;One page&lt;/title&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;background:#020617;color:#e2e8f0;font:15px/1.5 Outfit,system-ui,sans-serif}
+.top{height:64px;border-bottom:1px solid #1e293b;display:flex;align-items:center;padding:0 40px;gap:14px;background:#0b1222}
+.logo{width:34px;height:34px;border-radius:10px;background:#fff}
+.brand{font-weight:700;font-size:17px;color:#f8fafc}
+.nav{margin-left:auto;display:flex;gap:6px}
+.nav a{padding:7px 14px;border-radius:10px;color:#94a3b8;font-size:14px;font-weight:500}
+.nav a.on{background:#1e293b;color:#f8fafc}
+.wrap{display:grid;grid-template-columns:260px 1fr;height:836px}
+.out{padding:30px 22px;border-right:1px solid #1e293b}
+.ready{background:#052e1f;border:1px solid #065f46;color:#6ee7b7;border-radius:14px;padding:12px 14px;font-weight:600;margin-bottom:22px}
+.ready small{display:block;color:#a7f3d0;font-weight:400;opacity:.8}
+.o{display:flex;justify-content:space-between;padding:9px 12px;border-radius:10px;color:#94a3b8;font-weight:500}
+.o b{font-weight:500;color:#8a99b0;font-size:13px}
+.o.on{background:#0f172a;color:#f8fafc}
+.o.warn b{color:#fbbf24}
+.add{margin-top:18px;padding:10px 12px;border:1px dashed #334155;border-radius:12px;color:#94a3b8;font-size:14px}
+.doc{padding:30px 0;overflow:hidden}
+.sheet{width:820px;margin:0 auto;background:#0f172a;border:1px solid #1e293b;border-radius:20px;padding:38px 48px}
+.name{font-size:30px;font-weight:600;color:#f8fafc;letter-spacing:-.01em}
+.contact{color:#94a3b8;margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
+.contact span:hover{color:#fff}
+.h{display:flex;align-items:baseline;justify-content:space-between;margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid #1e293b}
+.h h2{font-size:15px;font-weight:600;color:#f8fafc;letter-spacing:.02em}
+.h a{font-size:13px;color:#93c5fd;font-weight:500}
+.e{padding:12px 14px;margin:0 -14px;border-radius:14px}
+.e:hover{background:#111c33}
+.er{display:flex;justify-content:space-between;color:#f1f5f9;font-weight:600}
+.er span:last-child{color:#94a3b8;font-weight:400;font-size:14px}
+.role{color:#94a3b8;font-size:14px}
+.e ul{margin:6px 0 0 18px;color:#cbd5e1;font-size:14.5px}
+.edit{background:#020617;border:1px solid #3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,.15);border-radius:16px;padding:18px;margin:6px -14px}
+.g{display:grid;grid-template-columns:1fr 1fr 150px 150px;gap:10px;margin-bottom:12px}
+.f{font-size:11.5px;color:#94a3b8;font-weight:600;letter-spacing:.04em}
+.in{height:40px;border:1px solid #334155;border-radius:10px;padding:0 12px;display:flex;align-items:center;color:#f1f5f9;margin-top:4px;font-size:14px}
+.bl{border:1px solid #334155;border-radius:10px;padding:8px 12px;margin-top:6px;font-size:14px;color:#e2e8f0}
+.bl.now{border-color:#3b82f6}
+.act{display:flex;gap:8px;margin-top:12px;align-items:center}
+.btn{height:36px;padding:0 16px;border-radius:10px;font-weight:600;font-size:14px;display:inline-flex;align-items:center}
+.pri{background:#f8fafc;color:#0f172a}.sec{border:1px solid #334155}
+.saved{color:#6ee7b7;font-size:13px;margin-left:auto}
+.flag{display:inline-block;font-size:12px;color:#fbbf24;border:1px solid #78350f;background:#2a1a05;padding:1px 8px;border-radius:999px;margin-left:8px;font-weight:500}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;div class=&quot;top&quot;&gt;&lt;div class=&quot;logo&quot;&gt;&lt;/div&gt;&lt;div class=&quot;brand&quot;&gt;Dovetailed&lt;/div&gt;
+&lt;div class=&quot;nav&quot;&gt;&lt;a&gt;Jobs&lt;/a&gt;&lt;a class=&quot;on&quot;&gt;Profile&lt;/a&gt;&lt;a&gt;Settings&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;wrap&quot;&gt;
+&lt;aside class=&quot;out&quot;&gt;
+&lt;div class=&quot;ready&quot;&gt;Ready to tailor&lt;small&gt;Everything a resume needs is here.&lt;/small&gt;&lt;/div&gt;
+&lt;div class=&quot;o&quot;&gt;You &lt;b&gt;4 of 4&lt;/b&gt;&lt;/div&gt;
+&lt;div class=&quot;o on&quot;&gt;Experience &lt;b&gt;4 roles&lt;/b&gt;&lt;/div&gt;
+&lt;div class=&quot;o warn&quot;&gt;Projects &lt;b&gt;1 without bullets&lt;/b&gt;&lt;/div&gt;
+&lt;div class=&quot;o&quot;&gt;Skills &lt;b&gt;24&lt;/b&gt;&lt;/div&gt;
+&lt;div class=&quot;o&quot;&gt;Education &lt;b&gt;1&lt;/b&gt;&lt;/div&gt;
+&lt;div class=&quot;add&quot;&gt;+ Read another resume&lt;/div&gt;
+&lt;/aside&gt;
+&lt;main class=&quot;doc&quot;&gt;&lt;div class=&quot;sheet&quot;&gt;
+&lt;div class=&quot;name&quot;&gt;Marc Yuri G. Olivares&lt;/div&gt;
+&lt;div class=&quot;contact&quot;&gt;&lt;span&gt;yuri.olivares0608@gmail.com&lt;/span&gt;&lt;span&gt;+639175340608&lt;/span&gt;&lt;span&gt;linkedin.com/in/marc-yuri-olivares&lt;/span&gt;&lt;span&gt;github.com/yuriolvrs&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;h&quot;&gt;&lt;h2&gt;Experience&lt;/h2&gt;&lt;a&gt;+ Add a role&lt;/a&gt;&lt;/div&gt;
+&lt;div class=&quot;edit&quot;&gt;
+&lt;div class=&quot;g&quot;&gt;&lt;div&gt;&lt;span class=&quot;f&quot;&gt;COMPANY&lt;/span&gt;&lt;div class=&quot;in&quot;&gt;Viridis Arcus Esports&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;f&quot;&gt;ROLE&lt;/span&gt;&lt;div class=&quot;in&quot;&gt;Assistant Director for Internals&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;f&quot;&gt;FROM&lt;/span&gt;&lt;div class=&quot;in&quot;&gt;Nov 2024&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span class=&quot;f&quot;&gt;TO&lt;/span&gt;&lt;div class=&quot;in&quot;&gt;Present&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;span class=&quot;f&quot;&gt;WHAT YOU DID&lt;/span&gt;
+&lt;div class=&quot;bl&quot;&gt;Planned and executed events as project head, including community events, tournaments, and general assemblies&lt;/div&gt;
+&lt;div class=&quot;bl now&quot;&gt;Handled documentation, proposals, and post-event reports for organizational activities&lt;/div&gt;
+&lt;div class=&quot;act&quot;&gt;&lt;span class=&quot;btn pri&quot;&gt;Done&lt;/span&gt;&lt;span class=&quot;btn sec&quot;&gt;More details&lt;/span&gt;&lt;span class=&quot;saved&quot;&gt;Saved&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;e&quot;&gt;&lt;div class=&quot;er&quot;&gt;&lt;span&gt;La Salle Computer Society&lt;/span&gt;&lt;span&gt;Sep 2024 – Jan 2025&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;role&quot;&gt;Committee Trainee for Publications&lt;/div&gt;
+&lt;ul&gt;&lt;li&gt;Wrote social media captions to support organizational events and official announcements&lt;/li&gt;&lt;li&gt;Conducted interviews with members, students, and a featured developer for spotlight content&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+&lt;div class=&quot;e&quot;&gt;&lt;div class=&quot;er&quot;&gt;&lt;span&gt;National Service Training Program – LTS&lt;/span&gt;&lt;span&gt;Mar 2023 – Jul 2023&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;role&quot;&gt;Resource Mobilization Committee Head&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;h&quot;&gt;&lt;h2&gt;Projects&lt;/h2&gt;&lt;a&gt;+ Add a project&lt;/a&gt;&lt;/div&gt;
+&lt;div class=&quot;e&quot;&gt;&lt;div class=&quot;er&quot;&gt;&lt;span&gt;Kabu Kids – AI Dining Companion App&lt;/span&gt;&lt;span&gt;Python, TensorFlow, OpenCV&lt;/span&gt;&lt;/div&gt;
+&lt;ul&gt;&lt;li&gt;Developing food portion recognition using computer vision to calculate percentage of food consumed&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;
+&lt;div class=&quot;e&quot;&gt;&lt;div class=&quot;er&quot;&gt;&lt;span&gt;SX Manila – Event Ticketing Website &lt;span class=&quot;flag&quot;&gt;No bullets yet&lt;/span&gt;&lt;/span&gt;&lt;span&gt;HTML, CSS, JavaScript&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;&lt;/main&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;
+
+"></iframe></div>
+  <div class="pc"><div><h3>Good</h3><ul><li>You see everything at once, the way a recruiter will.</li><li>Editing a returning profile is one click, not tab, then entry, then field.</li><li>The same view works for setup and for later edits.</li></ul></div>
+  <div><h3>Watch out</h3><ul><li>An empty sheet is less guiding than steps for a brand-new user.</li></ul></div></div>
+</section>
+<section class="idea" id="talk">
+  <div class="head"><span class="letter">C</span><h2>Talk it through</h2></div>
+  <p class="what">Describe a role in your own words, messy is fine. Dovetailed drafts the entry and shows which of your words each bullet came from, so nothing is invented. It also notices a second role you mentioned and offers to draft it.</p>
+  <div class="frame"><iframe title="Talk it through mockup" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;Talk it through&lt;/title&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;background:#020617;color:#e2e8f0;font:15px/1.5 Outfit,system-ui,sans-serif}
+.top{height:64px;border-bottom:1px solid #1e293b;display:flex;align-items:center;padding:0 40px;gap:14px;background:#0b1222}
+.logo{width:34px;height:34px;border-radius:10px;background:#fff}
+.brand{font-weight:700;font-size:17px;color:#f8fafc}
+.nav{margin-left:auto;display:flex;gap:6px}
+.nav a{padding:7px 14px;border-radius:10px;color:#94a3b8;font-size:14px;font-weight:500}
+.nav a.on{background:#1e293b;color:#f8fafc}
+.wrap{display:grid;grid-template-columns:300px 1fr 1fr;height:836px}
+.col{padding:30px 28px;border-right:1px solid #1e293b;overflow:hidden}
+.col h2{font-size:13px;color:#94a3b8;font-weight:500;margin-bottom:14px}
+.ent{padding:12px 14px;border-radius:12px;border:1px solid #1e293b;margin-bottom:8px;background:#0b1222}
+.ent b{display:block;color:#f1f5f9;font-weight:600}
+.ent span{font-size:13px;color:#94a3b8}
+.ent.drafting{border-color:#3b82f6;background:#0f172a}
+.ent.drafting span{color:#93c5fd}
+.need{margin-top:18px;font-size:13.5px;color:#94a3b8;line-height:1.6}
+.need b{color:#fbbf24;font-weight:500}
+h1{font-size:26px;font-weight:600;color:#f8fafc;margin-bottom:6px;letter-spacing:-.01em}
+.lede{color:#94a3b8;margin-bottom:18px}
+.notes{background:#0f172a;border:1px solid #334155;border-radius:16px;padding:18px 20px;height:420px;color:#e2e8f0;font-size:15.5px;line-height:1.75}
+mark{background:rgba(59,130,246,.18);color:#bfdbfe;border-bottom:2px solid #3b82f6;padding:0 1px}
+mark.b{background:rgba(52,211,153,.14);color:#a7f3d0;border-color:#34d399}
+mark.c{background:rgba(251,191,36,.13);color:#fde68a;border-color:#fbbf24}
+.row{display:flex;gap:10px;margin-top:14px;align-items:center}
+.btn{height:42px;padding:0 20px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.pri{background:#f8fafc;color:#0f172a}.sec{border:1px solid #334155}
+.tip{font-size:13px;color:#8a99b0;margin-left:auto}
+.draft{background:#0f172a;border:1px solid #1e293b;border-radius:18px;padding:22px 24px}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.dh b{font-size:18px;color:#f8fafc;font-weight:600;display:block}
+.dh span{color:#94a3b8;font-size:14px}
+.badge{font-size:12px;color:#6ee7b7;border:1px solid #065f46;background:#052e1f;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.bul{display:flex;gap:12px;padding:12px 0;border-top:1px solid #1e293b;font-size:14.5px;color:#e2e8f0}
+.sw{width:18px;height:18px;border-radius:50%;flex:none;background:#052e1f;border:1px solid #065f46;color:#6ee7b7;display:grid;place-items:center;margin-top:2px}
+.from{display:block;font-size:12.5px;color:#8a99b0;margin-top:3px}
+.ask{margin-top:14px;padding:12px 14px;border-radius:12px;background:#1c1405;border:1px solid #78350f;color:#fde68a;font-size:14px}
+.ask small{display:block;color:#d6b25e;margin-top:2px}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;div class=&quot;top&quot;&gt;&lt;div class=&quot;logo&quot;&gt;&lt;/div&gt;&lt;div class=&quot;brand&quot;&gt;Dovetailed&lt;/div&gt;
+&lt;div class=&quot;nav&quot;&gt;&lt;a&gt;Jobs&lt;/a&gt;&lt;a class=&quot;on&quot;&gt;Profile&lt;/a&gt;&lt;a&gt;Settings&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;wrap&quot;&gt;
+&lt;aside class=&quot;col&quot;&gt;&lt;h2&gt;Your profile so far&lt;/h2&gt;
+&lt;div class=&quot;ent&quot;&gt;&lt;b&gt;Marc Yuri G. Olivares&lt;/b&gt;&lt;span&gt;Email, phone, 2 links&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;ent&quot;&gt;&lt;b&gt;La Salle Computer Society&lt;/b&gt;&lt;span&gt;Committee Trainee · 3 bullets&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;ent drafting&quot;&gt;&lt;b&gt;Viridis Arcus Esports&lt;/b&gt;&lt;span&gt;Drafting from your notes…&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;ent&quot;&gt;&lt;b&gt;Skills&lt;/b&gt;&lt;span&gt;Java, Python, React +21&lt;/span&gt;&lt;/div&gt;
+&lt;p class=&quot;need&quot;&gt;Still useful: &lt;b&gt;a project&lt;/b&gt; and &lt;b&gt;your school&lt;/b&gt;. Or type everything into the fields yourself.&lt;/p&gt;
+&lt;/aside&gt;
+&lt;main class=&quot;col&quot;&gt;
+&lt;h1&gt;Tell us about one role&lt;/h1&gt;
+&lt;p class=&quot;lede&quot;&gt;Write it like you’d explain it to a friend. Messy is fine. Nothing is added that you didn’t write.&lt;/p&gt;
+&lt;div class=&quot;notes&quot;&gt;i&#x27;ve been &lt;mark&gt;assistant director for internals&lt;/mark&gt; at &lt;mark&gt;viridis arcus esports&lt;/mark&gt; since &lt;mark&gt;nov 2024&lt;/mark&gt; (it used to be called assistant VP). i &lt;mark class=&quot;b&quot;&gt;head projects for our events — community nights, tournaments, general assemblies&lt;/mark&gt;. i also &lt;mark class=&quot;b&quot;&gt;do the documentation: proposals and the post-event reports&lt;/mark&gt;, and i &lt;mark class=&quot;b&quot;&gt;write captions and promo posts for the events&lt;/mark&gt;. before that i was &lt;mark class=&quot;c&quot;&gt;junior officer for internals&lt;/mark&gt; from june to nov 2024.&lt;/div&gt;
+&lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;btn pri&quot;&gt;Draft the entry →&lt;/span&gt;&lt;span class=&quot;btn sec&quot;&gt;Attach a file&lt;/span&gt;&lt;span class=&quot;tip&quot;&gt;One role at a time works best&lt;/span&gt;&lt;/div&gt;
+&lt;/main&gt;
+&lt;section class=&quot;col&quot; style=&quot;border-right:0&quot;&gt;
+&lt;h2&gt;Drafted entry · check it, then add&lt;/h2&gt;
+&lt;div class=&quot;draft&quot;&gt;
+&lt;div class=&quot;dh&quot;&gt;&lt;div&gt;&lt;b&gt;Assistant Director for Internals&lt;/b&gt;&lt;span&gt;Viridis Arcus Esports · Nov 2024 – Present&lt;/span&gt;&lt;/div&gt;&lt;span class=&quot;badge&quot;&gt;All from your notes&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;bul&quot;&gt;&lt;i class=&quot;sw&quot;&gt;&lt;svg width=&quot;10&quot; height=&quot;10&quot; viewBox=&quot;0 0 10 10&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M2 5.2 4.1 7.3 8 2.8&quot;/&gt;&lt;/svg&gt;&lt;/i&gt;&lt;div&gt;Headed projects for community nights, tournaments and general assemblies&lt;span class=&quot;from&quot;&gt;from “head projects for our events — community nights…”&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;bul&quot;&gt;&lt;i class=&quot;sw&quot;&gt;&lt;svg width=&quot;10&quot; height=&quot;10&quot; viewBox=&quot;0 0 10 10&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M2 5.2 4.1 7.3 8 2.8&quot;/&gt;&lt;/svg&gt;&lt;/i&gt;&lt;div&gt;Wrote event proposals and post-event reports&lt;span class=&quot;from&quot;&gt;from “do the documentation: proposals and the post-event reports”&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;bul&quot;&gt;&lt;i class=&quot;sw&quot;&gt;&lt;svg width=&quot;10&quot; height=&quot;10&quot; viewBox=&quot;0 0 10 10&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; aria-hidden=&quot;true&quot;&gt;&lt;path d=&quot;M2 5.2 4.1 7.3 8 2.8&quot;/&gt;&lt;/svg&gt;&lt;/i&gt;&lt;div&gt;Wrote captions and promotional posts for events&lt;span class=&quot;from&quot;&gt;from “write captions and promo posts”&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;btn pri&quot;&gt;Add to my profile&lt;/span&gt;&lt;span class=&quot;btn sec&quot;&gt;Edit first&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;ask&quot;&gt;You also mentioned &lt;b&gt;Junior Officer for Internals&lt;/b&gt; (Jun – Nov 2024).&lt;small&gt;Draft that as a second role?&lt;/small&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;
+
+"></iframe></div>
+  <div class="pc"><div><h3>Good</h3><ul><li>Fastest way to get bullets out of someone who hates writing them.</li><li>Every bullet is traced to your own words, which fits the "nothing invented" promise.</li><li>Reuses the notes-to-entry feature that already exists.</li></ul></div>
+  <div><h3>Watch out</h3><ul><li>One AI call per role on the shared free tier.</li><li>Some people would rather type into fields.</li></ul></div></div>
+</section>
+<section class="settings" id="settings">
+  <div class="head"><span class="letter">+</span><h2>Settings, for everything that isn't your work history</h2></div>
+  <p class="what">Writing samples, the LaTeX template, backups and delete-all, each with one line on why it exists. Same in all three ideas.</p>
+  <div class="frame"><iframe title="Settings mockup" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;title&gt;Settings&lt;/title&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;background:#020617;color:#e2e8f0;font:15px/1.5 Outfit,system-ui,sans-serif}
+.top{height:64px;border-bottom:1px solid #1e293b;display:flex;align-items:center;padding:0 40px;gap:14px;background:#0b1222}
+.logo{width:34px;height:34px;border-radius:10px;background:#fff}
+.brand{font-weight:700;font-size:17px;color:#f8fafc}
+.nav{margin-left:auto;display:flex;gap:6px}
+.nav a{padding:7px 14px;border-radius:10px;color:#94a3b8;font-size:14px;font-weight:500}
+.nav a.on{background:#1e293b;color:#f8fafc}
+main{width:860px;margin:36px auto}
+h1{font-size:28px;font-weight:600;color:#f8fafc;letter-spacing:-.01em}
+.lede{color:#94a3b8;margin:4px 0 26px}
+section{display:grid;grid-template-columns:240px 1fr;gap:32px;padding:24px 0;border-top:1px solid #1e293b}
+h2{font-size:16px;font-weight:600;color:#f1f5f9}
+.why{font-size:13.5px;color:#94a3b8;margin-top:4px}
+.box{background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:16px 18px}
+.li{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e293b;font-size:14.5px}
+.li:last-of-type{border-bottom:0}
+.li span{color:#94a3b8;font-size:13px}
+.btn{height:38px;padding:0 16px;border-radius:10px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;margin-right:8px;margin-top:10px}
+.pri{background:#f8fafc;color:#0f172a}.sec{border:1px solid #334155}
+.danger{border:1px solid #7f1d1d;color:#fca5a5}
+.ok{color:#6ee7b7;font-size:13.5px}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;div class=&quot;top&quot;&gt;&lt;div class=&quot;logo&quot;&gt;&lt;/div&gt;&lt;div class=&quot;brand&quot;&gt;Dovetailed&lt;/div&gt;
+&lt;div class=&quot;nav&quot;&gt;&lt;a&gt;Jobs&lt;/a&gt;&lt;a&gt;Profile&lt;/a&gt;&lt;a class=&quot;on&quot;&gt;Settings&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;main&gt;
+&lt;h1&gt;Settings&lt;/h1&gt;
+&lt;p class=&quot;lede&quot;&gt;Things that shape your documents but aren&#x27;t part of your work history.&lt;/p&gt;
+&lt;section&gt;&lt;div&gt;&lt;h2&gt;Writing samples&lt;/h2&gt;&lt;p class=&quot;why&quot;&gt;Cover letters copy your tone from these. Optional.&lt;/p&gt;&lt;/div&gt;
+&lt;div class=&quot;box&quot;&gt;&lt;p class=&quot;why&quot; style=&quot;margin:0&quot;&gt;None yet. Paste a cover letter or essay you wrote.&lt;/p&gt;&lt;span class=&quot;btn sec&quot;&gt;+ Add a sample&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section&gt;&lt;div&gt;&lt;h2&gt;Resume template&lt;/h2&gt;&lt;p class=&quot;why&quot;&gt;Your LaTeX template from Overleaf. Used for the .tex export.&lt;/p&gt;&lt;/div&gt;
+&lt;div class=&quot;box&quot;&gt;&lt;p class=&quot;why&quot; style=&quot;margin:0&quot;&gt;Not set up. PDF and Word export work without it.&lt;/p&gt;&lt;span class=&quot;btn sec&quot;&gt;Paste a template&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section&gt;&lt;div&gt;&lt;h2&gt;Backups&lt;/h2&gt;&lt;p class=&quot;why&quot;&gt;Your data lives only in this browser. Save a copy so nothing is lost.&lt;/p&gt;&lt;/div&gt;
+&lt;div class=&quot;box&quot;&gt;&lt;span class=&quot;btn pri&quot; style=&quot;margin-top:0&quot;&gt;Download backup&lt;/span&gt;&lt;span class=&quot;btn sec&quot;&gt;Restore from file&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section&gt;&lt;div&gt;&lt;h2&gt;Delete everything&lt;/h2&gt;&lt;p class=&quot;why&quot;&gt;Removes your profile, jobs and documents from this browser.&lt;/p&gt;&lt;/div&gt;
+&lt;div class=&quot;box&quot;&gt;&lt;span class=&quot;btn danger&quot; style=&quot;margin-top:0&quot;&gt;Delete all data…&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;/main&gt;&lt;/body&gt;&lt;/html&gt;
+"></iframe></div>
+</section>
+<section class="rec" id="pick">
+  <div><h2>What I'd build</h2><p>B as the profile itself, with A's steps and C's "describe it" as ways to fill it.</p></div>
+  <ol>
+    <li><strong>The profile becomes one page (B).</strong> No tabs. It reads like your resume, and you click to edit in place. This is what returning users see.</li>
+    <li><strong>A blank profile gets the guided steps (A).</strong> Same fields, one section at a time, with the resume filling in beside you. When you finish, you land on the one page.</li>
+    <li><strong>Every job and project step offers "Describe it instead" (C).</strong> Write it in your own words and get a traced draft. Typing fields stays the default.</li>
+    <li><strong>Settings gets its own page</strong> for samples, template and backups.</li>
+  </ol>
+</section>
+</div>
+<script>
+// Scales each 1440x900 mockup to its frame's width.
+function fit(){document.querySelectorAll('.frame').forEach(f=>f.style.setProperty('--s',f.clientWidth/1440))}
+addEventListener('resize',fit);fit();
+</script>
+</body></html>
