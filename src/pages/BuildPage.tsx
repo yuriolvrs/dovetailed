@@ -54,7 +54,13 @@ export default function BuildPage() {
       if (controller.signal.aborted) {
         setStatus('stopped');
       } else {
-        setError(llmErrorMessage(err, 'Building your documents'));
+        // fetch rejects with a TypeError when nothing answers at all, which
+        // reads as "Failed to fetch" -- say what actually happened instead.
+        setError(
+          err instanceof TypeError
+            ? 'Could not reach the AI service. Check your connection, then use Retry from here. Steps that finished are kept.'
+            : llmErrorMessage(err, 'Building your documents'),
+        );
         setStatus('error');
       }
     }
