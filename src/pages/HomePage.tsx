@@ -22,5 +22,5 @@ export default function HomePage() {
 
   if (returning === null) return null;
   if (returning) return <Navigate to="/jobs" replace />;
-  return <Welcome onStart={() => navigate('/profile')} />;
+  return <Welcome onStart={() => navigate('/profile')} onTypeIn={() => navigate('/profile?setup=1')} />;
 }

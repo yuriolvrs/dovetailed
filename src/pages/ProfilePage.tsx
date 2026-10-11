@@ -9,7 +9,7 @@
 // page, or a step-by-step setup when you have none yet.
 
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, ArrowRight, CheckCircle, CircleDashed, FileText, X } from 'lucide-react';
 import type { Profile } from '../types';
 import { computeProfileCompleteness, hasBullets, loadProfile, saveProfile } from '../lib/profileStore';
@@ -97,14 +97,17 @@ export default function ProfilePage() {
   const [mode, setMode] = useState<'start' | 'setup' | 'sheet'>('start');
   const [importing, setImporting] = useState(false);
   const navigate = useNavigate();
+  // ?setup=1 (the landing page's "Type it in instead") skips the start screen.
+  const [searchParams] = useSearchParams();
+  const wantsSetup = searchParams.get('setup') === '1';
   const { saved, pulse } = useAutosaveIndicator();
 
   const refresh = useCallback(() => {
     loadProfile().then((loaded) => {
       setProfile(loaded);
-      setMode(isBlankProfile(loaded) ? 'start' : 'sheet');
+      setMode(isBlankProfile(loaded) ? (wantsSetup ? 'setup' : 'start') : 'sheet');
     });
-  }, []);
+  }, [wantsSetup]);
 
   useEffect(() => {
     refresh();

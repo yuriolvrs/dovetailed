@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Check, Shield, Upload } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, Shield, Upload } from 'lucide-react';
 import { Btn } from '../ui/primitives';
 
 type ReqId = 'events' | 'writing' | 'design' | 'video';
@@ -29,35 +29,35 @@ type Line = { id: string; text: string; req?: ReqId; from?: string };
 type Entry = { title: string; org: string; lines: Line[] };
 type Sheet = { sections: { name: string; entries: Entry[] }[]; skills: Line };
 
-const CAMPUS_MAP: Entry = {
-  title: 'Campus Map App',
+const RECIPE_APP: Entry = {
+  title: 'Recipe Finder',
   org: 'Class project',
-  lines: [{ id: 'p1', text: 'Built a React app for finding rooms on campus' }],
+  lines: [{ id: 'p1', text: 'Built a web app that suggests meals from what is in the fridge' }],
 };
 
 const BEFORE: Sheet = {
   sections: [
-    { name: 'Projects', entries: [CAMPUS_MAP] },
+    { name: 'Projects', entries: [RECIPE_APP] },
     {
       name: 'Experience',
       entries: [
         {
-          title: 'Internals Director',
-          org: 'University Esports Club',
+          title: 'Volunteer Coordinator',
+          org: 'Hillside Community Library',
           lines: [
-            { id: 'e1', text: 'Project head for community nights, tournaments and general assemblies' },
-            { id: 'e2', text: 'Wrote event proposals and post-event reports' },
+            { id: 'e1', text: 'In charge of the monthly reading fairs and book drives' },
+            { id: 'e2', text: 'Wrote grant requests and the monthly newsletter' },
           ],
         },
         {
-          title: 'Publications Volunteer',
-          org: 'Computer Society',
-          lines: [{ id: 'e3', text: 'Wrote social media captions for org events' }],
+          title: 'Staff Writer',
+          org: 'The Campus Ledger (student paper)',
+          lines: [{ id: 'e3', text: 'Wrote feature articles and event coverage' }],
         },
       ],
     },
   ],
-  skills: { id: 's1', text: 'React, Python, Java, Git, Canva' },
+  skills: { id: 's1', text: 'Python, JavaScript, Excel, Canva' },
 };
 
 const AFTER: Sheet = {
@@ -66,28 +66,23 @@ const AFTER: Sheet = {
       name: 'Experience',
       entries: [
         {
-          title: 'Internals Director',
-          org: 'University Esports Club',
+          title: 'Volunteer Coordinator',
+          org: 'Hillside Community Library',
           lines: [
-            {
-              id: 't1',
-              text: 'Ran community nights, tournaments and general assemblies as project head',
-              req: 'events',
-              from: 'e1',
-            },
-            { id: 't2', text: 'Wrote event proposals and post-event reports', req: 'writing', from: 'e2' },
+            { id: 't1', text: 'Organized the monthly reading fairs and book drives', req: 'events', from: 'e1' },
+            { id: 't2', text: 'Wrote grant requests and the monthly newsletter', req: 'writing', from: 'e2' },
           ],
         },
         {
-          title: 'Publications Volunteer',
-          org: 'Computer Society',
-          lines: [{ id: 't3', text: 'Wrote social media captions for org events', req: 'writing', from: 'e3' }],
+          title: 'Staff Writer',
+          org: 'The Campus Ledger (student paper)',
+          lines: [{ id: 't3', text: 'Wrote feature articles and event coverage', req: 'writing', from: 'e3' }],
         },
       ],
     },
-    { name: 'Projects', entries: [CAMPUS_MAP] },
+    { name: 'Projects', entries: [RECIPE_APP] },
   ],
-  skills: { id: 't4', text: 'Canva, React, Python, Git', req: 'design', from: 's1' },
+  skills: { id: 't4', text: 'Canva, Excel, Python, JavaScript', req: 'design', from: 's1' },
 };
 
 // Ids of the general-resume lines behind a requirement's tailored lines.
@@ -145,7 +140,7 @@ function ResumeSheet({
       }`}
     >
       <p className="text-center text-[15px] font-bold tracking-wide">Sam Reyes</p>
-      <p className="text-center text-xs">sam@example.com | Manila</p>
+      <p className="text-center text-xs">sam@example.com | Cebu City</p>
       {sheet.sections.map((section) => (
         <div key={section.name}>
           <p className={HEAD}>{section.name}</p>
@@ -237,13 +232,13 @@ function BeforeAfter() {
 
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
         <div className="min-w-0">
-          <p className="mb-2 text-sm font-medium text-slate-600 dark:text-slate-400">Their resume as it is</p>
+          <p className="mb-2 text-sm font-medium text-slate-600 dark:text-slate-400">Sam's resume as it is</p>
           <ResumeSheet sheet={BEFORE} tailored={false} active={active} onPoint={setPreview} />
         </div>
         {/* On a phone the tailored sheet comes first, right under the
             requirements, so a tap lights lines on screen. */}
         <div className="order-first min-w-0 sm:order-none">
-          <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">Tailored for this posting</p>
+          <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">Sam's resume, tailored for the job posting above</p>
           <ResumeSheet sheet={AFTER} tailored active={active} onPoint={setPreview} />
         </div>
       </div>
@@ -306,14 +301,14 @@ function HowItWorks() {
           <p className="border-b border-slate-900 text-[11px] font-bold uppercase tracking-wide">Experience</p>
           <ul className="mt-1 list-disc space-y-1 pl-4">
             <li>
-              Ran community nights, tournaments and general assemblies as project head
+              Organized the monthly reading fairs and book drives
               <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 text-[11px] font-medium text-emerald-800">
                 <Check size={10} aria-hidden />
                 Events
               </span>
             </li>
             <li>
-              Wrote event proposals and post-event reports
+              Wrote grant requests and the monthly newsletter
               <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 text-[11px] font-medium text-emerald-800">
                 <Check size={10} aria-hidden />
                 Writing
@@ -327,7 +322,7 @@ function HowItWorks() {
 
   return (
     <section aria-labelledby="how-it-works" className="mt-20 sm:mt-24">
-      <h2 id="how-it-works" className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+      <h2 id="how-it-works" className="scroll-mt-24 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
         How it works
       </h2>
       <ol className="mt-5 grid grid-cols-[minmax(0,1fr)] divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white md:grid-cols-3 md:divide-x md:divide-y-0 dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
@@ -355,10 +350,11 @@ function HowItWorks() {
 }
 
 /**
- * The welcome page. `onStart` goes to the Profile page.
- * In plain terms: the landing page and its main button.
+ * The welcome page. `onStart` goes to the Profile page to read a resume file;
+ * `onTypeIn` goes straight to the step-by-step setup.
+ * In plain terms: the landing page and its buttons.
  */
-export function Welcome({ onStart }: { onStart: () => void }) {
+export function Welcome({ onStart, onTypeIn }: { onStart: () => void; onTypeIn: () => void }) {
   const start = (
     <Btn onClick={onStart}>
       Start with your resume
@@ -377,15 +373,31 @@ export function Welcome({ onStart }: { onStart: () => void }) {
             Paste a job posting. Dovetailed picks, orders and words your own experience for it, and writes the cover
             letter. Each line is traced to something you wrote; anything it cannot trace is flagged.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             {start}
-            <Link
-              to="/settings"
-              className="text-sm font-medium text-slate-600 underline underline-offset-4 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-            >
-              Have a backup? Restore it
-            </Link>
+            <Btn variant="secondary" onClick={onTypeIn}>
+              Type it in instead
+            </Btn>
           </div>
+          <Link
+            to="/settings"
+            className="mt-4 inline-block text-sm font-medium text-slate-600 underline underline-offset-4 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+          >
+            Have a backup? Restore it
+          </Link>
+          <a
+            href="#how-it-works"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="mt-12 hidden items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 lg:flex dark:text-slate-400 dark:hover:text-slate-100"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 motion-safe:animate-bounce motion-safe:[animation-iteration-count:3] dark:border-slate-700">
+              <ArrowDown size={14} aria-hidden />
+            </span>
+            See how it works
+          </a>
         </div>
         <BeforeAfter />
       </section>
