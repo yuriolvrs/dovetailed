@@ -169,7 +169,7 @@ export async function importAllData(backup: BackupFile): Promise<void> {
 
 /**
  * Wipes all local data.
- * In plain terms: the "Delete All Data" button — erases everything stored
+ * In plain terms: the "Delete all data" button — erases everything stored
  * in the browser.
  */
 export async function deleteAllData(): Promise<void> {

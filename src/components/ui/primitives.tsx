@@ -225,7 +225,7 @@ export function Btn({
 
 // A "Reset" action that discards unsaved edits, so it asks for a second
 // click before firing -- same inline two-step confirm as BackupControls'
-// "Delete All Data", just scoped to one button instead of a whole section.
+// "Delete all data", just scoped to one button instead of a whole section.
 // In plain terms: the reset button used on a resume section's header; you
 // have to click it twice (with a Cancel escape hatch) before it actually
 // discards your edits to that section.

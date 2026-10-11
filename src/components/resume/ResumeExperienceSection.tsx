@@ -3,7 +3,7 @@
 // per-entry "N matched" badge, and per-bullet match labels naming which job
 // requirement each bullet satisfies (from the resume's sourceMap, via
 // ResumeEditor's bulletMatch lookup). Reuses the same field layout as the
-// Profile page's ExperienceForm.
+// Profile page's ExperienceDetail.
 // In plain terms: the job entries in the resume editor, collapsed into rows
 // you can reorder and expand one at a time, showing at a glance which
 // bullets are tied to a requirement from the job posting.

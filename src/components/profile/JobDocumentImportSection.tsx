@@ -67,11 +67,14 @@ export function JobDocumentImportSection({
   profile,
   onImported,
   initialKind = 'experience',
+  inline = false,
 }: {
   profile: Profile;
   onImported: (next: Profile) => void;
-  /** Which kind of entry the draft starts as: the tab it sits on. */
+  /** Which kind of entry the draft starts as: the section it sits in. */
   initialKind?: 'experience' | 'project';
+  /** Inside a profile section: no card, notes first, the file as a fallback. */
+  inline?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -149,38 +152,61 @@ export function JobDocumentImportSection({
   const p = review?.entry.project;
   const existingEntries: (ExperienceEntry | ProjectEntry)[] = kind === 'experience' ? profile.experience : profile.projects;
 
-  return (
-    <Card className="p-6">
-      <SectionTitle sub="Attach an old job description, offer letter, or project brief, or paste rough notes, to add it as a new entry, or overwrite the bullet points of an existing entry. You review it before it's applied">
-        Add a Job or Project from a Document or Notes
-      </SectionTitle>
+  const noun = initialKind === 'experience' ? 'role' : 'project';
+  const dropzone = (
+    <FileDropzone
+      compact={inline}
+      onFile={handleFile}
+      busy={busy}
+      busyLabel={status ?? 'Reading…'}
+      label={inline ? `Or attach a document about this ${noun}` : 'Attach a job or project document'}
+    />
+  );
+  const notesField = (
+    <textarea
+      id={`${initialKind}-notes`}
+      autoFocus={inline}
+      value={notes}
+      onChange={(ev) => setNotes(ev.target.value)}
+      rows={5}
+      disabled={busy}
+      placeholder={
+        inline
+          ? `Write it like you'd explain it to a friend: where, when, what you did. Messy is fine.`
+          : 'A job description, old resume lines, or rough notes about what you did and where.'
+      }
+      className={`w-full ${fieldInputClass}`}
+    />
+  );
 
+  const body = (
+    <>
       {!review && (
         <>
-          <FileDropzone
-            onFile={handleFile}
-            busy={busy}
-            busyLabel={status ?? 'Reading…'}
-            label="Attach a job or project document"
-          />
-          <label className={`mt-4 mb-1.5 block ${fieldLabelClass}`} htmlFor="job-notes">
-            Or paste notes
-          </label>
-          <textarea
-            id="job-notes"
-            value={notes}
-            onChange={(ev) => setNotes(ev.target.value)}
-            rows={5}
-            disabled={busy}
-            placeholder="A job description, old resume lines, or rough notes about what you did and where."
-            className={`w-full ${fieldInputClass}`}
-          />
+          {inline ? (
+            <>
+              <label className="mb-1.5 block text-sm text-slate-600 dark:text-slate-400" htmlFor={`${initialKind}-notes`}>
+                Describe one {noun} in your own words. You get a drafted entry to check, built only from what you
+                wrote.
+              </label>
+              {notesField}
+            </>
+          ) : (
+            <>
+              {dropzone}
+              <label className={`mt-4 mb-1.5 block ${fieldLabelClass}`} htmlFor={`${initialKind}-notes`}>
+                Or paste notes
+              </label>
+              {notesField}
+            </>
+          )}
           <div className="mt-2 flex items-center justify-end gap-3">
             {busy && status && <span className="text-xs text-slate-500 dark:text-slate-400">{status}</span>}
             <Btn onClick={handleNotes} disabled={busy || notes.trim() === ''}>
               Draft an entry
             </Btn>
           </div>
+          {inline && <div className="mt-3">{dropzone}</div>}
           {error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>}
           {importedMessage && (
             <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 inline-flex items-center gap-1">
@@ -318,6 +344,16 @@ export function JobDocumentImportSection({
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (inline) return body;
+  return (
+    <Card className="p-6">
+      <SectionTitle sub="Attach an old job description, offer letter, or project brief, or paste rough notes, to add it as a new entry, or overwrite the bullet points of an existing entry. You review it before it's applied">
+        Add a Job or Project from a Document or Notes
+      </SectionTitle>
+      {body}
     </Card>
   );
 }

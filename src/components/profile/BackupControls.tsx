@@ -1,5 +1,5 @@
-// What this file is: the UI for exporting/importing your data as JSON and
-// for deleting all local data, with a two-step confirmation and
+// What this file is: the UI for exporting/importing your data as JSON, and
+// (separately) for deleting all local data, with a two-step confirmation and
 // error/success messaging.
 // In plain terms: the buttons for backing up, restoring, or wiping your
 // data.
@@ -20,7 +20,6 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function handleExport() {
     setError(null);
@@ -58,18 +57,10 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
     }
   }
 
-  async function handleConfirmDelete() {
-    await deleteAllData();
-    setConfirmingDelete(false);
-    setError(null);
-    setMessage('All local data has been deleted.');
-    onDataChanged();
-  }
-
   return (
     <Card className="p-6">
-      <SectionTitle sub="Your data lives only in this browser. Export it to back up or move to another device">
-        Data
+      <SectionTitle sub="Your data lives only in this browser. Download a copy to keep it safe or move it to another device">
+        Backups
       </SectionTitle>
 
       {error && <p className="mb-3 text-xs text-red-600 dark:text-red-400">{error}</p>}
@@ -78,11 +69,11 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
       <div className="flex flex-wrap gap-2">
         <Btn size="sm" variant="secondary" onClick={handleExport}>
           <Upload size={13} />
-          Export Data
+          Download backup
         </Btn>
         <Btn size="sm" variant="secondary" onClick={handleImportClick}>
           <Download size={13} />
-          Import Data
+          Restore from file
         </Btn>
         <input
           ref={fileInputRef}
@@ -91,23 +82,48 @@ export function BackupControls({ onDataChanged }: { onDataChanged: () => void })
           className="hidden"
           onChange={handleFileSelected}
         />
-
-        {!confirmingDelete ? (
-          <Btn size="sm" variant="danger" onClick={() => setConfirmingDelete(true)}>
-            Delete All Data
-          </Btn>
-        ) : (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-600 dark:text-slate-300">Are you sure? This cannot be undone.</span>
-            <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
-              Yes, delete everything
-            </Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
-              Cancel
-            </Btn>
-          </div>
-        )}
       </div>
+    </Card>
+  );
+}
+
+/**
+ * Delete-all, in its own section so it never sits beside a routine action.
+ * Two-step: the first click asks, the second deletes.
+ * In plain terms: the button that wipes everything from this browser.
+ */
+export function DeleteAllControls({ onDataChanged }: { onDataChanged: () => void }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleConfirmDelete() {
+    await deleteAllData();
+    setConfirmingDelete(false);
+    setMessage('All local data has been deleted.');
+    onDataChanged();
+  }
+
+  return (
+    <Card className="p-6">
+      <SectionTitle sub="Removes your profile, jobs and documents from this browser. Download a backup first if you may want them back">
+        Delete everything
+      </SectionTitle>
+      {message && <p className="mb-3 text-xs text-emerald-600 dark:text-emerald-400">{message}</p>}
+      {!confirmingDelete ? (
+        <Btn size="sm" variant="danger" onClick={() => setConfirmingDelete(true)}>
+          Delete all data…
+        </Btn>
+      ) : (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-600 dark:text-slate-300">Are you sure? This cannot be undone.</span>
+          <Btn size="sm" variant="dangerSolid" onClick={handleConfirmDelete}>
+            Yes, delete everything
+          </Btn>
+          <Btn size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
+            Cancel
+          </Btn>
+        </div>
+      )}
     </Card>
   );
 }

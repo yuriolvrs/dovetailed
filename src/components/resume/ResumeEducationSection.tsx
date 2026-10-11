@@ -1,6 +1,6 @@
 // What this file is: the Generate step's Education list -- accordion rows
 // (collapsed to school/degree/dates) with ▲/▼ reorder buttons, reusing the
-// same field layout as the Profile page's EducationForm. The whole section
+// same field layout as the Profile page's EducationDetail. The whole section
 // can also be collapsed to a header line, like Contact Information, and
 // reset back to the profile's education entries via a confirm-then-discard
 // Reset button (ResetButton, ui/primitives.tsx).

@@ -18,7 +18,7 @@ export function ProfileStart({
   profile: Profile;
   onImported: (next: Profile) => void;
   onStartBlank: () => void;
-  /** Opens the tab with backup restore. */
+  /** Opens the Settings page, where backup restore lives. */
   onRestore: () => void;
 }) {
   return (

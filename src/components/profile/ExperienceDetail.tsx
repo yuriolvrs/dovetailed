@@ -66,6 +66,13 @@ export function ExperienceDetail({
         onFocused={onFocused}
       />
 
+      {/* Dates sit in view, not under Details: they print on every resume. */}
+      <div className="px-5 pt-4">
+        <EntryDetailField label="Dates">
+          <DateRangeCompact entry={entry} update={onChange} currentLabel="Still here" />
+        </EntryDetailField>
+      </div>
+
       <div className="p-5">
         <EntryDetailListHeader
           label="Highlights"
@@ -96,12 +103,8 @@ export function ExperienceDetail({
         />
       </div>
 
-      <EntryMoreDetails summary="Dates, location, section, trimming">
+      <EntryMoreDetails summary="Location, section, trimming">
         <EntryDetailFields>
-          <EntryDetailField label="Dates">
-            <DateRangeCompact entry={entry} update={onChange} currentLabel="Still here" />
-          </EntryDetailField>
-
           <FieldInput
             label="Location"
             placeholder="San Francisco, CA"

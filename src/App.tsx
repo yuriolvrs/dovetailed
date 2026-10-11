@@ -4,7 +4,7 @@
 // wherever a page gets shown depending on which tab you're on.
 
 import { Link, NavLink, Navigate, Route, Routes, useMatch, useParams } from 'react-router-dom';
-import { Briefcase, User } from 'lucide-react';
+import { Briefcase, Settings, User } from 'lucide-react';
 import ProfilePage from './pages/ProfilePage.tsx';
 import JobsPage from './pages/JobsPage.tsx';
 import JobDetailPage from './pages/JobDetailPage.tsx';
@@ -14,6 +14,7 @@ import BuildPage from './pages/BuildPage.tsx';
 import DocumentsPage from './pages/DocumentsPage.tsx';
 import AnalyzePostingPage from './pages/AnalyzePostingPage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
+import SettingsPage from './pages/SettingsPage.tsx';
 import { ToastProvider } from './components/ui/Toast.tsx';
 import { ThemeToggle } from './components/ui/ThemeToggle.tsx';
 import Logo from './components/ui/Logo.tsx';
@@ -43,7 +44,7 @@ function LegacyGenerateRedirect() {
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
-    'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+    'flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
     isActive
       ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
       : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800',
@@ -63,7 +64,7 @@ export default function App() {
               <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-sm">
                 <Logo size={26} className="text-white dark:text-slate-900" />
               </div>
-              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+              <span className="hidden sm:inline text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
                 Dovetailed
               </span>
             </Link>
@@ -79,6 +80,10 @@ export default function App() {
               <NavLink to="/profile" className={navLinkClass}>
                 <User size={13} />
                 Profile
+              </NavLink>
+              <NavLink to="/settings" className={navLinkClass}>
+                <Settings size={13} />
+                Settings
               </NavLink>
             </nav>
           </div>
@@ -98,6 +103,7 @@ export default function App() {
             <Route path="/jobs/:id/build" element={<BuildPage />} />
             <Route path="/jobs/:id/documents" element={<DocumentsPage />} />
             <Route path="/jobs/:id/generate" element={<LegacyGenerateRedirect />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

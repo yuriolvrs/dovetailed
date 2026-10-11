@@ -113,21 +113,26 @@ export function EntryDetailHeader({
   autoFocus?: boolean;
   onFocused?: () => void;
 }) {
-  const titleRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!autoFocus) return;
-    titleRef.current?.focus();
+    titleRef.current?.querySelector('textarea')?.focus();
     onFocused?.();
   }, [autoFocus, onFocused]);
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-5 border-b border-slate-200 dark:border-slate-800">
-      <div className="flex-1 min-w-0">
-        <input
-          ref={titleRef}
+      <div ref={titleRef} className="flex-1 min-w-0">
+        {/* Grows rather than scrolls, so a long title shows in full. Enter
+            does nothing: a title is one line on the resume. */}
+        <AutoGrowTextarea
+          rows={1}
           value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
+          onChange={(e) => onTitleChange(e.target.value.replace(/\n/g, ' '))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.preventDefault();
+          }}
           placeholder={titlePlaceholder}
           aria-label={titlePlaceholder}
           className={`${headlineClass} text-lg font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500`}
