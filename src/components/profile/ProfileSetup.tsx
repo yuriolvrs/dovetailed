@@ -303,7 +303,7 @@ export function ProfileSetup({
 
       <aside aria-label="Resume preview" className="hidden xl:block xl:sticky xl:top-20 xl:self-start">
         <h2 className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">Your resume, so far</h2>
-        <div className="max-h-[calc(100vh-8rem)] overflow-y-auto scroll-thin rounded-2xl text-[13px]">
+        <div className="max-h-[calc(100vh-8rem)] overflow-y-auto scroll-thin rounded-2xl">
           <ResumePrintView content={profile} variant="preview" />
         </div>
       </aside>
