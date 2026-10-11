@@ -21,6 +21,7 @@ import {
   STATUS_LABELS,
 } from '../lib/jobStore';
 import { listGenerationTypesByPosting } from '../lib/genStore';
+import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { JobsFirstRun } from '../components/jobs/JobsFirstRun';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import {
@@ -74,6 +75,9 @@ export default function JobsPage() {
   const [postings, setPostings] = useState<JobPosting[] | null>(null);
   const [generationTypes, setGenerationTypes] = useState<Map<string, Set<GenerationType>>>(new Map());
   const [modalOpen, setModalOpen] = useState(false);
+  // True when the profile has nothing to match a posting against. Null until loaded.
+  const [profileEmpty, setProfileEmpty] = useState<boolean | null>(null);
+  const [gateOpen, setGateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
   const [location, setLocation] = useState('');
@@ -83,11 +87,21 @@ export default function JobsPage() {
   const refresh = useCallback(() => {
     listJobPostings().then(setPostings);
     listGenerationTypesByPosting().then(setGenerationTypes);
+    loadProfile().then((profile) => setProfileEmpty(!hasProfileContent(profile)));
   }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Asks about the profile first: a posting added with nothing to match it
+  // against can only produce gaps.
+  // In plain terms: if your profile is empty, the Add button explains that
+  // before it opens the paste box.
+  function handleAddClick() {
+    if (profileEmpty) setGateOpen(true);
+    else openModal();
+  }
 
   function openModal() {
     setTitle('');
@@ -129,12 +143,34 @@ export default function JobsPage() {
           </p>
         </div>
         {postings !== null && postings.length > 0 && (
-          <Btn onClick={openModal}>
+          <Btn onClick={handleAddClick}>
             <Plus size={14} />
             Add Job Posting
           </Btn>
         )}
       </div>
+
+      <Modal open={gateOpen} onClose={() => setGateOpen(false)} className="max-w-md">
+        <div className="p-5 space-y-2">
+          <SectionTitle sub="A posting needs something to be matched against">Your profile is empty</SectionTitle>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            Add your experience, projects, skills or education first. Without them, every requirement in a posting shows
+            as a gap.
+          </p>
+        </div>
+        <div className="p-5 pt-0 flex justify-end gap-2">
+          <Btn
+            variant="secondary"
+            onClick={() => {
+              setGateOpen(false);
+              openModal();
+            }}
+          >
+            Save a posting for later
+          </Btn>
+          <Btn onClick={() => navigate('/profile')}>Set up my profile</Btn>
+        </div>
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} className="max-w-xl max-h-[90vh]">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 shrink-0 flex items-start justify-between gap-3">
@@ -211,7 +247,7 @@ export default function JobsPage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : postings.length === 0 ? (
-          <JobsFirstRun onAddPosting={openModal} onSetUpProfile={() => navigate('/profile')} />
+          <JobsFirstRun onAddPosting={handleAddClick} onSetUpProfile={() => navigate('/profile')} />
         ) : (
           <div className="space-y-3">
             {postings.map((posting) => {
