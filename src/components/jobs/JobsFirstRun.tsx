@@ -1,12 +1,11 @@
 // What this file is: the Jobs list's first-run panel, shown in place of the
-// posting list while nothing is saved. Since / is the app's home, this is also
-// the first screen a stranger sees, so it carries what the app does and where
-// the data lives alongside the two ways in (add a posting, fill the profile).
-// It borrows the shared EmptyState's dashed frame but lays its own content out
+// posting list while nothing is saved. With a profile ready it asks for the
+// first posting; without one it sends the user to the Profile first, since a
+// posting has nothing to match against yet. It borrows the shared EmptyState's dashed frame but lays its own content out
 // left-aligned, with the brand mark used at size as surface rather than as an
 // icon above centred text.
-// In plain terms: the "nothing here yet" panel on the Jobs page, which doubles
-// as the app's front door.
+// In plain terms: the "nothing here yet" panel on the Jobs page, pointing at
+// the one next step.
 
 import { Plus, Shield } from 'lucide-react';
 import { Btn } from '../ui/primitives';
@@ -14,13 +13,16 @@ import Logo from '../ui/Logo';
 
 /**
  * The first-run panel. `onAddPosting` opens the same paste modal as the list's
- * Add button; `onSetUpProfile` navigates to the Profile page.
+ * Add button; `onSetUpProfile` navigates to the Profile page. `profileReady`
+ * decides which of the two is the main button.
  * In plain terms: the panel, plus the two things its buttons do.
  */
 export function JobsFirstRun({
+  profileReady,
   onAddPosting,
   onSetUpProfile,
 }: {
+  profileReady: boolean;
   onAddPosting: () => void;
   onSetUpProfile: () => void;
 }) {
@@ -35,20 +37,27 @@ export function JobsFirstRun({
 
       <div className="relative px-6 sm:px-12 pt-8 sm:pt-12 pb-8 sm:pb-10">
         <h2 className="max-w-xl text-2xl font-semibold tracking-tight leading-snug text-slate-900 dark:text-slate-100">
-          Start with a posting, or your profile
+          {profileReady ? 'Add your first job posting' : 'Set up your profile first'}
         </h2>
         <p className="mt-3.5 max-w-lg text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-          Dovetailed scores a job posting against your profile, then drafts a resume and cover
-          letter — every line traced back to something you wrote.
+          {profileReady
+            ? 'Paste a posting and press Build. You get a resume and cover letter for that job, each line traced to your profile.'
+            : 'A posting is matched against your profile. With nothing in it yet, every requirement would show as a gap.'}
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-2">
-          <Btn onClick={onAddPosting}>
-            <Plus size={14} />
-            Add Job Posting
-          </Btn>
-          <Btn variant="secondary" onClick={onSetUpProfile}>
-            Set up your profile
-          </Btn>
+          {profileReady ? (
+            <Btn onClick={onAddPosting}>
+              <Plus size={14} />
+              Add a job posting
+            </Btn>
+          ) : (
+            <>
+              <Btn onClick={onSetUpProfile}>Set up your profile</Btn>
+              <Btn variant="secondary" onClick={onAddPosting}>
+                Save a posting for later
+              </Btn>
+            </>
+          )}
         </div>
       </div>
 

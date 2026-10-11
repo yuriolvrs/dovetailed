@@ -184,7 +184,7 @@ export default function ProfilePage() {
                 <CheckCircle size={15} aria-hidden />
                 Ready to tailor
               </p>
-              <Btn size="sm" className="mt-2" onClick={() => navigate('/')}>
+              <Btn size="sm" className="mt-2" onClick={() => navigate('/jobs?add=1')}>
                 Tailor to a job
                 <ArrowRight size={13} />
               </Btn>

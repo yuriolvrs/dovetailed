@@ -74,7 +74,7 @@ export function JobDetailHeader({
               what the steps below are for, so the back link never has to
               guess which of them "back" means. */}
           <Link
-            to="/"
+            to="/jobs"
             className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors font-medium w-fit rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <ArrowLeft size={15} />

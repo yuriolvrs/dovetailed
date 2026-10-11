@@ -7,6 +7,7 @@ import { Link, NavLink, Navigate, Route, Routes, useMatch, useParams } from 'rea
 import { Briefcase, Settings, User } from 'lucide-react';
 import ProfilePage from './pages/ProfilePage.tsx';
 import JobsPage from './pages/JobsPage.tsx';
+import HomePage from './pages/HomePage.tsx';
 import JobDetailPage from './pages/JobDetailPage.tsx';
 import MatchingReviewPage from './pages/MatchingReviewPage.tsx';
 import DirectSelectionPage from './pages/DirectSelectionPage.tsx';
@@ -27,8 +28,8 @@ import Logo from './components/ui/Logo.tsx';
 // In plain terms: how wide the page's content is, the same everywhere.
 const COLUMN = 'max-w-6xl';
 
-// The header's destination buttons. The brand mark also goes home, so Jobs
-// is a shortcut rather than the only way back to the list.
+// The header's destination buttons. The brand mark goes to /, which sends
+// returning users on to the Jobs list.
 // In plain terms: how the Jobs and Profile buttons in the top-right look.
 // The Documents screen was /generate before the two routes got a shared hub.
 // A relative <Navigate to="../documents"> cannot do this: React Router resolves
@@ -39,7 +40,7 @@ const COLUMN = 'max-w-6xl';
 // of dumping you on the jobs list.
 function LegacyGenerateRedirect() {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={id ? `/jobs/${id}/documents` : '/'} replace />;
+  return <Navigate to={id ? `/jobs/${id}/documents` : '/jobs'} replace />;
 }
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -54,13 +55,16 @@ export default function App() {
   // Jobs stays lit through a posting's own screens -- they are still the jobs
   // section, just deeper in.
   const onJobDetail = useMatch('/jobs/:id/*');
+  // The landing page is for someone who has not started yet, so it gets the
+  // brand mark alone; the app's sections appear once they are in.
+  const onLanding = useMatch({ path: '/', end: true });
 
   return (
     <ToastProvider>
       <div className="min-h-screen flex flex-col print:block print:min-h-0 bg-[#f5f6f8] dark:bg-slate-950 text-slate-900 dark:text-slate-100">
         <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 print:hidden">
           <div className={`mx-auto flex ${COLUMN} h-[54px] items-center justify-between px-4`}>
-            <Link to="/" className="flex items-center gap-3" aria-label="Jobs">
+            <Link to="/" className="flex items-center gap-3" aria-label="Dovetailed home">
               <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-sm">
                 <Logo size={26} className="text-white dark:text-slate-900" />
               </div>
@@ -69,23 +73,25 @@ export default function App() {
               </span>
             </Link>
 
-            <nav className="flex items-center gap-1">
-              <NavLink
-                to="/"
-                className={({ isActive }) => navLinkClass({ isActive: isActive || Boolean(onJobDetail) })}
-              >
-                <Briefcase size={13} />
-                Jobs
-              </NavLink>
-              <NavLink to="/profile" className={navLinkClass}>
-                <User size={13} />
-                Profile
-              </NavLink>
-              <NavLink to="/settings" className={navLinkClass}>
-                <Settings size={13} />
-                Settings
-              </NavLink>
-            </nav>
+            {!onLanding && (
+              <nav className="flex items-center gap-1">
+                <NavLink
+                  to="/jobs"
+                  className={({ isActive }) => navLinkClass({ isActive: isActive || Boolean(onJobDetail) })}
+                >
+                  <Briefcase size={13} />
+                  Jobs
+                </NavLink>
+                <NavLink to="/profile" className={navLinkClass}>
+                  <User size={13} />
+                  Profile
+                </NavLink>
+                <NavLink to="/settings" className={navLinkClass}>
+                  <Settings size={13} />
+                  Settings
+                </NavLink>
+              </nav>
+            )}
           </div>
         </header>
 
@@ -93,9 +99,9 @@ export default function App() {
           className={`flex-1 mx-auto w-full px-4 pt-8 pb-3 print:p-0 print:max-w-none ${COLUMN}`}
         >
           <Routes>
-            <Route path="/" element={<JobsPage />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/jobs" element={<Navigate to="/" replace />} />
+            <Route path="/jobs" element={<JobsPage />} />
             <Route path="/jobs/:id" element={<JobDetailPage />} />
             <Route path="/jobs/:id/match" element={<MatchingReviewPage />} />
             <Route path="/jobs/:id/direct" element={<DirectSelectionPage />} />

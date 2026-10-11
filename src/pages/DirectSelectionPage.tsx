@@ -144,7 +144,7 @@ export default function DirectSelectionPage() {
       <section>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           That job posting no longer exists.{' '}
-          <Link to="/" className="underline hover:text-slate-900 dark:hover:text-slate-100">
+          <Link to="/jobs" className="underline hover:text-slate-900 dark:hover:text-slate-100">
             Back to jobs.
           </Link>
         </p>

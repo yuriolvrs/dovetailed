@@ -6,7 +6,7 @@
 // you already saved.
 
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, ChevronRight, Circle, Plus, X } from 'lucide-react';
 import type { GenerationType, JobPosting } from '../types';
 import {
@@ -23,7 +23,6 @@ import {
 import { listGenerationTypesByPosting } from '../lib/genStore';
 import { hasProfileContent, loadProfile } from '../lib/profileStore';
 import { JobsFirstRun } from '../components/jobs/JobsFirstRun';
-import { Welcome } from '../components/jobs/Welcome';
 import { computeFitScore, fitScoreColor } from '../lib/matching/fitScore';
 import {
   Badge,
@@ -95,6 +94,17 @@ export default function JobsPage() {
     refresh();
   }, [refresh]);
 
+  // /jobs?add=1 (the Profile page's "Tailor to a job") opens the Add dialog
+  // straight away, once the profile check has loaded.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (profileEmpty === null || searchParams.get('add') !== '1') return;
+    setSearchParams({}, { replace: true });
+    handleAddClick();
+    // handleAddClick only reads profileEmpty, which is already a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileEmpty, searchParams, setSearchParams]);
+
   // Asks about the profile first: a posting added with nothing to match it
   // against can only produce gaps.
   // In plain terms: if your profile is empty, the Add button explains that
@@ -135,13 +145,6 @@ export default function JobsPage() {
     await saveJobPosting(posting);
     setModalOpen(false);
     navigate(build ? `/jobs/${posting.id}/build` : `/jobs/${posting.id}`);
-  }
-
-  // A first visit, with nothing saved anywhere, gets the welcome instead of
-  // an empty list.
-  if (postings !== null && postings.length === 0) {
-    if (profileEmpty === null) return null;
-    if (profileEmpty) return <Welcome onStart={() => navigate('/profile')} />;
   }
 
   return (
@@ -272,7 +275,11 @@ export default function JobsPage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : postings.length === 0 ? (
-          <JobsFirstRun onAddPosting={handleAddClick} onSetUpProfile={() => navigate('/profile')} />
+          <JobsFirstRun
+            profileReady={profileEmpty === false}
+            onAddPosting={handleAddClick}
+            onSetUpProfile={() => navigate('/profile')}
+          />
         ) : (
           <div className="space-y-3">
             {postings.map((posting) => {
