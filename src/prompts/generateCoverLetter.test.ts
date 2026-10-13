@@ -8,12 +8,11 @@ import { buildGenerateCoverLetterPrompt, isCoverLetterGeneration } from './gener
 
 const validResult = {
   greeting: 'Dear Hiring Manager,',
-  paragraphs: ['I am excited to apply.', 'I bring relevant experience.'],
-  closing: 'Sincerely,',
-  sourceMap: [
-    { generatedText: 'I am excited to apply.', atomIds: [] },
-    { generatedText: 'I bring relevant experience.', atomIds: ['skills-abc123'] },
+  paragraphs: [
+    { sentences: [{ text: 'I am excited to apply.', claim: false, atomIds: [] }] },
+    { sentences: [{ text: 'I bring relevant experience.', claim: true, atomIds: ['skills-abc123'] }] },
   ],
+  closing: 'Sincerely,',
 };
 
 describe('buildGenerateCoverLetterPrompt', () => {
@@ -64,25 +63,23 @@ describe('isCoverLetterGeneration', () => {
     expect(isCoverLetterGeneration({ ...validResult, paragraphs: [] })).toBe(false);
   });
 
-  it('rejects a paragraph that is blank', () => {
-    expect(isCoverLetterGeneration({ ...validResult, paragraphs: ['  '] })).toBe(false);
-  });
-
-  it('rejects a sourceMap that merges multiple paragraphs into fewer entries than paragraphs.length', () => {
+  it('rejects a paragraph with no sentences or a blank sentence', () => {
+    expect(isCoverLetterGeneration({ ...validResult, paragraphs: [{ sentences: [] }] })).toBe(false);
     expect(
-      isCoverLetterGeneration({
-        ...validResult,
-        sourceMap: [{ generatedText: 'I am excited to apply. I bring relevant experience.', atomIds: [] }],
-      }),
+      isCoverLetterGeneration({ ...validResult, paragraphs: [{ sentences: [{ text: '  ', claim: false, atomIds: [] }] }] }),
     ).toBe(false);
   });
 
-  it('rejects a sourceMap entry missing atomIds or with a non-string generatedText', () => {
+  it('rejects the old shape of plain paragraph strings', () => {
+    expect(isCoverLetterGeneration({ ...validResult, paragraphs: ['I am excited to apply.'] })).toBe(false);
+  });
+
+  it('rejects a sentence missing its claim flag or ids', () => {
     expect(
-      isCoverLetterGeneration({ ...validResult, sourceMap: [{ generatedText: 'x' }] }),
+      isCoverLetterGeneration({ ...validResult, paragraphs: [{ sentences: [{ text: 'x', atomIds: [] }] }] }),
     ).toBe(false);
     expect(
-      isCoverLetterGeneration({ ...validResult, sourceMap: [{ generatedText: 1, atomIds: [] }] }),
+      isCoverLetterGeneration({ ...validResult, paragraphs: [{ sentences: [{ text: 'x', claim: true }] }] }),
     ).toBe(false);
   });
 

@@ -5,7 +5,9 @@
 // pool), builds the prompt, calls the LLM, and enforces that any atomIds it
 // comes back with are actually ones it was offered (an extra safety net on
 // top of the prompt's own instruction not to invent ids, same defensive
-// pattern runMatching.ts uses for matchRequirement.ts's response).
+// pattern runMatching.ts uses for matchRequirement.ts's response). The model
+// answers sentence by sentence; this joins the sentences into paragraphs and
+// keeps one sourceMap entry per sentence.
 // In plain terms: the code that picks your most relevant real accomplishments,
 // asks the AI to write a cover letter grounded in them, and double-checks it
 // didn't cite anything it wasn't actually given.
@@ -18,6 +20,7 @@ import {
   MAX_CANDIDATES,
   type CoverLetterCandidate,
 } from '../../prompts/generateCoverLetter';
+import { stripAtomIdReferences } from './runHolisticSelection';
 
 /**
  * Picks which profile atoms to offer the model as citable evidence:
@@ -58,7 +61,7 @@ export interface GenerateCoverLetterOptions extends GenerateOptions {
 /**
  * Generates a tailored cover letter for a posting: picks evidence
  * candidates, calls the LLM once, and returns editable content plus a
- * sourceMap (one entry per paragraph) the UI uses to flag any paragraph that
+ * sourceMap (one entry per sentence) the UI uses to flag any sentence that
  * makes a claim with no backing evidence.
  * In plain terms: writes a full cover letter for this job, grounded in your
  * real profile, ready to review and edit.
@@ -115,18 +118,28 @@ export async function generateCoverLetterContent(
     signal: options.signal,
   });
 
-  // Defensive: only trust atomIds the model actually cites from what it was
-  // offered, even though the prompt already forbids inventing one.
-  const sourceMap: SourceMapEntry[] = result.sourceMap.map((entry) => ({
-    generatedText: entry.generatedText,
-    atomIds: entry.atomIds.filter((id) => candidateIds.has(id)),
-  }));
+  const sourceMap: SourceMapEntry[] = [];
+  const paragraphs = result.paragraphs.map((paragraph, p) => {
+    const sentences = paragraph.sentences.map((sentence, s) => {
+      // Ids the model wrote into its prose come out, as in interview prep.
+      let text = stripAtomIdReferences(sentence.text, candidateIds).trim();
+      // The greeting prints on its own line; drop it if the letter repeats it.
+      if (p === 0 && s === 0) text = withoutRepeatedGreeting(result.greeting, [text])[0];
+      return { ...sentence, text };
+    });
+    for (const sentence of sentences) {
+      sourceMap.push({
+        generatedText: sentence.text,
+        // Defensive: only trust ids that were actually offered, even though
+        // the prompt already forbids inventing one.
+        atomIds: sentence.atomIds.filter((id) => candidateIds.has(id)),
+        claim: sentence.claim,
+      });
+    }
+    return sentences.map((sentence) => sentence.text).join(' ');
+  });
 
-  const content: CoverLetterContent = {
-    greeting: result.greeting,
-    paragraphs: withoutRepeatedGreeting(result.greeting, result.paragraphs),
-    closing: result.closing,
-  };
+  const content: CoverLetterContent = { greeting: result.greeting, paragraphs, closing: result.closing };
 
   return { content, sourceMap };
 }

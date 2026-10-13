@@ -25,17 +25,9 @@ import { AlertTriangle, Sparkles } from 'lucide-react';
 import type { CoverLetterContent, Profile, ProfileAtom, SourceMapEntry } from '../../types';
 import type { CoverLetterNavTarget } from './coverLetterNav';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
-import { isPlainClosing } from '../../lib/generation/plainClosing';
+import { citeParagraph } from '../../lib/coverLetterCitations';
 import { StringList } from '../StringList';
 import { AtomHoverDetail, Badge, Card, FieldInput } from '../ui/primitives';
-
-function normalizeForMatch(text: string): string {
-  return text
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?]+$/, '');
-}
 
 export function CoverLetterEditor({
   value,
@@ -58,10 +50,6 @@ export function CoverLetterEditor({
   /** Posting text, role, company and candidate name: a closing that names nothing beyond these is not flagged. */
   closingContext?: string;
 }) {
-  const atomIdsByNormalizedText = useMemo(
-    () => new Map(sourceMap.map((e) => [normalizeForMatch(e.generatedText), e.atomIds])),
-    [sourceMap],
-  );
   const atomsById = useMemo(() => new Map(buildProfileAtoms(profile).map((a) => [a.id, a])), [profile]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,26 +97,26 @@ export function CoverLetterEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navRequest?.nonce]);
 
+  // Sentence-level citations (see coverLetterCitations.ts): a badge counts
+  // the profile lines a paragraph cites, or how many sentences need a check.
   function paragraphBadge(paragraph: string) {
     if (paragraph.trim() === '') return null;
-    const atomIds = atomIdsByNormalizedText.get(normalizeForMatch(paragraph));
-    // No sourceMap entry at all (a paragraph the user added by hand) is
-    // treated the same as an empty one -- both are unevidenced AI-free text
-    // the user is fully responsible for, nothing to flag as a broken AI claim.
-    if (atomIds === undefined) return null;
-    if (atomIds.length === 0) {
-      // The prompt requires the last paragraph to be a claim-free thank-you,
-      // so it never cites evidence; flag it only if it names something.
-      const isLast = paragraph === value.paragraphs[value.paragraphs.length - 1];
-      if (isLast && closingContext !== undefined && isPlainClosing(paragraph, closingContext)) return null;
+    const spans = citeParagraph(paragraph, sourceMap, {
+      isLast: paragraph === value.paragraphs[value.paragraphs.length - 1],
+      context: closingContext ?? '',
+    });
+    const flagged = spans.filter((s) => s.status === 'flagged').length;
+    if (flagged > 0) {
       return (
         <Badge color="amber">
           <AlertTriangle size={11} />
-          Not traceable to your profile. Review before sending.
+          {flagged} {flagged === 1 ? 'sentence is' : 'sentences are'} not traceable to your profile. Review before sending.
         </Badge>
       );
     }
-    const atoms = atomIds.map((id) => atomsById.get(id)).filter((a): a is ProfileAtom => a !== undefined);
+    const ids = [...new Set(spans.flatMap((s) => (s.status === 'cited' && s.entry ? s.entry.atomIds : [])))];
+    const atoms = ids.map((id) => atomsById.get(id)).filter((a): a is ProfileAtom => a !== undefined);
+    if (atoms.length === 0) return null;
     return (
       <AtomHoverDetail atoms={atoms}>
         <Badge color="blue">

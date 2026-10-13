@@ -303,6 +303,13 @@ export interface InterviewPrepContent {
 export interface SourceMapEntry {
   generatedText: string;
   atomIds: string[];
+  /**
+   * Cover letters only, one entry per sentence: false when the sentence makes
+   * no specific claim (interest, thanks), so it needs no evidence. A claim
+   * with no atomIds is flagged in the editor. Absent on resumes and on older
+   * letters, whose entries cover a whole paragraph.
+   */
+  claim?: boolean;
 }
 
 export interface Generation {
