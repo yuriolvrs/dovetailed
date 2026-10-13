@@ -51,3 +51,19 @@ General working style, in addition to the project-specific rules below (Conventi
 - Tests: `npm run test`
 - Worker deploy: `npx wrangler deploy` (from `worker/`)
 - Secrets: `npx wrangler secret put <NAME>` — never commit secrets or .env files.
+
+## Model workflow
+Commands: build `npm run build` · test `npm run test` · Worker test `npm run test` and typecheck `npm run typecheck` (from `worker/`).
+
+- Main session (Opus) plans, writes specs, reviews, and updates docs. The `implementer` agent (Sonnet) writes code.
+- Size rule: a change that touches 3 files or fewer and is under about 50 lines is done directly by the main session. Otherwise use the loop.
+- Loop:
+  1. Plan in `docs/plans/NN-<feature>.md`: goal, doc links, numbered tasks.
+  2. Write each task spec so it stands alone, using `docs/plans/_template.md`.
+  3. Delegate to `implementer`.
+  4. Review the diff against the spec and `docs/DECISIONS.md`.
+  5. Send findings back to the same implementer with SendMessage. Repeat until clean.
+  6. Record decisions in `docs/DECISIONS.md` and tick the task.
+- No production code from the main session outside the size rule, except small fixes found during review.
+- Run tasks in parallel only if they touch different files.
+- Read a single known file directly instead of spawning an agent.
