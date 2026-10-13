@@ -29,6 +29,10 @@ interface EditableListProps<T> {
    * 'flat' with room between rows, for paragraphs of running text.
    */
   variant?: 'card' | 'flat' | 'prose';
+  /** Extra buttons beside a row's remove button, e.g. "Reword". */
+  itemActions?: (index: number) => ReactNode;
+  /** The remove button's name for screen readers, e.g. "Remove from resume". */
+  removeLabel?: string;
 }
 
 // How long a removed row stays recoverable. Long enough to notice a
@@ -40,13 +44,14 @@ const UNDO_WINDOW_MS = 8000;
 // item" affordance in the app looks and behaves identically, whether or not
 // the row lives inside an EditableList.
 // In plain terms: the little trash icon used to remove a row from a list.
-export function RemoveItemButton({ onClick }: { onClick: () => void }) {
+export function RemoveItemButton({ onClick, label = 'Remove' }: { onClick: () => void; label?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-red-400 dark:hover:text-red-400 transition-colors p-0.5"
-      aria-label="Remove"
+      aria-label={label}
+      title={label}
     >
       <Trash2 size={13} />
     </button>
@@ -72,12 +77,14 @@ export function EditableList<T>({
   hideAddButton = false,
   reorderable = false,
   variant = 'card',
+  itemActions,
+  removeLabel,
 }: EditableListProps<T>) {
   const flat = variant !== 'card';
   // Hidden until the row is hovered or something inside it has focus, so a
   // flat list stays quiet while you read it.
   const hoverActionClass = flat
-    ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100'
+    ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100'
     : '';
   const [undo, setUndo] = useState<{ item: T; index: number } | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -179,8 +186,9 @@ export function EditableList<T>({
             </span>
           )}
           <div className="flex-1">{renderItem(item, (next) => updateAt(index, next), index)}</div>
-          <span className={hoverActionClass}>
-            <RemoveItemButton onClick={() => removeAt(index)} />
+          <span className={`flex shrink-0 items-center gap-1 ${hoverActionClass}`}>
+            {itemActions?.(index)}
+            <RemoveItemButton onClick={() => removeAt(index)} label={removeLabel} />
           </span>
         </div>
       ))}

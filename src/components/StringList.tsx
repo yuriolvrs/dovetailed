@@ -62,7 +62,7 @@ interface StringListProps {
   /** Optional extra content rendered above an item's input, e.g. a warning badge. */
   itemBadge?: (value: string) => ReactNode;
   /** Optional extra content rendered below an item's input, e.g. a rewrite-suggestion action. */
-  itemExtra?: (value: string, update: (next: string) => void) => ReactNode;
+  itemExtra?: (value: string, update: (next: string) => void, index: number) => ReactNode;
   /** Fires with an item's index when its field gains focus, e.g. to highlight the matching spot in a live preview. */
   onItemFocus?: (index: number) => void;
   /** Fires when an item's field loses focus. */
@@ -74,6 +74,10 @@ interface StringListProps {
    * fields on the page.
    */
   quickEntry?: boolean;
+  /** Extra buttons beside each row's remove button, e.g. "Reword". */
+  itemActions?: (value: string, index: number) => ReactNode;
+  /** The remove button's name for screen readers. */
+  removeLabel?: string;
 }
 
 /**
@@ -101,6 +105,8 @@ export function StringList({
   onItemFocus,
   onItemBlur,
   quickEntry = false,
+  itemActions,
+  removeLabel,
 }: StringListProps) {
   const flat = variant === 'flat';
   const inputClass = `w-full ${
@@ -120,9 +126,24 @@ export function StringList({
     });
   }
 
+  // Alt+Up and Alt+Down move the bullet being edited, the keyboard twin of
+  // dragging its handle. Focus follows the bullet to its new place.
+  function handleMove(e: KeyboardEvent<HTMLTextAreaElement>, index: number): boolean {
+    if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return false;
+    e.preventDefault();
+    const to = index + (e.key === 'ArrowUp' ? -1 : 1);
+    if (to < 0 || to >= items.length) return true;
+    const next = [...items];
+    [next[index], next[to]] = [next[to], next[index]];
+    onChange(next);
+    focusAfter(e.currentTarget, to - index);
+    return true;
+  }
+
   // Enter splits the bullet at the cursor: the text after it moves to a new
   // bullet below. Ignored while an IME is composing and with Shift held.
   function handleEnter(e: KeyboardEvent<HTMLTextAreaElement>, index: number) {
+    if (handleMove(e, index)) return;
     if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
     e.preventDefault();
     const { value, selectionStart, selectionEnd } = e.currentTarget;
@@ -157,6 +178,8 @@ export function StringList({
       hideAddButton={hideAddButton}
       reorderable={reorderable}
       variant={variant}
+      itemActions={itemActions && ((index) => itemActions(items[index], index))}
+      removeLabel={removeLabel}
       renderItem={(value, update, index) => (
         <div className={flat ? 'flex items-start gap-2' : ''}>
           {flat && (
@@ -201,7 +224,7 @@ export function StringList({
                 }}
               />
             )}
-            {itemExtra?.(value, update)}
+            {itemExtra?.(value, update, index)}
           </div>
         </div>
       )}

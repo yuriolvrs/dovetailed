@@ -6,7 +6,38 @@
 // sneak in a skill or number you didn't already write.
 
 import { describe, expect, it } from 'vitest';
-import { filterSafeSuggestions, introducesUnsupportedClaims, isRewriteSuggestions } from './suggestBulletRewrite';
+import {
+  buildSuggestBulletRewritePrompt,
+  filterSafeParagraphSuggestions,
+  filterSafeSuggestions,
+  introducesUnsupportedClaims,
+  isRewriteSuggestions,
+} from './suggestBulletRewrite';
+
+describe('buildSuggestBulletRewritePrompt', () => {
+  it('sends posting terms only for the posting goal', () => {
+    const terms = ['stakeholder communication'];
+    expect(buildSuggestBulletRewritePrompt('Wrote updates', { goal: 'posting', postingTerms: terms })).toContain(
+      'stakeholder communication',
+    );
+    expect(buildSuggestBulletRewritePrompt('Wrote updates', { goal: 'tighter', postingTerms: terms })).not.toContain(
+      'stakeholder communication',
+    );
+  });
+});
+
+describe('filterSafeParagraphSuggestions', () => {
+  const original = 'At Acme I ran the spring fair. It drew a big crowd.';
+
+  it('allows reordered sentences whose first words change', () => {
+    expect(filterSafeParagraphSuggestions(original, ['It drew a big crowd when I ran the spring fair at Acme.'])).toHaveLength(1);
+  });
+
+  it('drops a paragraph that adds a new name or figure', () => {
+    expect(filterSafeParagraphSuggestions(original, ['At Acme and Globex I ran the spring fair.'])).toEqual([]);
+    expect(filterSafeParagraphSuggestions(original, ['At Acme I ran the spring fair for 300 guests.'])).toEqual([]);
+  });
+});
 
 describe('introducesUnsupportedClaims', () => {
   it('allows a plain paraphrase with no new proper nouns or numbers', () => {

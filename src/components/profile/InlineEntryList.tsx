@@ -32,8 +32,6 @@ export interface EntrySummary {
   bullets: string[];
   /** Shown as a red flag when set, e.g. "No bullets yet". */
   warning?: string;
-  /** Extra status on the small count line, e.g. the resume editor's "2 chosen". */
-  badge?: ReactNode;
 }
 
 /** How many bullets a closed entry shows before "and N more". */
@@ -58,7 +56,6 @@ export function InlineEntryList<T>({
   focusNew,
   onFocused,
   noun,
-  compact = false,
 }: {
   items: T[];
   indexes?: number[];
@@ -74,8 +71,6 @@ export function InlineEntryList<T>({
   onFocused: () => void;
   /** What one entry is called, for button labels, e.g. "role". */
   noun: string;
-  /** Closed entries show no bullets: for screens with a preview beside them. */
-  compact?: boolean;
 }) {
   const shown = indexes ?? items.map((_, i) => i);
 
@@ -179,17 +174,7 @@ export function InlineEntryList<T>({
               {s.subtitle?.trim() && (
                 <span className="block text-sm text-slate-600 dark:text-slate-400">{s.subtitle}</span>
               )}
-              {compact && (s.bullets.length > 0 || s.badge) && (
-                <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  {s.bullets.length > 0 && (
-                    <span>
-                      {s.bullets.length} highlight{s.bullets.length === 1 ? '' : 's'}
-                    </span>
-                  )}
-                  {s.badge}
-                </span>
-              )}
-              {!compact && s.bullets.length > 0 && (
+              {s.bullets.length > 0 && (
                 <span className="mt-1.5 block space-y-0.5 text-sm text-slate-700 dark:text-slate-300">
                   {s.bullets.slice(0, PREVIEW_BULLETS).map((bullet, i) => (
                     <span key={i} className="flex gap-2">

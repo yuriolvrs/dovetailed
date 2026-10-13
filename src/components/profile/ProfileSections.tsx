@@ -5,9 +5,9 @@
 // Contact and Skills read as resume lines with an Edit button.
 // Experience and Projects can also open "Describe it instead", which is the
 // existing notes-to-entry flow (JobDocumentImportSection).
-// The resume editor uses the same sections on a tailored resume, adding its
-// own extras through ResumeExtras (match badges, left-out bullets and
-// entries, Reset, opening an entry from a preview click).
+// The resume editor reuses Contact, Education and the section card
+// (SheetSection); Education takes its Reset and preview-click opening
+// through ResumeExtras.
 // In plain terms: the jobs, projects and schools parts of your profile, and
 // of each tailored resume.
 
@@ -37,13 +37,11 @@ function bulletRewrite(bulletText: string, applySuggestion: (next: string) => vo
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 /**
- * The red flag on an entry with no bullets. On the profile it cannot be
- * matched to a job; on a resume it is left out of the printed page.
+ * The red flag on an entry with no bullets: it cannot be matched to a job.
  * In plain terms: why an entry without bullets is a problem here.
  */
-function bulletWarning(entry: { bullets: string[] }, resume?: unknown): string | undefined {
-  if (hasBullets(entry)) return undefined;
-  return resume ? 'Not printed: no highlights' : 'No highlights yet';
+function bulletWarning(entry: { bullets: string[] }): string | undefined {
+  return hasBullets(entry) ? undefined : 'No highlights yet';
 }
 
 /**
@@ -148,20 +146,10 @@ function useDescribe(kind: 'experience' | 'project', describe?: DescribeProps) {
   return { button, panel };
 }
 
-/** What the resume editor adds to a section. The Profile page passes none. */
-export interface ResumeExtras<T> {
-  /** Extra header buttons, e.g. Reset to profile. */
+/** What the resume editor adds to the Education section. The Profile page passes none. */
+export interface ResumeExtras {
+  /** Extra header buttons, e.g. Reset. */
   actions?: ReactNode;
-  /** A label beside a bullet, e.g. "Matched to this job". */
-  bulletBadge?: (bulletText: string) => ReactNode;
-  /** A label beside a closed entry's title, e.g. "2 chosen". */
-  entryBadge?: (entry: T) => ReactNode;
-  /** Under an open entry's bullets, e.g. bullets this resume left out. */
-  belowBullets?: (entry: T, update: (next: T) => void) => ReactNode;
-  /** Profile entries this resume left out, offered back. */
-  excluded?: { entries: T[]; label: (entry: T) => string; onAdd: (entry: T) => void };
-  /** Bullet focus (index) or blur (null), so the preview can highlight it. */
-  onFocusBullet?: (entry: T, bulletIndex: number | null) => void;
   /** A preview click asking to open this entry. */
   nav?: { index: number; nonce: number } | null;
 }
@@ -185,35 +173,6 @@ function useNavOpen(sectionId: string, nav: { index: number; nonce: number } | n
   }, [nav?.nonce]);
 }
 
-/**
- * The resume editor's "Not included" list: profile entries this resume left
- * out, each one click to add back. Removing an entry from a resume never
- * deletes it from the profile, so it must stay reachable.
- * In plain terms: the jobs or projects you can put back on this resume.
- */
-function ExcludedEntries<T>({ excluded }: { excluded?: ResumeExtras<T>['excluded'] }) {
-  if (!excluded || excluded.entries.length === 0) return null;
-  return (
-    <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
-      <h3 className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">Not on this resume</h3>
-      <ul className="flex flex-col">
-        {excluded.entries.map((entry, i) => (
-          <li key={i}>
-            <button
-              type="button"
-              onClick={() => excluded.onAdd(entry)}
-              className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
-            >
-              <Plus size={13} aria-hidden className="shrink-0" />
-              <span className="min-w-0 flex-1 truncate">{excluded.label(entry)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function newExperienceEntry(): ExperienceEntry {
   return { section: DEFAULT_SECTION, company: '', title: '', current: false, bullets: [] };
 }
@@ -228,18 +187,15 @@ export function ExperienceSection({
   onChange,
   describe,
   title = 'Experience',
-  resume,
 }: {
   value: ExperienceEntry[];
   onChange: (next: ExperienceEntry[]) => void;
   describe?: DescribeProps;
   title?: string;
-  resume?: ResumeExtras<ExperienceEntry>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusNew, setFocusNew] = useState(false);
   const { button, panel } = useDescribe('experience', describe);
-  useNavOpen('experience', resume?.nav, setOpenIndex);
   const groups = groupBySection(value);
   const sections = value.length === 0 ? [DEFAULT_SECTION] : sectionOrder(value);
   const bulletTotal = value.reduce((total, entry) => total + entry.bullets.length, 0);
@@ -260,7 +216,6 @@ export function ExperienceSection({
       meta={value.length > 0 ? `${count(value.length, 'role')} · ${count(bulletTotal, 'highlight')}` : undefined}
       actions={
         <>
-          {resume?.actions}
           {button}
           <Btn size="sm" variant="ghost" onClick={() => add(lastSection)}>
             <Plus size={13} />
@@ -289,7 +244,6 @@ export function ExperienceSection({
                 onChange={onChange}
                 duplicate={(entry) => ({ ...entry, bullets: [...entry.bullets] })}
                 noun="role"
-                compact={Boolean(resume)}
                 openIndex={openIndex}
                 onOpen={setOpenIndex}
                 focusNew={focusNew}
@@ -301,16 +255,10 @@ export function ExperienceSection({
                   subtitle: entry.company,
                   aside: dateRange(entry),
                   bullets: entry.bullets,
-                  warning: bulletWarning(entry, resume),
-                  badge: resume?.entryBadge?.(entry),
+                  warning: bulletWarning(entry),
                 })}
                 renderDetail={({ index, entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
                   <ExperienceDetail
-                    noun={resume ? 'role from this resume' : undefined}
-                    bulletBadge={resume?.bulletBadge}
-                    belowBullets={resume?.belowBullets?.(entry, update)}
-                    onBulletFocus={resume?.onFocusBullet && ((i) => resume.onFocusBullet?.(entry, i))}
-                    onBulletBlur={resume?.onFocusBullet && (() => resume.onFocusBullet?.(entry, null))}
                     entry={entry}
                     onChange={update}
                     autoFocus={autoFocus}
@@ -331,7 +279,6 @@ export function ExperienceSection({
           ))}
         </div>
       )}
-      <ExcludedEntries excluded={resume?.excluded} />
     </SheetSection>
   );
 }
@@ -348,17 +295,14 @@ export function ProjectsSection({
   value,
   onChange,
   describe,
-  resume,
 }: {
   value: ProjectEntry[];
   onChange: (next: ProjectEntry[]) => void;
   describe?: DescribeProps;
-  resume?: ResumeExtras<ProjectEntry>;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusNew, setFocusNew] = useState(false);
   const { button, panel } = useDescribe('project', describe);
-  useNavOpen('projects', resume?.nav, setOpenIndex);
   const bulletTotal = value.reduce((total, entry) => total + entry.bullets.length, 0);
 
   function add() {
@@ -374,7 +318,6 @@ export function ProjectsSection({
       meta={value.length > 0 ? `${count(value.length, 'project')} · ${count(bulletTotal, 'highlight')}` : undefined}
       actions={
         <>
-          {resume?.actions}
           {button}
           <Btn size="sm" variant="ghost" onClick={add}>
             <Plus size={13} />
@@ -399,7 +342,6 @@ export function ProjectsSection({
             links: entry.links.map((link) => ({ ...link })),
           })}
           noun="project"
-          compact={Boolean(resume)}
           openIndex={openIndex}
           onOpen={setOpenIndex}
           focusNew={focusNew}
@@ -409,16 +351,10 @@ export function ProjectsSection({
             untitled: 'Untitled project',
             subtitle: entry.description,
             bullets: entry.bullets,
-            warning: bulletWarning(entry, resume),
-            badge: resume?.entryBadge?.(entry),
+            warning: bulletWarning(entry),
           })}
           renderDetail={({ entry, update, onDuplicate, onDelete, autoFocus, onFocused }) => (
             <ProjectDetail
-              noun={resume ? 'project from this resume' : undefined}
-              bulletBadge={resume?.bulletBadge}
-              belowBullets={resume?.belowBullets?.(entry, update)}
-              onBulletFocus={resume?.onFocusBullet && ((i) => resume.onFocusBullet?.(entry, i))}
-              onBulletBlur={resume?.onFocusBullet && (() => resume.onFocusBullet?.(entry, null))}
               entry={entry}
               onChange={update}
               autoFocus={autoFocus}
@@ -430,7 +366,6 @@ export function ProjectsSection({
           )}
         />
       )}
-      <ExcludedEntries excluded={resume?.excluded} />
     </SheetSection>
   );
 }
@@ -450,7 +385,7 @@ export function EducationSection({
 }: {
   value: EducationEntry[];
   onChange: (next: EducationEntry[]) => void;
-  resume?: Pick<ResumeExtras<EducationEntry>, 'actions' | 'nav'>;
+  resume?: ResumeExtras;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusNew, setFocusNew] = useState(false);

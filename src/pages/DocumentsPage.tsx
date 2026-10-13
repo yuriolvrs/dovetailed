@@ -22,7 +22,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, ArrowLeft, Check, Download, FileCode, FileText, History, Info, Mail, MessageCircleQuestion, Sparkles } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Download, FileCode, FileText, History, Info, Mail, MessageCircleQuestion, Sparkles } from 'lucide-react';
 import type { ExperienceEntry, Generation, GenerationSnapshot, GenerationStrategy, JobPosting, LatexTemplate, Profile, ResumeContent } from '../types';
 import type { ResumeFocusTarget, ResumeNavTarget } from '../lib/resumeEntryKeys';
 import { loadJobPosting } from '../lib/jobStore';
@@ -716,8 +716,11 @@ export default function DocumentsPage() {
                 <div className={`min-w-0 ${paneClass(pane, 'edit')}`}>
                   <ResumeEditor
                     value={generation.content as ResumeContent}
-                    sourceMap={generation.sourceMap}
-                    analysis={posting.analysis}
+                    // Each route marks lines by its own evidence: the matched
+                    // route by requirement matches, the direct route by its picks.
+                    analysis={strategy === 'matched' ? posting.analysis : undefined}
+                    holistic={strategy === 'holistic' ? posting.holisticSelection : undefined}
+                    fitsOnePage={overflows === null ? null : !overflows}
                     profile={profile}
                     tailored={tailored ?? (generation.content as ResumeContent)}
                     onChange={updateContent}
@@ -728,17 +731,6 @@ export default function DocumentsPage() {
                 <div
                   className={`min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin ${paneClass(pane, 'preview')}`}
                 >
-                  {overflows !== null && (
-                    <p
-                      aria-live="polite"
-                      className={`mb-2 flex items-center gap-1.5 text-xs font-medium ${
-                        overflows ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'
-                      }`}
-                    >
-                      {overflows ? <AlertTriangle size={13} /> : <Check size={13} />}
-                      {overflows ? 'Runs past one page. Shorten or remove a line.' : 'Fits on one page'}
-                    </p>
-                  )}
                   <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
                     Select any part of the preview to edit it there.
                   </p>
