@@ -53,6 +53,12 @@ import { Btn, Card, PageSkeleton, SavedIndicator } from '../components/ui/primit
 
 type Tab = 'resume' | 'coverLetter' | 'interviewPrep';
 
+const DOC_TABS: { id: Tab; label: string; Icon: typeof FileText }[] = [
+  { id: 'resume', label: 'Resume', Icon: FileText },
+  { id: 'coverLetter', label: 'Cover Letter', Icon: Mail },
+  { id: 'interviewPrep', label: 'Interview Prep', Icon: MessageCircleQuestion },
+];
+
 export default function DocumentsPage() {
   const { id } = useParams<{ id: string }>();
   // Which route's documents this page is showing. Lives in the URL rather
@@ -424,43 +430,39 @@ export default function DocumentsPage() {
                 />
               </div>
             )}
-          <div className="flex border-b border-slate-200 dark:border-slate-700 print:hidden">
-            <button
-              type="button"
-              onClick={() => setTab('resume')}
-              className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
-                tab === 'resume'
-                  ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              <FileText size={14} />
-              Resume
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('coverLetter')}
-              className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
-                tab === 'coverLetter'
-                  ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              <Mail size={14} />
-              Cover Letter
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('interviewPrep')}
-              className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors ${
-                tab === 'interviewPrep'
-                  ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              <MessageCircleQuestion size={14} />
-              Interview Prep
-            </button>
+          <div
+            role="tablist"
+            aria-label="Documents"
+            className="flex border-b border-slate-200 dark:border-slate-700 print:hidden"
+            onKeyDown={(e) => {
+              // Arrow keys move between tabs, as screen-reader users expect.
+              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+              const i = DOC_TABS.findIndex((t) => t.id === tab);
+              const next = DOC_TABS[(i + (e.key === 'ArrowRight' ? 1 : DOC_TABS.length - 1)) % DOC_TABS.length];
+              setTab(next.id);
+              document.getElementById(`doc-tab-${next.id}`)?.focus();
+            }}
+          >
+            {DOC_TABS.map(({ id: tabId, label, Icon }) => (
+              <button
+                key={tabId}
+                id={`doc-tab-${tabId}`}
+                type="button"
+                role="tab"
+                aria-selected={tab === tabId}
+                aria-controls="doc-tabpanel"
+                tabIndex={tab === tabId ? 0 : -1}
+                onClick={() => setTab(tabId)}
+                className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
+                  tab === tabId
+                    ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                <Icon size={14} />
+                {label}
+              </button>
+            ))}
           </div>
           </>
         }
@@ -602,6 +604,7 @@ export default function DocumentsPage() {
         }
       />
 
+      <div role="tabpanel" id="doc-tabpanel" aria-labelledby={`doc-tab-${tab}`}>
       {tab === 'coverLetter' ? (
         <CoverLetterSection
           posting={posting}
@@ -780,6 +783,7 @@ export default function DocumentsPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
