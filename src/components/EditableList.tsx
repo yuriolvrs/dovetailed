@@ -157,7 +157,7 @@ export function EditableList<T>({
           className={[
             'flex items-start gap-2 rounded-xl border transition-[opacity,border-color,background-color]',
             flat
-              ? 'group rounded-lg px-1.5 py-1 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+              ? 'group rounded-lg px-1.5 py-1 hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]'
               : 'bg-slate-100 dark:bg-slate-800 p-4',
             overIndex === index && dragIndex !== null && dragIndex !== index
               ? 'border-slate-400 dark:border-slate-500'

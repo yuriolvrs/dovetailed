@@ -196,13 +196,13 @@ function ExcludedEntries<T>({ excluded }: { excluded?: ResumeExtras<T>['excluded
   return (
     <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
       <h3 className="mb-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">Not on this resume</h3>
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col">
         {excluded.entries.map((entry, i) => (
           <li key={i}>
             <button
               type="button"
               onClick={() => excluded.onAdd(entry)}
-              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-100"
+              className="-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
             >
               <Plus size={13} aria-hidden className="shrink-0" />
               <span className="min-w-0 flex-1 truncate">{excluded.label(entry)}</span>

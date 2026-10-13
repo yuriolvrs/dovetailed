@@ -29,8 +29,10 @@ export function BulletPicker({
   if (excluded.length === 0) return null;
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Not on this resume</p>
+    <div>
+      <p className="mb-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+        Not on this resume
+      </p>
       {excluded.map((bullet, i) => {
         const requirement = bulletMatch(bullet);
         return (
@@ -38,10 +40,11 @@ export function BulletPicker({
             key={i}
             type="button"
             onClick={() => onAdd(bullet)}
-            className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="group -mx-2 flex w-[calc(100%+1rem)] items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
           >
-            <Plus size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
-            <span className="flex-1 text-sm text-slate-500 dark:text-slate-400">{bullet}</span>
+            <Plus size={14} aria-hidden className="mt-0.5 shrink-0 text-slate-500 group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-100" />
+            <span className="sr-only">Add: </span>
+            <span className="flex-1 text-sm text-slate-600 group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-100">{bullet}</span>
             {requirement && (
               <span className="flex min-w-0 max-w-[50%]">
                 <Badge color="green" title={`Matches: ${requirement}`}>

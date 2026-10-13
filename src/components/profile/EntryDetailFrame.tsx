@@ -122,7 +122,7 @@ export function EntryDetailHeader({
   }, [autoFocus, onFocused]);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-5 border-b border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between p-5 border-b border-slate-200 dark:border-slate-700/60">
       <div ref={titleRef} className="flex-1 min-w-0">
         {/* Grows rather than scrolls, so a long title shows in full. Enter
             does nothing: a title is one line on the resume. */}
@@ -173,7 +173,7 @@ export function EntryDetailHeader({
  */
 export function EntryDetailFields({ children }: { children: ReactNode }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 p-5 border-b border-slate-200 dark:border-slate-800">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 p-5 border-b border-slate-200 dark:border-slate-700/60">
       {children}
     </div>
   );
@@ -187,7 +187,7 @@ export function EntryDetailFields({ children }: { children: ReactNode }) {
  */
 export function EntryMoreDetails({ summary, children }: { summary: string; children: ReactNode }) {
   return (
-    <details className="group border-t border-slate-200 dark:border-slate-800">
+    <details className="group border-t border-slate-200 dark:border-slate-700/60">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 [&::-webkit-details-marker]:hidden">
         <ChevronRight size={13} className="transition-transform group-open:rotate-90" aria-hidden />
         Details

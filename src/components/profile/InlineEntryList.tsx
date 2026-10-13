@@ -32,7 +32,7 @@ export interface EntrySummary {
   bullets: string[];
   /** Shown as a red flag when set, e.g. "No bullets yet". */
   warning?: string;
-  /** Extra status beside the title, e.g. the resume editor's "2 matched". */
+  /** Extra status on the small count line, e.g. the resume editor's "2 chosen". */
   badge?: ReactNode;
 }
 
@@ -98,7 +98,7 @@ export function InlineEntryList<T>({
             <li
               key={index}
               data-entry-index={index}
-              className="scroll-mt-24 rounded-xl border border-blue-300 dark:border-blue-500/60 ring-4 ring-blue-500/10 bg-white dark:bg-slate-950 overflow-hidden"
+              className="scroll-mt-24 -mx-3 rounded-xl bg-slate-50 dark:bg-slate-800/40"
             >
               {renderDetail({
                 index,
@@ -117,7 +117,7 @@ export function InlineEntryList<T>({
                 autoFocus: focusNew,
                 onFocused,
               })}
-              <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 dark:border-slate-800 px-5 py-3">
+              <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 dark:border-slate-700/60 px-5 py-3">
                 <Btn size="sm" onClick={() => onOpen(null)}>
                   <Check size={13} />
                   Done
@@ -166,23 +166,27 @@ export function InlineEntryList<T>({
                       {s.warning}
                     </span>
                   )}
-                  {s.badge && <span className="ml-2 inline-flex align-middle">{s.badge}</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-sm text-slate-500 dark:text-slate-400 tabular-nums">
                   {s.aside}
                   <Pencil
                     size={13}
                     aria-hidden
-                    className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                    className="text-slate-400 transition-colors group-hover:text-slate-700 group-focus-visible:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-200 dark:group-focus-visible:text-slate-200"
                   />
                 </span>
               </span>
               {s.subtitle?.trim() && (
                 <span className="block text-sm text-slate-600 dark:text-slate-400">{s.subtitle}</span>
               )}
-              {compact && s.bullets.length > 0 && (
-                <span className="block text-xs text-slate-500 dark:text-slate-400">
-                  {s.bullets.length} bullet{s.bullets.length === 1 ? '' : 's'}
+              {compact && (s.bullets.length > 0 || s.badge) && (
+                <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  {s.bullets.length > 0 && (
+                    <span>
+                      {s.bullets.length} highlight{s.bullets.length === 1 ? '' : 's'}
+                    </span>
+                  )}
+                  {s.badge}
                 </span>
               )}
               {!compact && s.bullets.length > 0 && (
