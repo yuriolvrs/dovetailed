@@ -298,7 +298,7 @@ export function InterviewPrepSection({
             </>
           ) : (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600 dark:text-slate-300">This will overwrite your edits. Regenerate?</span>
+              <span className="text-slate-600 dark:text-slate-300">Write new questions? These stay in History.</span>
               <Btn size="sm" onClick={handleGenerate} disabled={status === 'loading'}>
                 {status === 'loading' ? 'Writing…' : 'Yes, regenerate'}
               </Btn>
@@ -311,10 +311,15 @@ export function InterviewPrepSection({
         )}
 
       {hasPrep && status === 'error' && error && (
-        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5 mb-5">
-          <AlertTriangle size={13} className="shrink-0" />
-          {error}
-        </p>
+        <div role="alert" className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-red-600 dark:text-red-400">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} className="shrink-0" />
+            {error}
+          </span>
+          <Btn size="sm" variant="secondary" onClick={handleGenerate}>
+            Try again
+          </Btn>
+        </div>
       )}
 
       {!hasPrep ? (
@@ -323,7 +328,7 @@ export function InterviewPrepSection({
             <Sparkles size={22} className="text-white dark:text-slate-900" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Prepare for the interview</h3>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Prepare for the interview</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
               Generates likely interview questions for this role, each grounded in your matched
               requirements and real profile evidence where relevant. Review and edit them before your
@@ -420,7 +425,7 @@ export function InterviewPrepSection({
                       <AtomHoverDetail atoms={atoms}>
                         <Badge color="blue">
                           <Sparkles size={11} />
-                          Grounded
+                          Cites {atoms.length} profile {atoms.length === 1 ? 'line' : 'lines'}
                         </Badge>
                       </AtomHoverDetail>
                     )}

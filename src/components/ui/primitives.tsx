@@ -342,19 +342,25 @@ export function Badge({
 
 // Wraps a badge/trigger with a hover-only tooltip listing the exact profile
 // atom(s) (source + verbatim text) a generated bullet/paragraph is grounded
-// in -- pure CSS (group/group-hover), no click handler, since clicking a
-// bullet already opens its edit field. A no-op passthrough when there's
+// in -- pure CSS (group-hover, plus group-focus-within so keyboard users
+// can Tab to the badge and read it), no click handler. A no-op passthrough when there's
 // nothing to show, so callers can pass an empty array unconditionally.
 // In plain terms: hover over a "matched"/"sourced" badge to see the exact
 // line from your profile it came from.
 export function AtomHoverDetail({ atoms, children }: { atoms: ProfileAtom[]; children: ReactNode }) {
   if (atoms.length === 0) return <>{children}</>;
   return (
-    <span className="group relative inline-block">
+    <span
+      tabIndex={0}
+      className="group relative inline-block max-w-full rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    >
       {children}
-      <span className="pointer-events-none absolute left-0 top-full z-20 mt-1.5 hidden w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-left shadow-lg group-hover:block">
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full z-20 mt-1.5 hidden w-72 max-w-[80vw] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-left shadow-lg group-hover:block group-focus-within:block"
+      >
         <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-          Grounded in your profile
+          Cited from your profile
         </span>
         <span className="block space-y-1.5">
           {atoms.map((atom) => (
@@ -442,8 +448,9 @@ export function UnsavedIndicator() {
 // edit autosaves.
 export function SavedIndicator({ visible, label = 'Saved' }: { visible: boolean; label?: string }) {
   return (
+    // Takes no room while hidden, so it never leaves a gap between buttons.
     <span
-      className={`inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 normal-case tracking-normal transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      className={`items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 normal-case tracking-normal ${visible ? 'inline-flex' : 'hidden'}`}
     >
       <Check size={11} />
       {label}

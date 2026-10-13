@@ -57,6 +57,8 @@ interface StringListProps {
   reorderable?: boolean;
   /** Row chrome, forwarded to EditableList -- 'flat' also drops the field's own box and marks each item with a bullet dot. */
   variant?: 'card' | 'flat';
+  /** Names each field for screen readers as "<itemLabel> <n>", e.g. "Paragraph 2". */
+  itemLabel?: string;
   /** Optional extra content rendered above an item's input, e.g. a warning badge. */
   itemBadge?: (value: string) => ReactNode;
   /** Optional extra content rendered below an item's input, e.g. a rewrite-suggestion action. */
@@ -93,6 +95,7 @@ export function StringList({
   hideAddButton = false,
   reorderable = false,
   variant = 'card',
+  itemLabel,
   itemBadge,
   itemExtra,
   onItemFocus,
@@ -168,6 +171,7 @@ export function StringList({
                 className={inputClass}
                 value={value}
                 placeholder={placeholder}
+                aria-label={itemLabel && `${itemLabel} ${index + 1}`}
                 onChange={(e) => update(e.target.value)}
                 onFocus={() => onItemFocus?.(index)}
                 onBlur={() => {
@@ -186,6 +190,7 @@ export function StringList({
                 type="text"
                 value={value}
                 placeholder={placeholder}
+                aria-label={itemLabel && `${itemLabel} ${index + 1}`}
                 onChange={(e) => update(e.target.value)}
                 onFocus={() => onItemFocus?.(index)}
                 onBlur={() => {

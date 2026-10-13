@@ -4,14 +4,14 @@
 // 'print' -- hidden on screen via `hidden print:block`), and once as a
 // visible, non-interactive live preview next to the editor (`variant="preview"`).
 // On the 'preview' variant, the greeting, each paragraph, and the closing
-// are also clickable -- clicking calls onNavigate with a
+// are also clickable -- clicking, or Enter/Space, calls onNavigate with a
 // CoverLetterNavTarget, which CoverLetterSection uses to scroll the editor
 // to and flash that same field.
 // In plain terms: the plain, print-friendly layout of your cover letter --
 // shown live as a preview while editing (click any line to jump to it in
 // the editor), and used as-is when you print or "Save as PDF."
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 import type { Contact, CoverLetterContent } from '../../types';
 import type { CoverLetterNavTarget } from './coverLetterNav';
 
@@ -21,7 +21,8 @@ function today(): string {
 
 // Shared styling for a clickable preview line -- only applied on the
 // 'preview' variant.
-const navClickableClass = 'cursor-pointer rounded transition-colors hover:bg-slate-50 -mx-1 px-1';
+const navClickableClass =
+  'cursor-pointer rounded transition-colors hover:bg-slate-50 -mx-1 px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
 
 export function CoverLetterPrintView({
   content,
@@ -40,6 +41,26 @@ export function CoverLetterPrintView({
   onNavigate?: (target: CoverLetterNavTarget) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const interactive = variant === 'preview' && Boolean(onNavigate);
+
+  /**
+   * Makes a preview line act as a button: click, Enter or Space opens the
+   * matching field in the editor.
+   * In plain terms: lets you jump to a line with mouse or keyboard.
+   */
+  function navProps(target: CoverLetterNavTarget) {
+    if (!interactive) return {};
+    return {
+      role: 'button',
+      tabIndex: 0,
+      onClick: () => onNavigate?.(target),
+      onKeyDown: (e: KeyboardEvent) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        onNavigate?.(target);
+      },
+    };
+  }
 
   useEffect(() => {
     if (focusedParagraph === null || variant !== 'preview' || !rootRef.current) return;
@@ -73,8 +94,8 @@ export function CoverLetterPrintView({
 
       {content.greeting.trim() !== '' && (
         <p
-          className={`mb-4 ${variant === 'preview' && onNavigate ? navClickableClass : ''}`}
-          onClick={variant === 'preview' ? () => onNavigate?.({ section: 'greeting' }) : undefined}
+          className={`mb-4 ${interactive ? navClickableClass : ''}`}
+          {...navProps({ section: 'greeting' })}
         >
           {content.greeting}
         </p>
@@ -88,11 +109,11 @@ export function CoverLetterPrintView({
             key={i}
             data-focus-key={`paragraph:${i}`}
             style={variant === 'print' ? { breakInside: 'avoid' } : undefined}
-            onClick={variant === 'preview' ? () => onNavigate?.({ section: 'paragraph', index: i }) : undefined}
+            {...navProps({ section: 'paragraph', index: i })}
             className={[
               'mb-4',
               focused ? 'bg-emerald-100' : '',
-              variant === 'preview' && onNavigate ? navClickableClass : 'transition-colors',
+              interactive ? navClickableClass : 'transition-colors',
             ].join(' ')}
           >
             {p}
@@ -103,8 +124,8 @@ export function CoverLetterPrintView({
       {content.closing.trim() !== '' && (
         <p
           style={variant === 'print' ? { breakInside: 'avoid' } : undefined}
-          className={variant === 'preview' && onNavigate ? navClickableClass : ''}
-          onClick={variant === 'preview' ? () => onNavigate?.({ section: 'closing' }) : undefined}
+          className={interactive ? navClickableClass : ''}
+          {...navProps({ section: 'closing' })}
         >
           {content.closing}
           <br />

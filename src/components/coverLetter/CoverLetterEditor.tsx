@@ -133,7 +133,7 @@ export function CoverLetterEditor({
       <AtomHoverDetail atoms={atoms}>
         <Badge color="blue">
           <Sparkles size={11} />
-          Grounded in your profile
+          Cites {atoms.length} profile {atoms.length === 1 ? 'line' : 'lines'}
         </Badge>
       </AtomHoverDetail>
     );
@@ -153,11 +153,18 @@ export function CoverLetterEditor({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+        <div role="group" aria-labelledby="cl-paragraphs" className="flex flex-col gap-1.5">
+          <span id="cl-paragraphs" className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
             Paragraphs
           </span>
+          {/* A citation backs part of a paragraph, not every sentence in it,
+              so the badge counts sources instead of vouching for the whole. */}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Point at or Tab to a badge to see the profile lines a paragraph cites. Check that each claim
+            is in them.
+          </p>
           <StringList
+            itemLabel="Paragraph"
             items={value.paragraphs}
             onChange={(paragraphs) => onChange({ ...value, paragraphs })}
             multiline

@@ -45,6 +45,7 @@ import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
 import { RouteSwitch } from '../components/jobs/RouteSwitch';
+import { PaneSwitch, paneClass, type Pane } from '../components/ui/PaneSwitch';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
 import { InterviewPrepSection } from '../components/interviewPrep/InterviewPrepSection';
 import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
@@ -112,7 +113,7 @@ export default function DocumentsPage() {
   // change, so an effect keyed on it wouldn't re-fire).
   const [navRequest, setNavRequest] = useState<{ target: ResumeNavTarget; nonce: number } | null>(null);
   // On narrow screens the editor and preview take turns; wide screens show both.
-  const [pane, setPane] = useState<'edit' | 'preview'>('edit');
+  const [pane, setPane] = useState<Pane>('edit');
   // Whether the resume as edited runs past one printed page; null until measured.
   const [overflows, setOverflows] = useState<boolean | null>(null);
   // DOM node inside the shared header's actions slot that CoverLetterSection
@@ -456,7 +457,7 @@ export default function DocumentsPage() {
                 className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap text-xs sm:text-sm font-semibold py-3 border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
                   tab === tabId
                     ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon size={14} />
@@ -622,7 +623,7 @@ export default function DocumentsPage() {
                 <Sparkles size={22} className="text-white dark:text-slate-900" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Build a tailored resume</h3>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Build a tailored resume</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
                   Selects and prioritizes your most relevant experience, projects, and skills for this
                   job. Every bullet stays exactly as you wrote it. Edit anything before exporting.
@@ -639,7 +640,7 @@ export default function DocumentsPage() {
                 <AlertTriangle size={22} className="text-white" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">This resume needs to be rebuilt</h3>
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">This resume needs to be rebuilt</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
                   It was built by an older version of this app that could rewrite bullet text, so some
                   of what it shows may not actually be in your profile. Rebuilding replaces it with
@@ -714,29 +715,9 @@ export default function DocumentsPage() {
                   </div>
                 </Card>
               )}
-              <div
-                role="group"
-                aria-label="Show"
-                className="mb-4 flex w-fit rounded-xl bg-slate-100 p-0.5 lg:hidden print:hidden dark:bg-slate-800"
-              >
-                {(['edit', 'preview'] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    aria-pressed={pane === option}
-                    onClick={() => setPane(option)}
-                    className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-colors ${
-                      pane === option
-                        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
-                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100'
-                    }`}
-                  >
-                    {option === 'edit' ? 'Edit' : 'Preview'}
-                  </button>
-                ))}
-              </div>
+              <PaneSwitch pane={pane} onChange={setPane} />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start print:hidden">
-                <div className={`min-w-0 ${pane === 'edit' ? '' : 'hidden lg:block'}`}>
+                <div className={`min-w-0 ${paneClass(pane, 'edit')}`}>
                   <ResumeEditor
                     value={generation.content as ResumeContent}
                     sourceMap={generation.sourceMap}
@@ -749,9 +730,7 @@ export default function DocumentsPage() {
                   />
                 </div>
                 <div
-                  className={`min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin ${
-                    pane === 'preview' ? '' : 'hidden lg:block'
-                  }`}
+                  className={`min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin ${paneClass(pane, 'preview')}`}
                 >
                   {overflows !== null && (
                     <p

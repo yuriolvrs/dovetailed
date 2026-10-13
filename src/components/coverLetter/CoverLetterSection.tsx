@@ -34,6 +34,7 @@ import { downloadBlob, downloadTextFile } from '../../lib/download';
 import { Btn, Card, SavedIndicator, Skeleton } from '../ui/primitives';
 import { CoverLetterEditor } from './CoverLetterEditor';
 import { CoverLetterPrintView } from './CoverLetterPrintView';
+import { PaneSwitch, paneClass, type Pane } from '../ui/PaneSwitch';
 import type { CoverLetterNavTarget } from './coverLetterNav';
 
 export function CoverLetterSection({
@@ -67,6 +68,8 @@ export function CoverLetterSection({
   const [useWritingStyle, setUseWritingStyle] = useState(hasWritingSamples);
   // Which paragraph is focused in the editor right now, so the live preview
   // alongside it can highlight the matching spot.
+  // On narrow screens the editor and preview take turns; wide screens show both.
+  const [pane, setPane] = useState<Pane>('edit');
   const [focusedParagraph, setFocusedParagraph] = useState<number | null>(null);
   // A one-shot "scroll to and flash this field" request fired by clicking
   // something in the live preview -- the nonce lets the same target be
@@ -302,7 +305,7 @@ export function CoverLetterSection({
             </>
           ) : (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-600 dark:text-slate-300">This will overwrite your edits. Regenerate?</span>
+              <span className="text-slate-600 dark:text-slate-300">Write a new letter? This one stays in History.</span>
               <Btn size="sm" onClick={handleGenerate} disabled={status === 'loading'}>
                 {status === 'loading' ? 'Writing…' : 'Yes, regenerate'}
               </Btn>
@@ -315,10 +318,15 @@ export function CoverLetterSection({
         )}
 
       {hasLetter && status === 'error' && error && (
-        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5 mb-5 print:hidden">
-          <AlertTriangle size={13} className="shrink-0" />
-          {error}
-        </p>
+        <div role="alert" className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-red-600 dark:text-red-400 print:hidden">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} className="shrink-0" />
+            {error}
+          </span>
+          <Btn size="sm" variant="secondary" onClick={handleGenerate}>
+            Try again
+          </Btn>
+        </div>
       )}
 
       {!hasLetter ? (
@@ -327,7 +335,7 @@ export function CoverLetterSection({
             <Sparkles size={22} className="text-white dark:text-slate-900" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Write a tailored cover letter</h3>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Write a tailored cover letter</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
               Grounded in your matched requirements and real profile evidence. Any sentence the AI
               can't back up with something from your profile is flagged for you to review.
@@ -357,7 +365,9 @@ export function CoverLetterSection({
         </Card>
       ) : (
         <>
+          <PaneSwitch pane={pane} onChange={setPane} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start print:hidden">
+            <div className={`min-w-0 ${paneClass(pane, 'edit')}`}>
             <CoverLetterEditor
               value={generation.content as CoverLetterContent}
               sourceMap={generation.sourceMap}
@@ -367,13 +377,17 @@ export function CoverLetterSection({
               navRequest={navRequest}
               closingContext={[posting.rawText, posting.title, posting.company, profile.contact.name].join('\n')}
             />
-            <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin">
+            </div>
+            <div className={`min-w-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto scroll-thin ${paneClass(pane, 'preview')}`}>
               <CoverLetterPrintView
                 content={generation.content as CoverLetterContent}
                 contact={profile.contact}
                 variant="preview"
                 focusedParagraph={focusedParagraph}
-                onNavigate={(target) => setNavRequest({ target, nonce: Date.now() })}
+                onNavigate={(target) => {
+                  setPane('edit');
+                  setNavRequest({ target, nonce: Date.now() });
+                }}
               />
             </div>
           </div>
