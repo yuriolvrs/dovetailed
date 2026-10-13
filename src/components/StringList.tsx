@@ -160,7 +160,7 @@ export function StringList({
               className="mt-3 h-1 w-1 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
             />
           )}
-          <div className={`flex-1 ${itemBadge || itemExtra ? 'space-y-1.5' : ''}`}>
+          <div className={`min-w-0 flex-1 ${itemBadge || itemExtra ? 'space-y-1.5' : ''}`}>
             {itemBadge?.(value)}
             {multiline ? (
               <AutoGrowTextarea

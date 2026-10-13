@@ -235,7 +235,7 @@ export function ImportResumeSection({
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-1.5">
-              <FileText size={13} className="text-slate-400 dark:text-slate-500" />
+              <FileText size={13} className="text-slate-500 dark:text-slate-400" />
               {batch
                 ? `${batch.name} (${batch.index + 1} of ${batch.total}): choose what to add. Nothing is changed until you apply.`
                 : 'Choose what to add. Nothing is changed until you apply.'}
@@ -244,7 +244,7 @@ export function ImportResumeSection({
               type="button"
               onClick={next}
               aria-label="Discard import"
-              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>

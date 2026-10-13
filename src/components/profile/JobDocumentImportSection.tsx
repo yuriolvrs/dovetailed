@@ -225,7 +225,7 @@ export function JobDocumentImportSection({
               type="button"
               onClick={() => setReview(null)}
               aria-label="Discard"
-              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>
@@ -286,9 +286,9 @@ export function JobDocumentImportSection({
             {kind === 'experience' ? (
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                 {e?.title || 'Untitled role'}
-                {e?.company && <span className="text-slate-400 dark:text-slate-500"> · {e.company}</span>}
+                {e?.company && <span className="text-slate-500 dark:text-slate-400"> · {e.company}</span>}
                 {(e?.startYear || e?.endYear) && (
-                  <span className="text-slate-400 dark:text-slate-500">
+                  <span className="text-slate-500 dark:text-slate-400">
                     {' '}
                     · {e?.startYear ?? '?'}–{e?.current ? 'Present' : (e?.endYear ?? '?')}
                   </span>

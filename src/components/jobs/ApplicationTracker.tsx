@@ -114,7 +114,7 @@ export function ApplicationTracker({
           })}
         </div>
         {posting.appliedAt && posting.status && (
-          <span className="text-xs text-slate-400 dark:text-slate-500 inline-flex items-center gap-1.5">
+          <span className="text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-1.5">
             <Check size={12} />
             Applied {formatDate(posting.appliedAt)}
           </span>
@@ -151,7 +151,7 @@ export function ApplicationTracker({
                 setPicking(false);
               }}
               aria-label="Clear deadline"
-              className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
+              className="text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
             >
               <X size={13} />
             </button>
@@ -160,7 +160,7 @@ export function ApplicationTracker({
           <button
             type="button"
             onClick={() => setPicking(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 w-fit rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-400 dark:text-slate-500 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 w-fit rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-500 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             <CalendarPlus size={13} />
             Set deadline

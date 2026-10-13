@@ -160,7 +160,7 @@ export function AnalysisEditor({
           <EmptyState>No requirements listed.</EmptyState>
         ) : (
           <>
-            <div className="flex items-center gap-3 pb-2 border-b border-slate-200 dark:border-slate-700 text-[10px] font-semibold text-slate-300 dark:text-slate-600 uppercase tracking-widest">
+            <div className="flex items-center gap-3 pb-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
               <span className="flex-1">Requirement</span>
               <span className="shrink-0 w-[76px]">Type</span>
               <span className="shrink-0 w-[17px]" />

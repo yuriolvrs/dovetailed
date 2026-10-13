@@ -44,7 +44,7 @@ export function RemoveItemButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-400 transition-colors p-0.5"
+      className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-red-400 dark:hover:text-red-400 transition-colors p-0.5"
       aria-label="Remove"
     >
       <Trash2 size={13} />
@@ -171,7 +171,7 @@ export function EditableList<T>({
               draggable
               onDragStart={(e) => handleDragStart(e, index)}
               onDragEnd={handleDragEnd}
-              className={`shrink-0 mt-0.5 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-grab active:cursor-grabbing transition-colors ${hoverActionClass}`}
+              className={`shrink-0 mt-0.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing transition-colors ${hoverActionClass}`}
               aria-label="Drag to reorder"
             >
               <GripVertical size={14} />

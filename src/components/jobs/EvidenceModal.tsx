@@ -78,7 +78,7 @@ function SkillChip({
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 transition-colors"
       >
         {atom.text}
-        <span className="text-[9px] uppercase tracking-wide">Added</span>
+        <span className="text-[11px] uppercase tracking-wide">Added</span>
       </button>
     );
   }
@@ -95,7 +95,7 @@ function SkillChip({
       }`}
     >
       {atom.text}
-      {added && <span className="text-[9px] uppercase tracking-wide">Added</span>}
+      {added && <span className="text-[11px] uppercase tracking-wide">Added</span>}
     </button>
   );
 }
@@ -140,7 +140,7 @@ function EntryCard({
               {atom.text}
               {(confirmed || added) && (
                 <span
-                  className={`ml-2 text-[9px] uppercase tracking-wide ${confirmed ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}
+                  className={`ml-2 text-[11px] uppercase tracking-wide ${confirmed ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}
                 >
                   Added
                 </span>
@@ -235,7 +235,7 @@ export function EvidenceModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>
@@ -243,7 +243,7 @@ export function EvidenceModal({
           {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{subtitle}</p>}
           {confirmedAtoms.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">{confirmedLabel}</p>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{confirmedLabel}</p>
               {confirmedAtoms.map((atom) =>
                 onRemoveExisting ? (
                   <button
@@ -253,17 +253,17 @@ export function EvidenceModal({
                     className="w-full flex items-center justify-between gap-2 text-left text-xs text-slate-600 dark:text-slate-300 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors group"
                   >
                     <span>
-                      <span className="text-slate-400 dark:text-slate-500">{atom.sourceLabel}: </span>
+                      <span className="text-slate-500 dark:text-slate-400">{atom.sourceLabel}: </span>
                       {atom.text}
                     </span>
                     <X
                       size={12}
-                      className="shrink-0 text-slate-300 dark:text-slate-600 group-hover:text-red-400 dark:group-hover:text-red-400 transition-colors"
+                      className="shrink-0 text-slate-500 dark:text-slate-400 group-hover:text-red-400 dark:group-hover:text-red-400 transition-colors"
                     />
                   </button>
                 ) : (
                   <div key={atom.id} className="text-xs text-slate-600 dark:text-slate-300 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                    <span className="text-slate-400 dark:text-slate-500">{atom.sourceLabel}: </span>
+                    <span className="text-slate-500 dark:text-slate-400">{atom.sourceLabel}: </span>
                     {atom.text}
                   </div>
                 ),
@@ -271,7 +271,7 @@ export function EvidenceModal({
             </div>
           )}
           <div className="relative mt-3">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
             <input
               type="text"
               value={search}
@@ -282,7 +282,7 @@ export function EvidenceModal({
           </div>
         </div>
 
-        {noResults && <p className="text-xs text-slate-300 dark:text-slate-600">No matches for "{search.trim()}".</p>}
+        {noResults && <p className="text-xs text-slate-500 dark:text-slate-400">No matches for "{search.trim()}".</p>}
 
         {skillAtoms.length > 0 && (
           <div>
@@ -340,7 +340,7 @@ export function EvidenceModal({
         )}
 
         {skillAtoms.length === 0 && experienceGroups.length === 0 && projectGroups.length === 0 && (
-          <p className="text-xs text-slate-300 dark:text-slate-600">Nothing in your profile yet -- write new evidence below.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Nothing in your profile yet. Write new evidence below.</p>
         )}
       </div>
 

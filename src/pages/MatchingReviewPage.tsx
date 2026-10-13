@@ -330,7 +330,7 @@ export default function MatchingReviewPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
         <Link
           to="/jobs"
-          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
+          className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
         >
           <ArrowLeft size={15} />
           Back to Jobs
@@ -503,7 +503,7 @@ export default function MatchingReviewPage() {
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-center shrink-0">
               <span className="text-3xl font-bold text-slate-900 dark:text-slate-100 leading-none">{fitScore}%</span>
-              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1.5">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1.5">
                 Overall fit
               </span>
             </div>
@@ -578,7 +578,7 @@ export default function MatchingReviewPage() {
           </div>
           <div className="space-y-1">
             {filteredRequirements.length === 0 ? (
-              <p className="text-xs text-slate-300 dark:text-slate-600 text-center py-6">No requirements in this filter.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-6">No requirements in this filter.</p>
             ) : (
               filteredRequirements.map((requirement) => {
                 const match = matchByRequirementId.get(requirement.id);
@@ -704,7 +704,7 @@ export default function MatchingReviewPage() {
             className={`flex-1 text-center text-sm font-semibold py-2.5 border-b-2 -mb-px transition-colors ${
               infoTab === 'evidence'
                 ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
             Evidence in use ({evidenceRows.length})
@@ -715,7 +715,7 @@ export default function MatchingReviewPage() {
             className={`flex-1 text-center text-sm font-semibold py-2.5 border-b-2 -mb-px transition-colors ${
               infoTab === 'additional'
                 ? 'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100'
-                : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
             Additional info ({profile.additionalInfo.length})
@@ -724,11 +724,11 @@ export default function MatchingReviewPage() {
 
         {infoTab === 'evidence' && (
           <>
-            <p className="text-xs text-slate-400 dark:text-slate-500 -mt-1 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1 mb-3">
               Profile items currently attached as evidence to at least one requirement
             </p>
             {evidenceRows.length === 0 ? (
-              <p className="text-xs text-slate-300 dark:text-slate-600 py-2">No evidence attached yet.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 py-2">No evidence attached yet.</p>
             ) : (
               <div className="space-y-1.5">
                 {evidenceRows.map(({ atom, requirementTexts }) => {
@@ -750,12 +750,12 @@ export default function MatchingReviewPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             matched {requirementTexts.length}×
                           </span>
                           <ChevronDown
                             size={14}
-                            className={`text-slate-300 dark:text-slate-600 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                            className={`text-slate-500 dark:text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
                           />
                         </div>
                       </button>
@@ -778,7 +778,7 @@ export default function MatchingReviewPage() {
 
         {infoTab === 'additional' && (
           <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500 -mt-1 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1 mb-3">
               Accomplishments not tied to a specific requirement — eligible evidence for any future
               matching
             </p>
@@ -786,7 +786,7 @@ export default function MatchingReviewPage() {
               <button
                 type="button"
                 onClick={() => setAdditionalInfoModalOpen(true)}
-                className="w-full py-8 text-center text-xs text-slate-300 dark:text-slate-600 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl hover:border-slate-200 dark:hover:border-slate-700 hover:text-slate-400 dark:hover:text-slate-500 transition-colors"
+                className="w-full py-8 text-center text-xs text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl hover:border-slate-200 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
               >
                 Add accomplishment
               </button>

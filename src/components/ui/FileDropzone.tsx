@@ -104,14 +104,14 @@ export function FileDropzone({
       >
         <div className={`flex items-center justify-center gap-2 ${compact ? '' : 'flex-col gap-1.5'}`}>
           {busy ? (
-            <Loader2 size={compact ? 13 : 18} className="text-slate-400 dark:text-slate-500 animate-spin" />
+            <Loader2 size={compact ? 13 : 18} className="text-slate-500 dark:text-slate-400 animate-spin" />
           ) : compact ? (
-            <Paperclip size={13} className="text-slate-400 dark:text-slate-500" />
+            <Paperclip size={13} className="text-slate-500 dark:text-slate-400" />
           ) : (
-            <Upload size={18} className="text-slate-400 dark:text-slate-500" />
+            <Upload size={18} className="text-slate-500 dark:text-slate-400" />
           )}
           <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{busy ? busyLabel : label}</span>
-          {!compact && !busy && <span className="text-[11px] text-slate-400 dark:text-slate-500">{sublabel}</span>}
+          {!compact && !busy && <span className="text-[11px] text-slate-500 dark:text-slate-400">{sublabel}</span>}
         </div>
       </button>
 

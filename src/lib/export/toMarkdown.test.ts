@@ -32,7 +32,7 @@ describe('resumeToMarkdown', () => {
     expect(md).toContain('## Education');
     expect(md).toContain('- Shipped the thing');
     expect(md).toContain('Senior Engineer — Acme');
-    expect(md).toContain('January 2022 -- Present');
+    expect(md).toContain('January 2022 – Present');
   });
 
   it('omits a bullet-less experience/project entry, matching the on-screen preview', () => {

@@ -65,7 +65,7 @@ export function BulletRewriteSuggest({
       <button
         type="button"
         onClick={handleSuggest}
-        className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
       >
         <Sparkles size={12} />
         Suggest rewording
@@ -74,7 +74,7 @@ export function BulletRewriteSuggest({
   }
 
   if (status === 'loading') {
-    return <p className="text-xs text-slate-400 dark:text-slate-500">Thinking of alternatives…</p>;
+    return <p className="text-xs text-slate-500 dark:text-slate-400">Thinking of alternatives…</p>;
   }
 
   if (status === 'error') {
@@ -91,7 +91,7 @@ export function BulletRewriteSuggest({
   if (suggestions.length === 0) {
     return (
       <div className="flex items-center gap-2">
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           No suggestions that stick to what's already in this bullet.
         </p>
         <Btn size="sm" variant="secondary" onClick={dismiss}>
@@ -124,7 +124,7 @@ export function BulletRewriteSuggest({
       <button
         type="button"
         onClick={dismiss}
-        className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+        className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
       >
         <X size={12} />
         Dismiss

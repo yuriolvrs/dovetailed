@@ -40,13 +40,15 @@ export function BulletPicker({
             onClick={() => onAdd(bullet)}
             className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
-            <Plus size={13} className="shrink-0 text-slate-400 dark:text-slate-500" />
+            <Plus size={13} className="shrink-0 text-slate-500 dark:text-slate-400" />
             <span className="flex-1 text-sm text-slate-500 dark:text-slate-400">{bullet}</span>
             {requirement && (
-              <Badge color="green">
-                <Check size={11} />
-                Matches: {requirement}
-              </Badge>
+              <span className="flex min-w-0 max-w-[50%]">
+                <Badge color="green" title={`Matches: ${requirement}`}>
+                  <Check size={11} />
+                  <span className="truncate">Matches: {requirement}</span>
+                </Badge>
+              </span>
             )}
           </button>
         );

@@ -226,7 +226,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
       {chunks.some((c) => c.length > MAX_TEMPLATE_CHARS) && (
         <p className="text-sm text-amber-600 dark:text-amber-400">
           One section of this template is longer than {MAX_TEMPLATE_CHARS.toLocaleString()}{' '}
-          characters, which is more than one pass can convert -- it can't be split further
+          characters, which is more than one pass can convert, and it can't be split further
           without breaking it. Converting will cut that section short; splitting it into two
           \section blocks first avoids that.
         </p>
@@ -256,7 +256,7 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
 
       {draft && (
         <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <SectionTitle sub="Review and edit the placeholder version before saving -- fix anything the conversion got wrong.">
+          <SectionTitle sub="Review and edit the placeholder version before saving. Fix anything the conversion got wrong.">
             Placeholder template
           </SectionTitle>
           <FieldTextarea
@@ -269,8 +269,8 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
             className="font-mono text-xs"
           />
           {syntaxError && <p className="text-sm text-red-600 dark:text-red-400">{syntaxError}</p>}
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            This is a starting point, not guaranteed-correct LaTeX -- the conversion can
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            This is a starting point, not guaranteed-correct LaTeX. The conversion can
             occasionally drop a brace from an existing command (e.g. turning \textbf{'{'}Title
             {'}'} into invalid \textbf{'{{'}title{'}}'} instead of \textbf{'{{{'}title{'}}}'}).
             Compile the exported .tex once after saving to confirm it works, and fix anything

@@ -152,7 +152,7 @@ export default function JobsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Jobs</h1>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Paste postings, run analysis, tailor your documents
           </p>
         </div>
@@ -195,7 +195,7 @@ export default function JobsPage() {
             type="button"
             onClick={() => setModalOpen(false)}
             aria-label="Close"
-            className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            className="shrink-0 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             <X size={16} />
           </button>
@@ -318,7 +318,7 @@ export default function JobsPage() {
                             {[company, locationArrangement].filter(Boolean).join(' · ')}
                           </p>
                         )}
-                        <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                           Saved {new Date(posting.createdAt).toLocaleDateString()}
                         </p>
                       </div>

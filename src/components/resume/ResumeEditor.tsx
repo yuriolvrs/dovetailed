@@ -168,10 +168,12 @@ export function ResumeEditor({
   function bulletBadge(bulletText: string) {
     const requirement = bulletMatch(bulletText);
     if (!requirement && !bulletChosen(bulletText)) return null;
+    const label = requirement ? `Matches: ${requirement}` : 'Chosen for this job';
+    // Long requirements are cut to one line; hovering shows the whole text.
     return (
-      <Badge color="green">
+      <Badge color="green" title={label}>
         <Check size={11} />
-        {requirement ? `Matches: ${requirement}` : 'Chosen for this job'}
+        <span className="truncate">{label}</span>
       </Badge>
     );
   }

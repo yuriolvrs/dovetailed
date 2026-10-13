@@ -71,7 +71,7 @@ function EditableText({
           setEditing(true);
         }}
         title="Click to edit"
-        className={`block w-full text-left rounded-lg -mx-1.5 px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${className} ${value ? '' : 'italic text-slate-300 dark:text-slate-600'}`}
+        className={`block w-full text-left rounded-lg -mx-1.5 px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${className} ${value ? '' : 'italic text-slate-500 dark:text-slate-400'}`}
       >
         {value || placeholder}
       </button>
@@ -324,9 +324,9 @@ export function InterviewPrepSection({
           </div>
           <div className="space-y-1.5">
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Prepare for the interview</h3>
-            <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
               Generates likely interview questions for this role, each grounded in your matched
-              requirements and real profile evidence where relevant -- review and edit before your
+              requirements and real profile evidence where relevant. Review and edit them before your
               interview.
             </p>
           </div>
@@ -362,7 +362,7 @@ export function InterviewPrepSection({
       ) : (
         <Card className="divide-y divide-slate-100 dark:divide-slate-800">
           <div className="flex items-center justify-between gap-3 px-5 py-3.5">
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               <span className="font-semibold text-slate-900 dark:text-slate-100">
                 {questions.length} question{questions.length !== 1 ? 's' : ''}
               </span>
@@ -408,7 +408,7 @@ export function InterviewPrepSection({
                       type="button"
                       onClick={() => toggleRationale(i)}
                       aria-expanded={open}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                     >
                       <ChevronDown
                         size={12}

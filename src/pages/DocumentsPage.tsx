@@ -297,7 +297,7 @@ export default function DocumentsPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400">Posting not found.</p>
         <Link
           to="/jobs"
-          className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
+          className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium w-fit"
         >
           <ArrowLeft size={15} />
           Back to Jobs
@@ -620,9 +620,9 @@ export default function DocumentsPage() {
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Build a tailored resume</h3>
-                <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-xs">
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
                   Selects and prioritizes your most relevant experience, projects, and skills for this
-                  job -- every bullet stays exactly as you wrote it. Edit anything before exporting.
+                  job. Every bullet stays exactly as you wrote it. Edit anything before exporting.
                 </p>
               </div>
               <Btn onClick={handleGenerate} className="min-w-[140px] justify-center">
@@ -637,8 +637,8 @@ export default function DocumentsPage() {
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">This resume needs to be rebuilt</h3>
-                <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed max-w-sm">
-                  It was built by an older version of this app that could rewrite bullet text -- some
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
+                  It was built by an older version of this app that could rewrite bullet text, so some
                   of what it shows may not actually be in your profile. Rebuilding replaces it with
                   today's selection-only version, where every bullet stays exactly as you wrote it.
                 </p>
@@ -668,7 +668,7 @@ export default function DocumentsPage() {
                         <div>
                           <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Still longer than one page</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                            Everything that could be dropped automatically already was -- every droppable
+                            Everything that could be dropped automatically already was: every droppable
                             entry, and every extra bullet down to the last one per job. Shorten some bullets
                             below, or tick "Drop this first" on more entries, to get under a page.
                           </p>
@@ -677,7 +677,7 @@ export default function DocumentsPage() {
                     )}
                     {pageFitRemoved.length > 0 && (
                       <div className="flex items-start gap-2.5 py-3 px-1">
-                        <Info size={16} className="text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+                        <Info size={16} className="text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
                             Removed to fit one page — {pageFitRemoved.length}{' '}
@@ -692,7 +692,7 @@ export default function DocumentsPage() {
                                 <span className="text-sm text-slate-700 dark:text-slate-300">
                                   {entry.title}
                                   {entry.company && (
-                                    <span className="text-slate-400 dark:text-slate-500"> · {entry.company}</span>
+                                    <span className="text-slate-500 dark:text-slate-400"> · {entry.company}</span>
                                   )}
                                 </span>
                                 <Btn

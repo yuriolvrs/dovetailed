@@ -124,7 +124,7 @@ export function CoverLetterEditor({
       return (
         <Badge color="amber">
           <AlertTriangle size={11} />
-          Not traceable to your profile -- review before sending
+          Not traceable to your profile. Review before sending.
         </Badge>
       );
     }

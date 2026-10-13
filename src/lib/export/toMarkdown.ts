@@ -15,7 +15,7 @@ function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
   if (!start) return end;
   if (!end) return start;
-  return `${start} -- ${end}`;
+  return `${start} – ${end}`;
 }
 
 function contactLine(contact: Contact): string {

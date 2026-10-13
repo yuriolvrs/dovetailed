@@ -15,7 +15,7 @@ export default function AboutPage() {
     <div className="space-y-4 pb-16">
       <div className="mb-3">
         <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">About &amp; Privacy</h1>
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           A privacy-first assistant that tailors your resume and cover letter to a specific job
           posting, grounded strictly in your real profile.
         </p>

@@ -88,7 +88,7 @@ export function CollapsibleSectionHeader({
           type="button"
           onClick={onToggle}
           aria-label={open ? 'Collapse' : 'Expand'}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
         >
           <ChevronDown
             size={14}
@@ -235,7 +235,7 @@ export function ResetButton({ onReset, label = 'Reset' }: { onReset: () => void;
   if (confirming) {
     return (
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-slate-400 dark:text-slate-500">Discard edits?</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">Discard edits?</span>
         <Btn
           size="sm"
           onClick={() => {
@@ -274,7 +274,7 @@ export function ProgressBar({ done, total }: { done: number; total: number }) {
         <span className="text-xs text-slate-500 dark:text-slate-400">
           Matching requirement {Math.min(done + 1, total)} of {total}…
         </span>
-        <span className="text-xs text-slate-400 dark:text-slate-500">{pct}%</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{pct}%</span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
         <div
@@ -323,13 +323,17 @@ const badgeColors = {
 export function Badge({
   children,
   color = 'slate',
+  title,
 }: {
   children: ReactNode;
   color?: keyof typeof badgeColors;
+  /** Full text on hover, for a badge whose label is cut short. */
+  title?: string;
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${badgeColors[color]}`}
+      title={title}
+      className={`inline-flex max-w-full items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium [&>svg]:shrink-0 ${badgeColors[color]}`}
     >
       {children}
     </span>
@@ -349,13 +353,13 @@ export function AtomHoverDetail({ atoms, children }: { atoms: ProfileAtom[]; chi
     <span className="group relative inline-block">
       {children}
       <span className="pointer-events-none absolute left-0 top-full z-20 mt-1.5 hidden w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-left shadow-lg group-hover:block">
-        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
           Grounded in your profile
         </span>
         <span className="block space-y-1.5">
           {atoms.map((atom) => (
             <span key={atom.id} className="block text-xs text-slate-600 dark:text-slate-300">
-              <span className="block text-[11px] text-slate-400 dark:text-slate-500">{atom.sourceLabel}</span>“{atom.text}”
+              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{atom.sourceLabel}</span>“{atom.text}”
             </span>
           ))}
         </span>
@@ -423,7 +427,7 @@ export const fieldLabelClass = 'text-[11px] font-semibold text-slate-500 dark:te
 // still typing in a field that only saves once you click away.
 export function UnsavedIndicator() {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 normal-case tracking-normal">
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 normal-case tracking-normal">
       <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
       Unsaved
     </span>
@@ -770,7 +774,7 @@ export function TagInput({
               <button
                 type="button"
                 onClick={() => removeAt(index)}
-                className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors ml-0.5"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors ml-0.5"
                 aria-label={`Remove ${tag}`}
               >
                 <X size={10} />
