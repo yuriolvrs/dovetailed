@@ -16,6 +16,7 @@ import {
   type InterviewPrepCandidate,
 } from '../../prompts/generateInterviewPrep';
 import { selectEvidenceCandidates } from './generateCoverLetterContent';
+import { stripAtomIdReferences } from './runHolisticSelection';
 
 /**
  * Generates likely interview questions for a posting: picks evidence
@@ -58,14 +59,22 @@ export async function generateInterviewPrepContent(
     signal: options.signal,
   });
 
+  // The model has written evidence ids into its prose ("referenced in
+  // experience-ktw6ib") despite the prompt, so they are stripped here too.
+  // The question text and its sourceMap entry go through the same function so
+  // they still match each other afterwards.
+  const clean = (text: string) => stripAtomIdReferences(text, candidateIds);
+
   // Defensive: only trust atomIds the model actually cites from what it was
   // offered, even though the prompt already forbids inventing one.
   const sourceMap: SourceMapEntry[] = result.sourceMap.map((entry) => ({
-    generatedText: entry.generatedText,
+    generatedText: clean(entry.generatedText),
     atomIds: entry.atomIds.filter((id) => candidateIds.has(id)),
   }));
 
-  const content: InterviewPrepContent = { questions: result.questions };
+  const content: InterviewPrepContent = {
+    questions: result.questions.map((q) => ({ question: clean(q.question), rationale: clean(q.rationale) })),
+  };
 
   return { content, sourceMap };
 }

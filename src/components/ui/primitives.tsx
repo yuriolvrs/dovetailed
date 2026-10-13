@@ -467,6 +467,7 @@ export function FieldInput({
   type = 'text',
   className = '',
   unsaved = false,
+  flat = false,
 }: {
   label?: string;
   value: string;
@@ -476,6 +477,8 @@ export function FieldInput({
   type?: string;
   className?: string;
   unsaved?: boolean;
+  /** No box until hovered or focused, like a 'flat' list's fields. */
+  flat?: boolean;
 }) {
   const id = useId();
   return (
@@ -495,7 +498,7 @@ export function FieldInput({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
-        className={fieldInputClass}
+        className={flat ? `${fieldInputFlatClass} hover:bg-slate-50 dark:hover:bg-slate-800/40` : fieldInputClass}
       />
     </div>
   );

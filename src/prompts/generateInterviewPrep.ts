@@ -63,6 +63,9 @@ Rules:
   backed by that evidence -- never invent a skill, employer, technology, metric, or accomplishment
   that isn't in the evidence list. A purely requirement-probing question (no specific candidate
   accomplishment referenced) needs no evidence.
+- "question" and "rationale" must read as plain prose. NEVER write an evidence id (e.g.
+  "experience-ab12c") or any citation marker inside them; name the role or project in words
+  instead. Evidence linking happens ONLY in the separate "sourceMap" field.
 - sourceMap: MUST have EXACTLY the same number of entries as "questions", one entry per question,
   in the same order. "generatedText" must be that ONE question's exact text (character-for-character
   identical to the matching entry in "questions"). "atomIds" lists the ids (from CANDIDATE EVIDENCE

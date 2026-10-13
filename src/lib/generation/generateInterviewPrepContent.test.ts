@@ -55,6 +55,20 @@ describe('generateInterviewPrepContent', () => {
     });
   });
 
+  it('removes evidence ids the model wrote into a question or rationale', async () => {
+    const offered = atom({ id: 'experience-ab12c', text: 'Ran the spring fair' });
+    generateStructuredMock.mockResolvedValueOnce({
+      questions: [{ question: 'How did you run the fair (experience-ab12c)?', rationale: 'Follows up on experience-ab12c.' }],
+      sourceMap: [{ generatedText: 'How did you run the fair (experience-ab12c)?', atomIds: ['experience-ab12c'] }],
+    });
+
+    const result = await generateInterviewPrepContent(posting(), [offered]);
+
+    expect(result.content.questions[0].question).toBe('How did you run the fair?');
+    expect(result.content.questions[0].rationale).not.toContain('experience-ab12c');
+    expect(result.sourceMap[0]).toEqual({ generatedText: 'How did you run the fair?', atomIds: ['experience-ab12c'] });
+  });
+
   it('throws when the posting has no analysis', async () => {
     await expect(
       generateInterviewPrepContent(posting({ analysis: undefined }), []),

@@ -148,6 +148,8 @@ export function CoverLetterEditor({
         >
           <FieldInput
             label="Greeting"
+            flat
+            className="[&>input]:-mx-2"
             value={value.greeting}
             onChange={(greeting) => onChange({ ...value, greeting })}
           />
@@ -163,8 +165,12 @@ export function CoverLetterEditor({
             Point at or Tab to a badge to see the profile lines a paragraph cites. Check that each claim
             is in them.
           </p>
+          {/* Pulls the boxless rows out by their padding so the text lines up
+              with the labels. */}
+          <div className="-mx-3.5">
           <StringList
             itemLabel="Paragraph"
+            variant="prose"
             items={value.paragraphs}
             onChange={(paragraphs) => onChange({ ...value, paragraphs })}
             multiline
@@ -174,6 +180,7 @@ export function CoverLetterEditor({
             onItemFocus={onFocusParagraph}
             onItemBlur={() => onFocusParagraph(null)}
           />
+          </div>
         </div>
 
         <div
@@ -182,6 +189,8 @@ export function CoverLetterEditor({
         >
           <FieldInput
             label="Closing"
+            flat
+            className="[&>input]:-mx-2"
             value={value.closing}
             onChange={(closing) => onChange({ ...value, closing })}
           />

@@ -24,6 +24,7 @@ import { llmErrorMessage } from '../../lib/llm';
 import { useAutosaveIndicator } from '../../lib/useAutosaveIndicator';
 import { useEscapeKey } from '../../lib/useEscapeKey';
 import { AtomHoverDetail, Badge, Btn, Card, Collapsible, SavedIndicator, Skeleton } from '../ui/primitives';
+import { DocumentEmptyState } from '../ui/DocumentEmptyState';
 
 // Click-to-edit text: renders as plain prose until clicked, then becomes a
 // self-sizing textarea that commits on blur (Escape cancels). Used for both a
@@ -323,55 +324,52 @@ export function InterviewPrepSection({
       )}
 
       {!hasPrep ? (
-        <Card className="p-10 flex flex-col items-center text-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
-            <Sparkles size={22} className="text-white dark:text-slate-900" />
-          </div>
-          <div className="space-y-1.5">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Prepare for the interview</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
-              Generates likely interview questions for this role, each grounded in your matched
-              requirements and real profile evidence where relevant. Review and edit them before your
-              interview.
-            </p>
-          </div>
-          {status === 'error' && error && (
-            <p className="text-xs text-red-600 dark:text-red-400 max-w-sm flex items-center gap-1.5">
-              <AlertTriangle size={13} className="shrink-0" />
-              {error}
-            </p>
-          )}
-          <Btn
-            onClick={handleGenerate}
-            disabled={status === 'loading' || !posting.analysis}
-            className="min-w-[140px] justify-center"
-          >
-            <Sparkles size={14} />
-            {status === 'loading' ? 'Writing…' : 'Generate questions'}
-          </Btn>
-          {!posting.analysis && (
-            // Interview prep is built from the extracted requirement list, so
-            // it needs the analysis pass -- the direct route doesn't produce
-            // one. Said plainly here rather than leaving a button that looks
-            // enabled and does nothing.
-            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm">
-              Interview prep is built from this posting's requirement list, which only the analysis
-              route produces.{' '}
-              <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
-                Run analysis
-              </Link>{' '}
-              to enable it.
-            </p>
-          )}
-        </Card>
+        <DocumentEmptyState
+          ghost="questions"
+          title="Prepare for the interview"
+          action={
+            <Btn onClick={handleGenerate} disabled={status === 'loading' || !posting.analysis}>
+              <Sparkles size={14} />
+              {status === 'loading' ? 'Writing…' : 'Generate questions'}
+            </Btn>
+          }
+          extra={
+            <>
+              {status === 'error' && error && (
+                <p role="alert" className="flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400">
+                  <AlertTriangle size={14} className="shrink-0" />
+                  {error}
+                </p>
+              )}
+              {!posting.analysis && (
+                // Interview prep is built from the extracted requirement list, so
+                // it needs the analysis pass -- the direct route doesn't produce
+                // one. Said plainly here rather than leaving a button that looks
+                // enabled and does nothing.
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Interview prep is built from this posting's requirement list, which only the analysis
+                  route produces.{' '}
+                  <Link to={`/jobs/${posting.id}`} className="underline hover:text-slate-900 dark:hover:text-slate-100">
+                    Run analysis
+                  </Link>{' '}
+                  to enable it.
+                </p>
+              )}
+            </>
+          }
+        >
+          Likely questions for this role, built from the requirements you matched. Where a question
+          rests on something you did, it shows the profile lines behind it. Edit any of them.
+        </DocumentEmptyState>
       ) : (
         <Card className="divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="flex items-center justify-between gap-3 px-5 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-5 py-3.5">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               <span className="font-semibold text-slate-900 dark:text-slate-100">
                 {questions.length} question{questions.length !== 1 ? 's' : ''}
               </span>
-              {groundedCount > 0 && ` · ${groundedCount} grounded in your profile`}
+              {groundedCount > 0 && ` · ${groundedCount} cite your profile`}
+              <span className="hidden sm:inline"> · Click a question or note to edit it.</span>
             </p>
             <div className="flex items-center gap-1 shrink-0">
               <Btn
@@ -396,11 +394,12 @@ export function InterviewPrepSection({
             const open = openRationales.has(i);
             return (
               <div key={i} className="flex items-start gap-3 px-5 py-4">
+                {/* Lines stop at a readable length on wide screens. */}
                 <span className="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[11px] font-semibold">
                   {i + 1}
                 </span>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 max-w-[72ch]">
                   <EditableText
                     value={q.question}
                     onCommit={(question) => updateQuestion(i, { question })}
@@ -413,7 +412,7 @@ export function InterviewPrepSection({
                       type="button"
                       onClick={() => toggleRationale(i)}
                       aria-expanded={open}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                      className="inline-flex items-center gap-1 rounded text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
                       <ChevronDown
                         size={12}
@@ -437,7 +436,7 @@ export function InterviewPrepSection({
                         value={q.rationale}
                         onCommit={(rationale) => updateQuestion(i, { rationale })}
                         placeholder="Add a note on why this is likely"
-                        className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed"
+                        className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
                       />
                     </div>
                   </Collapsible>

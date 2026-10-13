@@ -31,9 +31,11 @@ import { useEscapeKey } from '../../lib/useEscapeKey';
 import { coverLetterToMarkdown } from '../../lib/export/toMarkdown';
 import { coverLetterToDocx } from '../../lib/export/toDocx';
 import { downloadBlob, downloadTextFile } from '../../lib/download';
-import { Btn, Card, SavedIndicator, Skeleton } from '../ui/primitives';
+import { Link } from 'react-router-dom';
+import { Btn, SavedIndicator, Skeleton } from '../ui/primitives';
 import { CoverLetterEditor } from './CoverLetterEditor';
 import { CoverLetterPrintView } from './CoverLetterPrintView';
+import { DocumentEmptyState } from '../ui/DocumentEmptyState';
 import { PaneSwitch, paneClass, type Pane } from '../ui/PaneSwitch';
 import type { CoverLetterNavTarget } from './coverLetterNav';
 
@@ -330,39 +332,48 @@ export function CoverLetterSection({
       )}
 
       {!hasLetter ? (
-        <Card className="p-10 flex flex-col items-center text-center gap-5 print:hidden">
-          <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
-            <Sparkles size={22} className="text-white dark:text-slate-900" />
-          </div>
-          <div className="space-y-1.5">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Write a tailored cover letter</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
-              Grounded in your matched requirements and real profile evidence. Any sentence the AI
-              can't back up with something from your profile is flagged for you to review.
-            </p>
-          </div>
-          {hasWritingSamples && (
-            <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <input
-                type="checkbox"
-                checked={useWritingStyle}
-                onChange={(e) => setUseWritingStyle(e.target.checked)}
-                className="rounded border-slate-300 dark:border-slate-600"
-              />
-              Mimic my writing style from a saved sample
-            </label>
-          )}
-          {status === 'error' && error && (
-            <p className="text-xs text-red-600 dark:text-red-400 max-w-sm flex items-center gap-1.5">
-              <AlertTriangle size={13} className="shrink-0" />
-              {error}
-            </p>
-          )}
-          <Btn onClick={handleGenerate} disabled={status === 'loading'} className="min-w-[140px] justify-center">
-            <Sparkles size={14} />
-            {status === 'loading' ? 'Writing…' : 'Write cover letter'}
-          </Btn>
-        </Card>
+        <DocumentEmptyState
+          ghost="letter"
+          title="Write a tailored cover letter"
+          action={
+            <Btn onClick={handleGenerate} disabled={status === 'loading'}>
+              <Sparkles size={14} />
+              {status === 'loading' ? 'Writing…' : 'Write cover letter'}
+            </Btn>
+          }
+          extra={
+            <>
+              {hasWritingSamples ? (
+                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={useWritingStyle}
+                    onChange={(e) => setUseWritingStyle(e.target.checked)}
+                    className="rounded border-slate-300 dark:border-slate-600"
+                  />
+                  Match my writing style from a saved sample
+                </label>
+              ) : (
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  To match your own writing style, add a sample in{' '}
+                  <Link to="/settings" className="underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-100">
+                    Settings
+                  </Link>
+                  .
+                </p>
+              )}
+              {status === 'error' && error && (
+                <p role="alert" className="flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400">
+                  <AlertTriangle size={14} className="shrink-0" />
+                  {error}
+                </p>
+              )}
+            </>
+          }
+        >
+          Built from the requirements you matched and the evidence behind them. Each paragraph shows
+          which profile lines it cites, and anything it cannot trace is flagged for you to check.
+        </DocumentEmptyState>
       ) : (
         <>
           <PaneSwitch pane={pane} onChange={setPane} />

@@ -45,6 +45,7 @@ import { JobDetailHeader } from '../components/jobs/JobDetailHeader';
 import { ResumeEditor } from '../components/resume/ResumeEditor';
 import { ResumePrintView } from '../components/resume/ResumePrintView';
 import { RouteSwitch } from '../components/jobs/RouteSwitch';
+import { DocumentEmptyState } from '../components/ui/DocumentEmptyState';
 import { PaneSwitch, paneClass, type Pane } from '../components/ui/PaneSwitch';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
 import { InterviewPrepSection } from '../components/interviewPrep/InterviewPrepSection';
@@ -618,40 +619,35 @@ export default function DocumentsPage() {
       ) : (
         <>
           {generation === 'none' ? (
-            <Card className="p-10 flex flex-col items-center text-center gap-5 print:hidden">
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-lg">
-                <Sparkles size={22} className="text-white dark:text-slate-900" />
-              </div>
-              <div className="space-y-1.5">
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Build a tailored resume</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
-                  Selects and prioritizes your most relevant experience, projects, and skills for this
-                  job. Every bullet stays exactly as you wrote it. Edit anything before exporting.
-                </p>
-              </div>
-              <Btn onClick={handleGenerate} className="min-w-[140px] justify-center">
-                <Sparkles size={14} />
-                Build resume
-              </Btn>
-            </Card>
+            <DocumentEmptyState
+              ghost="resume"
+              title="Build a tailored resume"
+              action={
+                <Btn onClick={handleGenerate}>
+                  <Sparkles size={14} />
+                  Build resume
+                </Btn>
+              }
+            >
+              Picks and orders your most relevant experience, projects and skills for this job. Every
+              bullet stays exactly as you wrote it, and you can edit anything before exporting.
+            </DocumentEmptyState>
           ) : stale ? (
-            <Card className="p-10 flex flex-col items-center text-center gap-5 print:hidden">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg">
-                <AlertTriangle size={22} className="text-white" />
-              </div>
-              <div className="space-y-1.5">
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">This resume needs to be rebuilt</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
-                  It was built by an older version of this app that could rewrite bullet text, so some
-                  of what it shows may not actually be in your profile. Rebuilding replaces it with
-                  today's selection-only version, where every bullet stays exactly as you wrote it.
-                </p>
-              </div>
-              <Btn onClick={handleGenerate} className="min-w-[140px] justify-center">
-                <Sparkles size={14} />
-                Rebuild resume
-              </Btn>
-            </Card>
+            <DocumentEmptyState
+              ghost="resume"
+              title="This resume needs to be rebuilt"
+              icon={<AlertTriangle size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />}
+              action={
+                <Btn onClick={handleGenerate}>
+                  <Sparkles size={14} />
+                  Rebuild resume
+                </Btn>
+              }
+            >
+              An older version of this app built it, and that version could rewrite bullet text. Some of
+              what it shows may not be in your profile. Rebuilding keeps every bullet exactly as you wrote
+              it.
+            </DocumentEmptyState>
           ) : (
             <>
               {(texExportError || pageFitOverflow || pageFitRemoved.length > 0) && (

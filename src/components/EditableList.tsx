@@ -25,9 +25,10 @@ interface EditableListProps<T> {
   /**
    * Row chrome. 'card' (default) boxes every row; 'flat' drops the box and
    * reveals the grip/remove buttons on hover or focus, for lists that should
-   * read as content rather than as a stack of form controls.
+   * read as content rather than as a stack of form controls. 'prose' is
+   * 'flat' with room between rows, for paragraphs of running text.
    */
-  variant?: 'card' | 'flat';
+  variant?: 'card' | 'flat' | 'prose';
 }
 
 // How long a removed row stays recoverable. Long enough to notice a
@@ -72,7 +73,7 @@ export function EditableList<T>({
   reorderable = false,
   variant = 'card',
 }: EditableListProps<T>) {
-  const flat = variant === 'flat';
+  const flat = variant !== 'card';
   // Hidden until the row is hovered or something inside it has focus, so a
   // flat list stays quiet while you read it.
   const hoverActionClass = flat
@@ -145,7 +146,7 @@ export function EditableList<T>({
   }
 
   return (
-    <div className={flat ? 'space-y-0.5' : 'space-y-3'}>
+    <div className={variant === 'flat' ? 'space-y-0.5' : 'space-y-3'}>
       {items.length === 0 && !undo && <EmptyState>{emptyLabel}</EmptyState>}
       {items.map((item, index) => (
         <div
@@ -200,10 +201,14 @@ export function EditableList<T>({
         </div>
       )}
       {!hideAddButton && (
-        <Btn type="button" size="sm" variant="secondary" onClick={add}>
-          <Plus size={13} />
-          {addLabel}
-        </Btn>
+        // A 'prose' list hangs its rows out by their padding; the button
+        // steps back in so it lines up with the text above it.
+        <div className={variant === 'prose' ? 'px-3.5' : ''}>
+          <Btn type="button" size="sm" variant="secondary" onClick={add}>
+            <Plus size={13} />
+            {addLabel}
+          </Btn>
+        </div>
       )}
     </div>
   );

@@ -56,7 +56,7 @@ interface StringListProps {
   /** Shows a drag handle on each item so bullets can be reordered by dragging. */
   reorderable?: boolean;
   /** Row chrome, forwarded to EditableList -- 'flat' also drops the field's own box and marks each item with a bullet dot. */
-  variant?: 'card' | 'flat';
+  variant?: 'card' | 'flat' | 'prose';
   /** Names each field for screen readers as "<itemLabel> <n>", e.g. "Paragraph 2". */
   itemLabel?: string;
   /** Optional extra content rendered above an item's input, e.g. a warning badge. */
@@ -103,7 +103,9 @@ export function StringList({
   quickEntry = false,
 }: StringListProps) {
   const flat = variant === 'flat';
-  const inputClass = `w-full ${flat ? fieldInputFlatClass : fieldInputClass}`;
+  const inputClass = `w-full ${
+    variant === 'card' ? fieldInputClass : fieldInputFlatClass
+  } ${variant === 'prose' ? 'leading-relaxed' : ''}`;
 
   // Moves focus `offset` fields after `from` once React has rendered them.
   // A zero-delay timer, not an animation frame: frames wait for the next
@@ -164,7 +166,7 @@ export function StringList({
             />
           )}
           <div className={`min-w-0 flex-1 ${itemBadge || itemExtra ? 'space-y-1.5' : ''}`}>
-            {itemBadge?.(value)}
+            {itemBadge && <div className={variant === 'prose' ? 'px-2' : ''}>{itemBadge(value)}</div>}
             {multiline ? (
               <AutoGrowTextarea
                 rows={1}
