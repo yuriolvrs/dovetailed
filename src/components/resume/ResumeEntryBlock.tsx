@@ -108,8 +108,9 @@ export function ResumeEntryBlock({
 
   return (
     <article ref={ref} data-resume-entry={navKey} className="scroll-mt-24 rounded-xl py-4 transition-shadow">
-      <div className="group/head flex items-start gap-2">
-        <div className="min-w-0 flex-1">
+      {/* The buttons drop under the title when the column is narrow, so a long title keeps the width. */}
+      <div className="group/head flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+        <div className="min-w-0 flex-1 basis-48">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">
             {title.trim() || <span className="text-slate-500 dark:text-slate-400">{untitled}</span>}
           </h3>
@@ -120,7 +121,7 @@ export function ResumeEntryBlock({
             </p>
           )}
         </div>
-        <div className="-mr-1.5 -mt-1 flex shrink-0 items-center">
+        <div className="-mr-1.5 -mt-1 ml-auto flex shrink-0 items-center">
           <span className="flex items-center opacity-0 transition-opacity group-hover/head:opacity-100 group-focus-within/head:opacity-100 [@media(hover:none)]:opacity-100">
             <IconBtn label="Move up" onClick={() => onMoveUp?.()} disabled={!onMoveUp}>
               <ArrowUp size={14} />
@@ -132,9 +133,10 @@ export function ResumeEntryBlock({
               <Minus size={14} />
             </IconBtn>
           </span>
-          <IconBtn label="Edit title and dates" onClick={onToggleDetails} pressed={detailsOpen}>
-            <Pencil size={14} />
-          </IconBtn>
+          <Btn size="sm" variant="ghost" onClick={onToggleDetails} ariaLabel="Edit title and dates" ariaExpanded={detailsOpen}>
+            <Pencil size={13} />
+            Edit
+          </Btn>
         </div>
       </div>
 
@@ -160,6 +162,7 @@ export function ResumeEntryBlock({
           reorderable
           itemLabel="Bullet"
           removeLabel="Take off this resume"
+          actionsAlwaysVisible
           onItemFocus={onBulletFocus}
           onItemBlur={onBulletBlur}
           itemActions={(value, index) =>
@@ -170,13 +173,15 @@ export function ResumeEntryBlock({
                 aria-label="Reword with AI"
                 aria-expanded={rewording === index}
                 title="Reword with AI"
-                className={`rounded p-0.5 transition-colors ${
+                className={`inline-flex items-center gap-1 rounded p-0.5 text-xs transition-colors ${
                   rewording === index
                     ? 'text-blue-600 dark:text-blue-400'
                     : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400'
                 }`}
               >
                 <Sparkles size={13} />
+                {/* Icon only on phones, where the text column needs the width. */}
+                <span className="hidden sm:inline">Reword</span>
               </button>
             )
           }
@@ -200,28 +205,28 @@ export function ResumeEntryBlock({
           }}
         />
       </div>
-      <Btn
-        size="sm"
-        variant="ghost"
-        className="mt-0.5"
-        onClick={() => {
-          onBulletsChange([...bullets, '']);
-          // This entry's new last field, once React has rendered it.
-          setTimeout(() => {
-            const fields = ref.current?.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]');
-            fields?.[fields.length - 1]?.focus();
-          });
-        }}
-      >
-        <Plus size={13} />
-        Write a bullet
-      </Btn>
-
       <BulletPicker
         allBullets={profileBullets}
         included={bullets}
         onAdd={(bullet) => onBulletsChange([...bullets.filter((b) => b.trim() !== ''), bullet])}
         reasonFor={reasonFor}
+        footerStart={
+          <Btn
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              onBulletsChange([...bullets, '']);
+              // This entry's new last field, once React has rendered it.
+              setTimeout(() => {
+                const fields = ref.current?.querySelectorAll<HTMLTextAreaElement>('textarea[data-quick-entry]');
+                fields?.[fields.length - 1]?.focus();
+              });
+            }}
+          >
+            <Plus size={13} />
+            Write a bullet
+          </Btn>
+        }
       />
     </article>
   );

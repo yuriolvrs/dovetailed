@@ -1,6 +1,6 @@
 // What this file is: the status panel at the top of the resume editor. Its
 // header line says whether the resume fits on one page and how many of the
-// posting's requirements it covers. Opened, it lists every requirement: the
+// posting's requirements it covers. Open by default, it lists every requirement: the
 // line that covers it, or the profile lines that could (one click adds one),
 // or that nothing in the profile does. On the direct route there is no
 // requirement list, so it reports the AI's picks instead.
@@ -97,9 +97,9 @@ export function JobFitPanel({
 }) {
   const covered = coverage.filter((c) => c.status === 'onResume').length;
   const addable = coverage.filter((c) => c.status === 'inProfile' && c.addable.length > 0).length;
-  // Opens by itself when one click could cover more of the job.
-  const [open, setOpen] = useState(addable > 0);
   const hasList = coverage.length > 0;
+  // Open by default, so the recommendations are visible without a click.
+  const [open, setOpen] = useState(hasList);
 
   return (
     <Card className="mb-4 overflow-hidden">

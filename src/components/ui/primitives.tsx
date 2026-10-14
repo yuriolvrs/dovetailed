@@ -200,6 +200,7 @@ export function Btn({
   className = '',
   disabled = false,
   ariaLabel,
+  ariaExpanded,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -209,6 +210,8 @@ export function Btn({
   className?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  /** Set for a button that opens or closes something. */
+  ariaExpanded?: boolean;
 }) {
   return (
     <button
@@ -216,6 +219,7 @@ export function Btn({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-expanded={ariaExpanded}
       className={`inline-flex items-center gap-1.5 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     >
       {children}

@@ -33,6 +33,8 @@ interface EditableListProps<T> {
   itemActions?: (index: number) => ReactNode;
   /** The remove button's name for screen readers, e.g. "Remove from resume". */
   removeLabel?: string;
+  /** Flat rows only: keep the grip and action buttons visible, with a resting border. */
+  actionsAlwaysVisible?: boolean;
 }
 
 // How long a removed row stays recoverable. Long enough to notice a
@@ -79,11 +81,12 @@ export function EditableList<T>({
   variant = 'card',
   itemActions,
   removeLabel,
+  actionsAlwaysVisible = false,
 }: EditableListProps<T>) {
   const flat = variant !== 'card';
   // Hidden until the row is hovered or something inside it has focus, so a
   // flat list stays quiet while you read it.
-  const hoverActionClass = flat
+  const hoverActionClass = flat && !actionsAlwaysVisible
     ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100'
     : '';
   const [undo, setUndo] = useState<{ item: T; index: number } | null>(null);
@@ -169,7 +172,9 @@ export function EditableList<T>({
             overIndex === index && dragIndex !== null && dragIndex !== index
               ? 'border-slate-400 dark:border-slate-500'
               : flat
-                ? 'border-transparent'
+                ? actionsAlwaysVisible
+                  ? 'border-slate-200 dark:border-slate-800'
+                  : 'border-transparent'
                 : 'border-slate-200 dark:border-slate-700',
             dragIndex === index ? 'opacity-50' : '',
           ].join(' ')}
@@ -185,7 +190,8 @@ export function EditableList<T>({
               <GripVertical size={14} />
             </span>
           )}
-          <div className="flex-1">{renderItem(item, (next) => updateAt(index, next), index)}</div>
+          {/* min-w-0 lets a one-line child (a truncated label) shrink instead of widening the row. */}
+          <div className="min-w-0 flex-1">{renderItem(item, (next) => updateAt(index, next), index)}</div>
           <span className={`flex shrink-0 items-center gap-1 ${hoverActionClass}`}>
             {itemActions?.(index)}
             <RemoveItemButton onClick={() => removeAt(index)} label={removeLabel} />

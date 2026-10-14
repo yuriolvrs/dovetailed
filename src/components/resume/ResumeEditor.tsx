@@ -1,8 +1,8 @@
 // What this file is: the editor for a tailored resume. At the top,
 // JobFitPanel says whether the resume fits one page and which of the job's
 // requirements it covers, with one-click adds for the ones it could. Below,
-// the resume's sections in print order (contact, education, experience,
-// projects, skills -- see ResumePrintView). Jobs and projects show every
+// the job-tailored sections first (experience, projects, skills), then
+// education and contact. Jobs and projects show every
 // bullet ready to edit (ResumeEntryBlock): reorder, reword with AI, take off,
 // or add back a left-out profile line, with the lines the job asks for
 // marked. Profile entries the resume leaves out are offered at the end of
@@ -339,21 +339,6 @@ export function ResumeEditor({
         onAdd={addAtom}
       />
 
-      <ContactSection
-        value={value.contact}
-        onChange={(contact) => onChange({ ...value, contact })}
-        navNonce={target?.section === 'contact' ? nonce : undefined}
-      />
-
-      <EducationSection
-        value={value.education}
-        onChange={(education) => onChange({ ...value, education })}
-        resume={{
-          actions: <ResetButton onReset={() => onChange({ ...value, education: tailored.education })} />,
-          nav: educationNav,
-        }}
-      />
-
       <SheetSection
         id="experience"
         title="Experience"
@@ -507,6 +492,21 @@ export function ResumeEditor({
         onChange={(skills) => onChange({ ...value, skills })}
         onReset={() => onChange({ ...value, skills: tailored.skills })}
         reasonFor={fit.reasonFor}
+      />
+
+      <EducationSection
+        value={value.education}
+        onChange={(education) => onChange({ ...value, education })}
+        resume={{
+          actions: <ResetButton onReset={() => onChange({ ...value, education: tailored.education })} />,
+          nav: educationNav,
+        }}
+      />
+
+      <ContactSection
+        value={value.contact}
+        onChange={(contact) => onChange({ ...value, contact })}
+        navNonce={target?.section === 'contact' ? nonce : undefined}
       />
     </div>
   );

@@ -1,13 +1,15 @@
 // What this file is: the profile bullets of one resume entry that are not on
 // the resume. The ones that fit this job are listed first and always shown,
 // with the requirement they answer; the rest wait behind "N more from your
-// profile". One click puts a bullet back. Included bullets are edited in the
+// profile". One click puts a bullet back. The toggle shares one footer row
+// with an optional control the caller passes in (footerStart). Included bullets are edited in the
 // list above this, so removing one there is the "exclude" half and this
 // component is the "include" half.
 // In plain terms: the lines you left out of this job, best ones first,
 // click to bring one back.
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import type { FitReason } from '../lib/jobFit';
 import { normalizeLine } from '../lib/jobFit';
@@ -47,6 +49,7 @@ export function BulletPicker({
   included,
   onAdd,
   reasonFor,
+  footerStart,
 }: {
   /** Every bullet on the source profile entry, not just the ones on the resume. */
   allBullets: string[];
@@ -55,19 +58,21 @@ export function BulletPicker({
   onAdd: (bullet: string) => void;
   /** Why a line fits this job, or null -- see jobFit.ts. */
   reasonFor: (text: string) => FitReason | null;
+  /** A control for the left of the footer row, e.g. "Write a bullet". Always shown. */
+  footerStart?: ReactNode;
 }) {
   const [showRest, setShowRest] = useState(false);
   const onResume = new Set(included.map(normalizeLine));
   const left = allBullets.filter((b) => b.trim() !== '' && !onResume.has(normalizeLine(b)));
-  if (left.length === 0) return null;
 
   const fitting = left.filter((b) => reasonFor(b));
   const rest = left.filter((b) => !reasonFor(b));
+  if (!footerStart && left.length === 0) return null;
 
   return (
     <div className="mt-2 space-y-1">
       {fitting.length > 0 && (
-        <div>
+        <div className="rounded-lg bg-emerald-50 px-2 py-1.5 dark:bg-emerald-500/10">
           <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Also fits this job</p>
           <ul>
             {fitting.map((bullet) => (
@@ -76,25 +81,28 @@ export function BulletPicker({
           </ul>
         </div>
       )}
-      {rest.length > 0 && (
-        <div>
-          <button
-            type="button"
-            aria-expanded={showRest}
-            onClick={() => setShowRest((v) => !v)}
-            className="-mx-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium text-slate-600 transition-colors hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-slate-400 dark:hover:text-slate-100"
-          >
-            <ChevronRight size={13} aria-hidden className={`transition-transform ${showRest ? 'rotate-90' : ''}`} />
-            {rest.length} more from your profile
-          </button>
-          {showRest && (
-            <ul>
-              {rest.map((bullet) => (
-                <PickRow key={bullet} text={bullet} reason={null} onAdd={() => onAdd(bullet)} />
-              ))}
-            </ul>
+      {(footerStart || rest.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>{footerStart}</div>
+          {rest.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={showRest}
+              onClick={() => setShowRest((v) => !v)}
+              className="-mx-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium text-slate-600 transition-colors hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 dark:text-slate-400 dark:hover:text-slate-100"
+            >
+              <ChevronRight size={13} aria-hidden className={`transition-transform ${showRest ? 'rotate-90' : ''}`} />
+              {rest.length} more from your profile
+            </button>
           )}
         </div>
+      )}
+      {showRest && rest.length > 0 && (
+        <ul>
+          {rest.map((bullet) => (
+            <PickRow key={bullet} text={bullet} reason={null} onAdd={() => onAdd(bullet)} />
+          ))}
+        </ul>
       )}
     </div>
   );

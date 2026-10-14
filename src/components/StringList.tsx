@@ -78,6 +78,8 @@ interface StringListProps {
   itemActions?: (value: string, index: number) => ReactNode;
   /** The remove button's name for screen readers. */
   removeLabel?: string;
+  /** Keeps each row's grip and buttons visible at rest, forwarded to EditableList. */
+  actionsAlwaysVisible?: boolean;
 }
 
 /**
@@ -107,6 +109,7 @@ export function StringList({
   quickEntry = false,
   itemActions,
   removeLabel,
+  actionsAlwaysVisible,
 }: StringListProps) {
   const flat = variant === 'flat';
   const inputClass = `w-full ${
@@ -180,12 +183,13 @@ export function StringList({
       variant={variant}
       itemActions={itemActions && ((index) => itemActions(items[index], index))}
       removeLabel={removeLabel}
+      actionsAlwaysVisible={actionsAlwaysVisible}
       renderItem={(value, update, index) => (
         <div className={flat ? 'flex items-start gap-2' : ''}>
           {flat && (
             <span
               aria-hidden
-              className="mt-3 h-1 w-1 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
+              className="mt-3 hidden h-1 w-1 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600 sm:block"
             />
           )}
           <div className={`min-w-0 flex-1 ${itemBadge || itemExtra ? 'space-y-1.5' : ''}`}>
