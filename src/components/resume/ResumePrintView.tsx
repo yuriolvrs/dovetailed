@@ -120,10 +120,34 @@ export function ResumePrintView({
     };
   }
 
+  // The last highlighted bullet, to tell a move from a jump to another bullet.
+  const lastFocused = useRef<{ section: string; entryKey: string; index: number; text: string } | null>(null);
+
   useEffect(() => {
+    // A blur (focusedTarget null) keeps lastFocused: dragging a bullet blurs
+    // its field before the drop focuses it again.
     if (!focusedTarget || variant !== 'preview' || !rootRef.current) return;
     const el = rootRef.current.querySelector(`[data-focus-key="${bulletFocusKey(focusedTarget)}"]`);
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const text = el?.textContent ?? '';
+    const last = lastFocused.current;
+    lastFocused.current = {
+      section: focusedTarget.section,
+      entryKey: focusedTarget.entryKey,
+      index: focusedTarget.bulletIndex,
+      text,
+    };
+    // Same entry, same words, new position: the bullet was moved. A short
+    // flash shows where it went.
+    const moved =
+      last !== null &&
+      last.section === focusedTarget.section &&
+      last.entryKey === focusedTarget.entryKey &&
+      last.index !== focusedTarget.bulletIndex &&
+      last.text === text;
+    if (moved && el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.animate([{ backgroundColor: '#34d399' }, { backgroundColor: '#d1fae5' }], { duration: 900, easing: 'ease-out' });
+    }
   }, [focusedTarget, variant]);
 
   const rootClass =
