@@ -6,7 +6,7 @@
 // In plain terms: a reusable building block for any list where you can add
 // or remove entries — used all over the Profile page.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
 import { GripVertical, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Btn, EmptyState } from './ui/primitives';
@@ -92,6 +92,7 @@ export function EditableList<T>({
   const [undo, setUndo] = useState<{ item: T; index: number } | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Cleared on a timer so the offer doesn't linger past the moment the user
   // would still recognise what was removed.
@@ -148,6 +149,13 @@ export function EditableList<T>({
     onChange(next);
     setDragIndex(null);
     setOverIndex(null);
+    // Focus the moved row's field, as a keyboard move does, so whatever
+    // follows focus (the live preview's highlight) points at it.
+    setTimeout(() => {
+      listRef.current
+        ?.querySelector<HTMLElement>(`:scope > [data-index="${index}"] textarea, :scope > [data-index="${index}"] input`)
+        ?.focus({ preventScroll: true });
+    });
   }
 
   function handleDragEnd() {
@@ -156,7 +164,7 @@ export function EditableList<T>({
   }
 
   return (
-    <div className={variant === 'flat' ? 'space-y-0.5' : 'space-y-3'}>
+    <div ref={listRef} className={variant === 'flat' ? 'space-y-0.5' : 'space-y-3'}>
       {items.length === 0 && !undo && <EmptyState>{emptyLabel}</EmptyState>}
       {items.map((item, index) => (
         <div
