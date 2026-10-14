@@ -21,6 +21,7 @@ import type {
   JobPosting,
   Profile,
   ProfileAtom,
+  SourceMapEntry,
 } from '../../types';
 import { buildProfileAtoms } from '../../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../../lib/genStore';
@@ -169,10 +170,11 @@ export function CoverLetterSection({
     setShowExportMenu(false);
   }
 
-  function updateContent(content: CoverLetterContent) {
+  // A sourceMap arrives only when an AI rewording moved citations around.
+  function updateContent(content: CoverLetterContent, sourceMap?: SourceMapEntry[]) {
     setGeneration((prev) => {
       if (!prev || prev === 'none') return prev;
-      const next = { ...prev, content };
+      const next = { ...prev, content, sourceMap: sourceMap ?? prev.sourceMap };
       void saveGeneration(next);
       return next;
     });

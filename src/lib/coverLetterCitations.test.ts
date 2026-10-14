@@ -3,7 +3,7 @@
 // right evidence, flagged when it needs a check, or left as your own words.
 
 import { describe, expect, it } from 'vitest';
-import { citeParagraph } from './coverLetterCitations';
+import { carryCitations, citeParagraph } from './coverLetterCitations';
 import type { SourceMapEntry } from '../types';
 
 const context = 'Events Associate at Brightline. Jane Doe';
@@ -41,5 +41,28 @@ describe('citeParagraph', () => {
     expect(last).toHaveLength(1);
     expect(last[0].status).toBe('plain');
     expect(citeParagraph('Thank you for your time. I look forward to talking.', old, opts)[0].status).toBe('flagged');
+  });
+});
+
+describe('carryCitations', () => {
+  const map: SourceMapEntry[] = [
+    { generatedText: 'I ran the spring fair.', atomIds: ['e1'], claim: true },
+    { generatedText: 'I wrote the newsletter.', atomIds: ['e2'], claim: true },
+    { generatedText: 'Other paragraph.', atomIds: ['e3'], claim: true },
+  ];
+
+  it('carries the old sentences evidence onto the reworded paragraph', () => {
+    const next = carryCitations(map, 'I ran the spring fair. I wrote the newsletter.', 'I ran the fair and wrote the newsletter.', opts);
+    expect(next).toEqual([
+      map[2],
+      { generatedText: 'I ran the fair and wrote the newsletter.', atomIds: ['e1', 'e2'], claim: true },
+    ]);
+    expect(citeParagraph('I ran the fair and wrote the newsletter.', next, opts)[0].status).toBe('cited');
+  });
+
+  it('keeps a reworded paragraph flagged when it held an unbacked claim', () => {
+    const flaggedMap: SourceMapEntry[] = [...map, { generatedText: 'I led ten people.', atomIds: [], claim: true }];
+    const next = carryCitations(flaggedMap, 'I ran the spring fair. I led ten people.', 'I ran the fair and led ten people.', opts);
+    expect(citeParagraph('I ran the fair and led ten people.', next, opts)[0].status).toBe('flagged');
   });
 });

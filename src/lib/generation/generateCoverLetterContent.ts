@@ -114,7 +114,9 @@ export async function generateCoverLetterContent(
     // prompt -- confirmed live, a too-tight budget here cut the response off
     // mid-JSON (finish_reason "length") before any usable content came out,
     // surfacing to the user as "LLM proxy response had no content."
-    maxTokens: 3500,
+    // The per-sentence shape repeats text/claim/atomIds for every sentence,
+    // so the answer itself is longer too; 3500 ran out live.
+    maxTokens: 6000,
     signal: options.signal,
   });
 

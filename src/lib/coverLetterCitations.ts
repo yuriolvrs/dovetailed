@@ -87,3 +87,28 @@ export function citeParagraph(
   gap(paragraph.length);
   return spans;
 }
+
+/**
+ * The sourceMap after an AI rewording replaced `before` with `after`. The
+ * rewording may only reuse what the paragraph already said (the filter in
+ * suggestBulletRewrite.ts drops new names and figures), so the old
+ * sentences' evidence carries over as one whole-paragraph entry. If any old
+ * sentence was an unbacked claim, the new paragraph is flagged as a whole
+ * rather than letting that claim hide under the others' evidence.
+ * In plain terms: keeps a reworded paragraph's citations honest.
+ */
+export function carryCitations(
+  sourceMap: SourceMapEntry[],
+  before: string,
+  after: string,
+  options: { isLast: boolean; context: string },
+): SourceMapEntry[] {
+  const spans = citeParagraph(before, sourceMap, options);
+  const used = new Set(spans.map((s) => s.entry).filter((e): e is SourceMapEntry => e !== null));
+  const rest = sourceMap.filter((e) => !used.has(e));
+  if (spans.some((s) => s.status === 'flagged')) {
+    return [...rest, { generatedText: after, atomIds: [], claim: true }];
+  }
+  const atomIds = [...new Set(spans.flatMap((s) => (s.status === 'cited' && s.entry ? s.entry.atomIds : [])))];
+  return [...rest, { generatedText: after, atomIds, claim: atomIds.length > 0 }];
+}
