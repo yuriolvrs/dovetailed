@@ -108,3 +108,47 @@ describe('toJobAnalysis', () => {
     expect(analysis.requirements.map((r) => r.order)).toEqual([0, 1]);
   });
 });
+
+describe('requirement kinds', () => {
+  it('toJobAnalysis copies a valid kind and defaults a missing or unknown one to qualification', () => {
+    const analysis = toJobAnalysis({
+      roleSummary: '',
+      requirements: [
+        { text: 'a', severity: 'required', kind: 'duty' },
+        { text: 'b', severity: 'required', kind: 'education' },
+        { text: 'c', severity: 'required', kind: 'qualification' },
+        { text: 'd', severity: 'required' },
+        { text: 'e', severity: 'required', kind: 'nonsense' },
+      ],
+      keywords: [],
+    });
+    expect(analysis.requirements.map((r) => r.kind)).toEqual([
+      'duty',
+      'education',
+      'qualification',
+      'qualification',
+      'qualification',
+    ]);
+  });
+
+  it('isExtractedAnalysis accepts requirements with and without kind', () => {
+    expect(isExtractedAnalysis(validExtracted)).toBe(true);
+    expect(
+      isExtractedAnalysis({ ...validExtracted, requirements: [{ text: 'x', severity: 'required', kind: 'duty' }] }),
+    ).toBe(true);
+  });
+
+  it('the prompt asks for duties, kinds, splitting, degrees, and 14 items', () => {
+    const prompt = buildAnalyzePostingPrompt('Some posting');
+    expect(prompt).toContain('at most 14');
+    expect(prompt).toContain('"duty"');
+    expect(prompt).toContain('"education"');
+    expect(prompt).toContain('"qualification"');
+    expect(prompt).toContain('Split a compound requirement');
+    expect(prompt).toContain('Shopify, Klaviyo, Canva');
+    expect(prompt).toContain('active RN');
+    expect(prompt).toContain('at most 12 skills/tools/terms');
+    expect(prompt).not.toContain('Do NOT include degree');
+    expect(prompt).not.toContain('Do NOT include job duties');
+  });
+});

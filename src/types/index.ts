@@ -87,6 +87,11 @@ export interface Profile {
    * so they're available as evidence in every future matching pass.
    */
   additionalInfo: string[];
+  /**
+   * The user's own summary line, kept verbatim from their resume. Optional:
+   * profiles saved before it existed have none.
+   */
+  summary?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,12 +115,20 @@ export interface ProfileAtom {
 
 export type RequirementSeverity = 'required' | 'preferred';
 
+/**
+ * Where a requirement came from in the posting: a qualification the
+ * candidate must have, a duty the job involves, or a degree requirement.
+ */
+export type RequirementKind = 'qualification' | 'duty' | 'education';
+
 export interface Requirement {
   id: string;
   text: string;
   severity: RequirementSeverity;
   /** Position as it appeared in the posting text; used for display sort. */
   order: number;
+  /** Absent on postings analysed before kinds existed; treat as 'qualification'. */
+  kind?: RequirementKind;
 }
 
 export type MatchStatus = 'full' | 'partial' | 'gap_no_candidates' | 'gap_unverified';
@@ -259,6 +272,8 @@ export type GenerationType = 'resume' | 'coverLetter' | 'interviewPrep';
  */
 export interface ResumeContent {
   contact: Contact;
+  /** Copied verbatim from Profile.summary when present. */
+  summary?: string;
   skills: SkillGroup[];
   experience: ExperienceEntry[];
   projects: ProjectEntry[];
@@ -310,6 +325,12 @@ export interface SourceMapEntry {
    * letters, whose entries cover a whole paragraph.
    */
   claim?: boolean;
+  /**
+   * Cover letters only: the result of the claim-support check. false when a
+   * second pass found the sentence says more than its cited lines do (a new
+   * result, scope, or ownership). Absent when the check did not run.
+   */
+  supported?: boolean;
 }
 
 export interface Generation {

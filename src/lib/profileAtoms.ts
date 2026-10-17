@@ -83,6 +83,14 @@ export function buildProfileAtoms(profile: Profile): ProfileAtom[] {
 
   for (const entry of profile.education) {
     const label = educationLabel(entry);
+    // The degree line itself is the first atom of the entry, so a degree
+    // requirement can cite it (see lib/matching/degreeMatch.ts).
+    const degree = entry.degree.trim();
+    if (degree !== '') {
+      const field = entry.field?.trim();
+      const text = field && !degree.toLowerCase().includes(field.toLowerCase()) ? `${degree} in ${field}` : degree;
+      atoms.push({ id: atomId('education', text), source: 'education', sourceLabel: label, text });
+    }
     for (const detail of entry.details ?? []) {
       if (detail.trim() === '') continue;
       atoms.push({ id: atomId('education', detail), source: 'education', sourceLabel: label, text: detail });

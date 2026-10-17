@@ -9,6 +9,7 @@
 
 import type { ProfileAtom, Requirement, RequirementMatch } from '../../types';
 import { retrieveCandidates } from './retrieval';
+import { matchDegree } from './degreeMatch';
 import {
   buildBatchMatchPrompt,
   buildMatchRequirementPrompt,
@@ -157,13 +158,20 @@ export async function runMatching(
   signal?: AbortSignal,
 ): Promise<RequirementMatch[]> {
   const pool = matchable(atoms);
-  const prepared = requirements.map((requirement) => ({
+  const byId = new Map<string, RequirementMatch>();
+
+  // Degree requirements are decided by code (level ranking), with no call.
+  const rest: Requirement[] = [];
+  for (const requirement of requirements) {
+    if (requirement.kind === 'education') byId.set(requirement.id, matchDegree(requirement, atoms));
+    else rest.push(requirement);
+  }
+  const prepared = rest.map((requirement) => ({
     requirement,
     candidates: retrieveCandidates(requirement.text, pool),
   }));
 
   // Requirements with no candidates are gaps straight away, with no call.
-  const byId = new Map<string, RequirementMatch>();
   for (const { requirement, candidates } of prepared) {
     if (candidates.length === 0) {
       byId.set(requirement.id, { requirementId: requirement.id, status: 'gap_no_candidates', atomIds: [] });

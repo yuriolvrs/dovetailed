@@ -7,7 +7,7 @@
 // In plain terms: this is what we ask the AI when it first reads a job
 // posting, before we go figure out which parts of your profile fit it.
 
-import type { JobAnalysis, RequirementSeverity } from '../types';
+import type { JobAnalysis, RequirementKind, RequirementSeverity } from '../types';
 
 /**
  * Job posting text beyond this length is truncated before it's sent.
@@ -34,7 +34,7 @@ export function buildAnalyzePostingPrompt(rawText: string): string {
 object and nothing else.
 
 Exact shape (no extra keys, no markdown, no code fences, no commentary):
-{"title":"…","company":"…","location":"…","arrangement":"…","roleSummary":"…","requirements":[{"text":"…","severity":"required"}],"keywords":["…"]}
+{"title":"…","company":"…","location":"…","arrangement":"…","roleSummary":"…","requirements":[{"text":"…","severity":"required","kind":"qualification"}],"keywords":["…"]}
 
 Rules:
 - title, company, location: the job title, hiring company and job location exactly as the
@@ -42,16 +42,20 @@ Rules:
 - location is the place only. Leave out words like Remote, Hybrid or On-site; they go in arrangement.
 - arrangement: "Onsite", "Hybrid" or "Remote" when the posting states it, otherwise "".
 - roleSummary: one or two sentences describing the role and what it does.
-- requirements: at most 8 concrete qualifications a candidate must have to be considered --
-  required skills, years of experience, tools, certifications. Postings often
-  separate a "Responsibilities" or "Roles & Responsibilities" section (day-to-day duties of
-  the job) from a "Requirements" or "Qualifications" section (what the candidate needs to
-  bring). Only pull from the qualifications side. Do NOT include job duties/responsibilities
-  (e.g. "coordinate with other teams", "maintain the architecture", "troubleshoot production
-  issues") even if the posting lists them prominently -- those describe the job, not what the
-  candidate must demonstrate. Do NOT include degree/education requirements (e.g. "Bachelor's
-  degree in X") -- a profile has no matchable evidence for those, so they can never be
-  anything but a permanent gap.
+- requirements: at most 14 concrete items, taken from the WHOLE posting. Include both what the
+  candidate must bring (required skills, years of experience, tools, certifications) and the
+  main responsibilities/duties of the job (e.g. "coordinate with other teams", "troubleshoot
+  production issues"). Postings often separate a "Responsibilities" section from a
+  "Requirements" or "Qualifications" section; read both.
+- kind: give every requirement a "kind":
+  - "qualification": a skill, tool, years of experience, certification, language or licence
+    the candidate must have. Language and licence requirements ("Bilingual", "active RN
+    license") are qualifications.
+  - "duty": a day-to-day responsibility of the job.
+  - "education": a degree requirement (e.g. "Bachelor's degree in X", "Associate degree").
+- Split a compound requirement into separate items when its parts are independent.
+  "Excellent customer service and written communication" becomes two items. Keep a list of
+  tools as ONE item ("Shopify, Klaviyo, Canva").
 - severity: "required" if the posting treats it as mandatory, "preferred" if the posting says
   something like "nice to have", "preferred", "bonus", or "a plus".
 - requirements must be listed in the same order they appear in the posting text.
@@ -73,6 +77,8 @@ Reply with the JSON object only.`;
 interface ExtractedRequirement {
   text: string;
   severity: RequirementSeverity;
+  /** Optional: older or shorter answers may leave it out. */
+  kind?: unknown;
 }
 
 export interface ExtractedAnalysis {
@@ -123,6 +129,12 @@ export function isExtractedAnalysis(x: unknown): x is ExtractedAnalysis {
   );
 }
 
+// An unknown or missing kind becomes 'qualification', so old or sloppy
+// answers keep working.
+function toKind(x: unknown): RequirementKind {
+  return x === 'duty' || x === 'education' ? x : 'qualification';
+}
+
 /**
  * Turns a freshly-extracted analysis into the stored JobAnalysis shape:
  * assigns a stable id + posting-order index to each requirement, and starts
@@ -140,6 +152,7 @@ export function toJobAnalysis(extracted: ExtractedAnalysis): JobAnalysis {
       text: r.text,
       severity: r.severity,
       order: i,
+      kind: toKind(r.kind),
     })),
     keywords: extracted.keywords,
     matches: [],

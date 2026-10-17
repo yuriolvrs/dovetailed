@@ -4,9 +4,20 @@
 // In plain terms: turns all the individual requirement matches into one
 // overall percentage so you can quickly gauge how good a fit a job is.
 
-import type { JobAnalysis, MatchStatus } from '../../types';
+import type { JobAnalysis, MatchStatus, Requirement } from '../../types';
 
 const SEVERITY_WEIGHT = { required: 2, preferred: 1 } as const;
+
+/**
+ * Weight of one requirement in the fit score: required 2, preferred 1; a
+ * duty counts 1 whatever its severity (it describes the job, not what the
+ * candidate must bring); education follows its severity.
+ * In plain terms: how much one requirement matters to the overall score.
+ */
+export function requirementWeight(requirement: Requirement): number {
+  if (requirement.kind === 'duty') return 1;
+  return SEVERITY_WEIGHT[requirement.severity];
+}
 
 const STATUS_VALUE: Record<MatchStatus, number> = {
   full: 1,
@@ -28,7 +39,7 @@ export function computeFitScore(analysis: JobAnalysis | undefined): number | nul
   let earned = 0;
   let possible = 0;
   for (const requirement of analysis.requirements) {
-    const weight = SEVERITY_WEIGHT[requirement.severity];
+    const weight = requirementWeight(requirement);
     const status = matchByRequirementId.get(requirement.id)?.status ?? 'gap_no_candidates';
     earned += weight * STATUS_VALUE[status];
     possible += weight;

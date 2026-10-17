@@ -71,7 +71,10 @@ export async function saveProfile(profile: Profile): Promise<void> {
 // In plain terms: checks whether your profile has anything a job can
 // actually be matched against.
 export function hasProfileContent(profile: Profile): boolean {
-  return buildProfileAtoms(profile).length > 0;
+  // A degree line is an atom too (for degree requirements), but it alone is
+  // not evidence, so it does not count here; education details still do.
+  const hasEducationDetail = profile.education.some((e) => (e.details ?? []).some((d) => d.trim() !== ''));
+  return buildProfileAtoms(profile).some((a) => a.source !== 'education') || hasEducationDetail;
 }
 
 // Whether a job or project has at least one non-blank bullet. Bullets are the

@@ -71,3 +71,22 @@ describe('isBatchMatchVerification', () => {
     expect(isBatchMatchVerification({})).toBe(false);
   });
 });
+
+describe('match rules (single and batch prompts)', () => {
+  const candidates = [{ id: 'a', text: 'Java', sourceLabel: 'Skills' }];
+  const prompts: [string, string][] = [
+    ['single', buildMatchRequirementPrompt('Java', candidates)],
+    ['batch', buildBatchMatchPrompt([{ label: 'R1', requirementText: 'Java', candidates }])],
+  ];
+
+  it.each(prompts)('%s prompt states the evidence rules', (_name, prompt) => {
+    expect(prompt).toContain('return "partial"');
+    expect(prompt).toContain('Never return an empty list');
+    expect(prompt).toContain('strongest, most specific evidence first');
+    expect(prompt).toContain('prefer an experience bullet over a');
+    expect(prompt).toContain('no Mac experience');
+    expect(prompt).toContain('Semantic equivalents count');
+    expect(prompt).toContain('customer-service evidence');
+    expect(prompt).toContain('copywriting evidence');
+  });
+});

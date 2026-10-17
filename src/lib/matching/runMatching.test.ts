@@ -127,3 +127,39 @@ describe('statusAfterReject', () => {
     expect(result).toEqual({ requirementId: 'r1', status: 'gap_unverified', atomIds: [], consideredAtomIds: [] });
   });
 });
+
+describe('runMatching education routing', () => {
+  it('decides an education requirement in code, without calling the LLM', async () => {
+    generateStructuredMock.mockReset();
+    const req = requirement({ id: 'ed', text: "Bachelor's degree in Biology", kind: 'education' });
+    const atoms = [atom({ id: 'deg', source: 'education', sourceLabel: 'Education: B.S., State U', text: 'B.S. in Biology' })];
+    const progress: number[] = [];
+
+    const result = await runMatching([req], atoms, (done) => progress.push(done));
+
+    expect(result).toEqual([{ requirementId: 'ed', status: 'full', atomIds: ['deg'] }]);
+    expect(generateStructuredMock).not.toHaveBeenCalled();
+    expect(progress).toEqual([1]);
+  });
+
+  it('sends other kinds through the LLM, keeping result order', async () => {
+    generateStructuredMock.mockReset();
+    const reqs = [
+      requirement({ id: 'ed', text: 'Associate degree', kind: 'education' }),
+      requirement({ id: 'du', text: 'Java experience', kind: 'duty' }),
+    ];
+    const atoms = [
+      atom({ id: 'deg', source: 'education', sourceLabel: 'Education: A.A., State U', text: 'A.A.' }),
+      atom({ id: 'java', text: 'Java' }),
+    ];
+    generateStructuredMock.mockResolvedValueOnce({ atomIds: ['java'], status: 'full' });
+
+    const result = await runMatching(reqs, atoms);
+
+    expect(generateStructuredMock).toHaveBeenCalledTimes(1);
+    expect(result.map((m) => [m.requirementId, m.status])).toEqual([
+      ['ed', 'full'],
+      ['du', 'full'],
+    ]);
+  });
+});

@@ -78,10 +78,24 @@ describe('buildProfileAtoms', () => {
         additionalInfo: ['Won a hackathon'],
       }),
     );
-    expect(atoms.map((a) => a.source)).toEqual(['projects', 'education', 'additional']);
+    expect(atoms.map((a) => a.source)).toEqual(['projects', 'education', 'education', 'additional']);
     expect(atoms[0]).toMatchObject({ sourceLabel: 'Project: Widget', text: 'Used React' });
-    expect(atoms[1]).toMatchObject({ sourceLabel: 'Education: BS Computer Science, State U', text: "Dean's list" });
-    expect(atoms[2]).toMatchObject({ sourceLabel: 'Additional information', text: 'Won a hackathon' });
+    // The degree line is the first atom of the entry.
+    expect(atoms[1]).toMatchObject({ sourceLabel: 'Education: BS Computer Science, State U', text: 'BS Computer Science' });
+    expect(atoms[2]).toMatchObject({ sourceLabel: 'Education: BS Computer Science, State U', text: "Dean's list" });
+    expect(atoms[3]).toMatchObject({ sourceLabel: 'Additional information', text: 'Won a hackathon' });
+  });
+
+  it('adds the field to the degree atom unless the degree already names it', () => {
+    const atoms = buildProfileAtoms(
+      profile({
+        education: [
+          { school: 'A', degree: 'B.S.', field: 'Biology', current: false },
+          { school: 'B', degree: 'BS Biology', field: 'Biology', current: false },
+        ],
+      }),
+    );
+    expect(atoms.map((a) => a.text)).toEqual(['B.S. in Biology', 'BS Biology']);
   });
 
   it('skips blank entries', () => {
