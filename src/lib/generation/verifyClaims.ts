@@ -107,3 +107,19 @@ export async function verifyClaimSentences(
   }
   return results;
 }
+
+/**
+ * Drops reword suggestions that say more than the original line. The original is the only evidence
+ * and there is no repair step. If the check cannot run, every suggestion is kept (today's behavior).
+ * In plain terms: throws away a reworded line if it claims something the old line did not.
+ */
+export async function dropUnsupportedRewords(
+  original: string,
+  suggestions: string[],
+  signal?: GenerateOptions['signal'],
+): Promise<string[]> {
+  if (suggestions.length === 0) return suggestions;
+  const items = suggestions.map((sentence, index) => ({ index, sentence, evidence: [original] }));
+  const checked = await verifyClaimSentences(items, { repair: false, signal });
+  return suggestions.filter((_, i) => checked.find((c) => c.index === i)?.supported !== false);
+}

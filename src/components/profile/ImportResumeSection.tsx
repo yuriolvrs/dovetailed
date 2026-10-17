@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { AlertTriangle, Check, FileText, X } from 'lucide-react';
 import type { Profile } from '../../types';
 import { extractText, generateStructured, llmErrorMessage } from '../../lib/llm';
-import { buildExtractProfilePrompt, isExtractedProfile } from '../../prompts/extractProfile';
+import { buildExtractProfilePrompt, cleanSpelling, isExtractedProfile } from '../../prompts/extractProfile';
 import type { ExtractedProfile } from '../../prompts/extractProfile';
 import {
   findDuplicates,
@@ -193,6 +193,7 @@ export function ImportResumeSection({
   }
 
   const unverifiedCount = review?.unverified.length ?? 0;
+  const typos = review ? cleanSpelling(review.extracted.spelling).slice(0, 8) : [];
 
   const body = (
     <>
@@ -270,6 +271,12 @@ export function ImportResumeSection({
                 ))}
               </ul>
             </div>
+          )}
+
+          {typos.length > 0 && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Possible typos: {typos.map((t) => `${t.text} → ${t.suggestion}`).join(', ')}. Nothing was changed.
+            </p>
           )}
 
           <div className="space-y-2">

@@ -19,6 +19,7 @@ import {
   type ParagraphRewordGoal,
 } from '../../prompts/suggestBulletRewrite';
 import { generateStructured } from '../../lib/llm';
+import { dropUnsupportedRewords } from '../../lib/generation/verifyClaims';
 import { AutoGrowTextarea } from '../StringList';
 import { IconBtn } from '../resume/ResumeEntryBlock';
 import { RewordPanel } from '../resume/BulletRewriteSuggest';
@@ -47,7 +48,7 @@ async function requestParagraphRewording(text: string, goal: ParagraphRewordGoal
     // A reasoning model thinks before it answers; a paragraph needs room.
     maxTokens: 2000,
   });
-  return filterSafeParagraphSuggestions(text, result.suggestions);
+  return dropUnsupportedRewords(text, filterSafeParagraphSuggestions(text, result.suggestions));
 }
 
 /**

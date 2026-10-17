@@ -22,11 +22,19 @@ export type ExtractedEducation = Omit<EducationEntry, 'current'> & { current?: b
  */
 export type ExtractedContact = Partial<Omit<Contact, 'links'>> & { links?: string[] };
 
+/** One possible typo found in the resume, with the likely fix. */
+export interface SpellingNote {
+  text: string;
+  suggestion: string;
+}
+
 /** What the extractor is allowed to return -- a Profile minus the app-managed fields. */
 export interface ExtractedProfile {
   contact: ExtractedContact;
   /** The resume's own summary or objective text, verbatim. */
   summary?: string;
+  /** Possible typos the resume contains. Notes only; the extracted text is never corrected. */
+  spelling?: SpellingNote[];
   skills: SkillGroup[];
   experience: ExtractedExperience[];
   projects: ExtractedProject[];
@@ -57,6 +65,7 @@ CRITICAL RULES:
 
 FIELD NOTES:
 - "summary" is the resume's own summary, profile or objective paragraph, copied verbatim, without its heading. Use "" if the resume has none. Do not write one.
+- "spelling" lists words in the resume that look misspelled, each as {"text": the word exactly as written, "suggestion": the correct spelling}. Use [] if there are none. Only list real typos, never names, brands or technical terms. Keep every other field exactly as written: do NOT fix the typo anywhere else.
 - "experience.company" is the employer name only. Put the city or state in "location", never inside "company". If the resume prints "Riverbend Community Hospital, Vancouver, WA", the company is "Riverbend Community Hospital" and the location is "Vancouver, WA".
 - "contact.links" lists every web address or profile link in the resume header (e.g. "linkedin.com/in/name", "github.com/name", a portfolio site), copied exactly. An email address is not a link.
 - "skills" groups skills under the document's own category headings (e.g. "Languages", "Tools"). If the resume lists skills without categories, use a single group with category "Skills".
@@ -72,6 +81,7 @@ Return ONLY valid JSON in exactly this shape, with no commentary and no markdown
 {
   "contact": { "name": "", "email": "", "phone": "", "location": "", "links": [""] },
   "summary": "",
+  "spelling": [{ "text": "", "suggestion": "" }],
   "skills": [{ "category": "", "items": [""] }],
   "experience": [{ "company": "", "title": "", "startMonth": "", "startYear": "", "endMonth": "", "endYear": "", "current": false, "location": "", "bullets": [""] }],
   "projects": [{ "name": "", "description": "", "bullets": [""] }],
@@ -95,6 +105,22 @@ function isObject(value: unknown): value is Record<string, unknown> {
 // doesn't say.
 function optionalString(value: unknown): boolean {
   return value === undefined || value === null || typeof value === 'string';
+}
+
+/**
+ * Keeps the well-formed typo notes and drops the rest. A malformed list is ignored, never an error.
+ * In plain terms: takes the AI's typo list and keeps only the entries that make sense.
+ */
+export function cleanSpelling(value: unknown): SpellingNote[] {
+  if (!Array.isArray(value)) return [];
+  const notes: SpellingNote[] = [];
+  for (const item of value) {
+    if (!isObject(item) || typeof item.text !== 'string' || typeof item.suggestion !== 'string') continue;
+    const text = item.text.trim();
+    const suggestion = item.suggestion.trim();
+    if (text && suggestion && text !== suggestion) notes.push({ text, suggestion });
+  }
+  return notes;
 }
 
 /**

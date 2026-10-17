@@ -3,7 +3,7 @@
 // that a broken check never blocks the letter.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { verifyClaimSentences } from './verifyClaims';
+import { dropUnsupportedRewords, verifyClaimSentences } from './verifyClaims';
 
 const { generateStructuredMock } = vi.hoisted(() => ({ generateStructuredMock: vi.fn() }));
 vi.mock('../llm', () => ({ generateStructured: generateStructuredMock }));
@@ -83,5 +83,29 @@ describe('verifyClaimSentences', () => {
     controller.abort();
     generateStructuredMock.mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'));
     await expect(verifyClaimSentences(items, { signal: controller.signal })).rejects.toThrow('Aborted');
+  });
+});
+
+describe('dropUnsupportedRewords', () => {
+  beforeEach(() => generateStructuredMock.mockReset());
+  const original = 'Assisted with billing issues';
+
+  it('drops failed suggestions, uses the original as the only evidence, and never repairs', async () => {
+    generateStructuredMock.mockResolvedValueOnce(verdicts([0, true], [1, false]));
+    const out = await dropUnsupportedRewords(original, ['Helped with billing issues', 'Led billing issues']);
+    expect(out).toEqual(['Helped with billing issues']);
+    expect(generateStructuredMock).toHaveBeenCalledTimes(1);
+    expect(generateStructuredMock.mock.calls[0][0]).toContain(original);
+  });
+
+  it('keeps every suggestion when the check cannot run', async () => {
+    generateStructuredMock.mockRejectedValueOnce(new Error('down'));
+    const list = ['A', 'B'];
+    expect(await dropUnsupportedRewords(original, list)).toEqual(list);
+  });
+
+  it('makes no call for an empty list', async () => {
+    expect(await dropUnsupportedRewords(original, [])).toEqual([]);
+    expect(generateStructuredMock).not.toHaveBeenCalled();
   });
 });

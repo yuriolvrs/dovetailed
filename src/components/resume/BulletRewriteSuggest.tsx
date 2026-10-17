@@ -19,6 +19,7 @@ import {
   type BulletRewordGoal,
 } from '../../prompts/suggestBulletRewrite';
 import { generateStructured, llmErrorMessage } from '../../lib/llm';
+import { dropUnsupportedRewords } from '../../lib/generation/verifyClaims';
 import { Btn, Skeleton } from '../ui/primitives';
 
 /**
@@ -35,7 +36,7 @@ export async function requestBulletRewording(
   // See runMatching.ts's comment on the same budget: the reasoning model's
   // own thinking can use several hundred tokens before it answers.
   const result = await generateStructured(prompt, isRewriteSuggestions, { temperature: 0.4, maxTokens: 900 });
-  return filterSafeSuggestions(text, result.suggestions);
+  return dropUnsupportedRewords(text, filterSafeSuggestions(text, result.suggestions));
 }
 
 /**

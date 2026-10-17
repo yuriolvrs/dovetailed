@@ -5,7 +5,7 @@
 // In plain terms: tests that we ask the AI properly and refuse bad answers.
 
 import { describe, expect, it } from 'vitest';
-import { buildExtractProfilePrompt, isExtractedProfile } from './extractProfile';
+import { buildExtractProfilePrompt, cleanSpelling, isExtractedProfile } from './extractProfile';
 
 const VALID = {
   contact: { name: 'A Person', email: 'a@example.com' },
@@ -103,5 +103,32 @@ describe('summary and company/location rules', () => {
   it('accepts a string summary and rejects a non-string one', () => {
     expect(isExtractedProfile({ ...VALID, summary: 'Hello' })).toBe(true);
     expect(isExtractedProfile({ ...VALID, summary: 5 })).toBe(false);
+  });
+});
+
+describe('spelling notes', () => {
+  it('asks for spelling notes and says not to correct the text', () => {
+    const prompt = buildExtractProfilePrompt('x');
+    expect(prompt).toContain('"spelling"');
+    expect(prompt).toContain('do NOT fix the typo');
+  });
+
+  it('never rejects a reply because of a malformed spelling field', () => {
+    expect(isExtractedProfile({ ...VALID, spelling: 'oops' })).toBe(true);
+    expect(isExtractedProfile({ ...VALID, spelling: [{ text: 'experiance', suggestion: 'experience' }] })).toBe(true);
+  });
+
+  it('keeps well-formed notes and ignores malformed ones', () => {
+    expect(cleanSpelling('oops')).toEqual([]);
+    expect(cleanSpelling(undefined)).toEqual([]);
+    expect(
+      cleanSpelling([
+        { text: 'experiance', suggestion: 'experience' },
+        { text: 'same', suggestion: 'same' },
+        { text: 5, suggestion: 'x' },
+        null,
+        { text: '', suggestion: 'x' },
+      ]),
+    ).toEqual([{ text: 'experiance', suggestion: 'experience' }]);
   });
 });
