@@ -8,10 +8,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { convertTemplate, type ConvertProgress } from './convertTemplate';
 import { MAX_CHUNK_CHARS } from './splitTemplate';
 import { generateStructured } from '../llm';
+import { validateTemplate } from './validateTemplate';
 
 vi.mock('../llm', () => ({ generateStructured: vi.fn() }));
+// The chunk/merge tests below use dummy templates; validation has its own tests.
+vi.mock('./validateTemplate', () => ({ validateTemplate: vi.fn(() => []) }));
 
 const mockGenerate = vi.mocked(generateStructured);
+const mockValidate = vi.mocked(validateTemplate);
 
 function twoSectionTemplate(): string {
   const filler = 'x'.repeat(MAX_CHUNK_CHARS - 100);
@@ -20,6 +24,8 @@ function twoSectionTemplate(): string {
 
 beforeEach(() => {
   mockGenerate.mockReset();
+  mockValidate.mockReset();
+  mockValidate.mockReturnValue([]);
 });
 
 describe('convertTemplate', () => {
@@ -29,7 +35,7 @@ describe('convertTemplate', () => {
     const result = await convertTemplate('\\begin{document}\\name{Jane}\\end{document}');
 
     expect(mockGenerate).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ compiledTemplate: '{{name}}', placeholders: ['name'] });
+    expect(result).toEqual({ compiledTemplate: '{{name}}', placeholders: ['name'], problems: [] });
   });
 
   it('converts each chunk and joins the parts in order', async () => {
@@ -80,5 +86,37 @@ describe('convertTemplate', () => {
 
     await expect(convertTemplate(twoSectionTemplate())).rejects.toThrow('proxy blew up');
     expect(mockGenerate).toHaveBeenCalledTimes(2);
+  });
+
+  it('converts at temperature 0', async () => {
+    mockGenerate.mockResolvedValue({ compiledTemplate: 'x', placeholders: [] });
+
+    await convertTemplate('\\begin{document}\\end{document}');
+
+    expect(mockGenerate.mock.calls[0][2]).toMatchObject({ temperature: 0 });
+  });
+
+  it('retries once with the problems in the prompt, and returns the fixed result', async () => {
+    mockGenerate
+      .mockResolvedValueOnce({ compiledTemplate: 'BAD', placeholders: [] })
+      .mockResolvedValueOnce({ compiledTemplate: 'GOOD', placeholders: [] });
+    mockValidate.mockReturnValueOnce(['`skillGroups.itemsLine` is a list']).mockReturnValueOnce([]);
+
+    const result = await convertTemplate('\\begin{document}\\end{document}');
+
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(mockGenerate.mock.calls[0][0]).not.toContain('PREVIOUS CONVERSION');
+    expect(mockGenerate.mock.calls[1][0]).toContain('`skillGroups.itemsLine` is a list');
+    expect(result).toEqual({ compiledTemplate: 'GOOD', placeholders: [], problems: [] });
+  });
+
+  it('returns the problems when the retry is still broken, and does not retry again', async () => {
+    mockGenerate.mockResolvedValue({ compiledTemplate: 'BAD', placeholders: [] });
+    mockValidate.mockReturnValue(['still broken']);
+
+    const result = await convertTemplate('\\begin{document}\\end{document}');
+
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(result.problems).toEqual(['still broken']);
   });
 });

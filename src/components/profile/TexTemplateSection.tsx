@@ -19,6 +19,7 @@ import { llmErrorMessage } from '../../lib/llm';
 import { convertTemplate, type ConvertProgress } from '../../lib/latex/convertTemplate';
 import { splitTexIntoChunks } from '../../lib/latex/splitTemplate';
 import { fillLatexTemplate, TemplateSyntaxError } from '../../lib/latex/fillTemplate';
+import { validateTemplate } from '../../lib/latex/validateTemplate';
 import { useFileText } from '../../lib/files/useFileText';
 import { FileDropzone } from '../ui/FileDropzone';
 import { Btn, Card, FieldTextarea, Skeleton, SectionTitle } from '../ui/primitives';
@@ -52,6 +53,8 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
   // several requests, paced by the provider's per-minute cap, so a bare
   // "Converting…" would look hung.
   const [progress, setProgress] = useState<ConvertProgress | null>(null);
+  // Re-checked on every edit, so conversion faults and hand-edit faults show the same way.
+  const problems = useMemo(() => (draft ? validateTemplate(draft.compiledTemplate) : []), [draft]);
   const texFile = useFileText('Reading that .tex file');
   // The same split the conversion will use, so the warning below reflects
   // what actually gets sent rather than a second guess at it.
@@ -269,6 +272,12 @@ export function TexTemplateSection({ onChanged }: { onChanged?: () => void }) {
             className="font-mono text-xs"
           />
           {syntaxError && <p className="text-sm text-red-600 dark:text-red-400">{syntaxError}</p>}
+          {!syntaxError &&
+            problems.map((p) => (
+              <p key={p} className="text-sm text-red-600 dark:text-red-400">
+                {p}
+              </p>
+            ))}
           <p className="text-xs text-slate-500 dark:text-slate-400">
             This is a starting point, not guaranteed-correct LaTeX. The conversion can
             occasionally drop a brace from an existing command (e.g. turning \textbf{'{'}Title

@@ -111,4 +111,17 @@ describe('estimateConversionMaxTokens', () => {
     const needed = 2800 + Math.ceil(MAX_CHUNK_CHARS / 2.6);
     expect(estimateConversionMaxTokens(prompt, tex)).toBeGreaterThan(needed);
   });
+
+  it('states the list-field and item-command rules', () => {
+    const prompt = buildConvertLatexTemplatePrompt('\section{A}');
+    expect(prompt).toContain('may be used ONLY inside its own {{#each');
+    expect(prompt).toContain('Every \\item must sit inside a list environment');
+  });
+
+  it('adds the problems from a failed attempt, and only then', () => {
+    expect(buildConvertLatexTemplatePrompt('x')).not.toContain('PREVIOUS CONVERSION');
+    const prompt = buildConvertLatexTemplatePrompt('x', undefined, ['`foo` is a list']);
+    expect(prompt).toContain('PREVIOUS CONVERSION');
+    expect(prompt).toContain('- `foo` is a list');
+  });
 });

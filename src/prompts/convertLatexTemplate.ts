@@ -117,7 +117,11 @@ Each loop "skillGroups", items: category, itemsLine (a single comma-joined strin
  * In plain terms: assembles the message asking the AI to turn a pasted
  * LaTeX template into a reusable fill-in-the-blanks version.
  */
-export function buildConvertLatexTemplatePrompt(rawTex: string, part?: { index: number; total: number }): string {
+export function buildConvertLatexTemplatePrompt(
+  rawTex: string,
+  part?: { index: number; total: number },
+  problems: string[] = [],
+): string {
   const tex = truncate(rawTex.trim(), MAX_TEMPLATE_CHARS);
   // Only present for a template big enough to need splitting -- without it
   // the model reasonably assumes it's looking at a whole document and
@@ -134,9 +138,18 @@ do not drop anything that is.
 `
       : '';
 
+  // Set only on the one retry, after validateTemplate found faults.
+  const problemRule =
+    problems.length > 0
+      ? `
+YOUR PREVIOUS CONVERSION OF THIS TEMPLATE HAD THESE PROBLEMS. Fix every one of them:
+${problems.map((p) => `- ${p}`).join('\n')}
+`
+      : '';
+
   return `You convert a LaTeX resume template into a reusable placeholder template. Reply with ONE
 JSON object and nothing else.
-${partRule}
+${partRule}${problemRule}
 
 Exact shape (no extra keys, no markdown, no code fences, no commentary):
 {"compiledTemplate":"…","placeholders":["…"]}
@@ -172,6 +185,12 @@ RULES:
 - Every placeholder you use must appear in "placeholders" as its dotted path relative to its
   loop, e.g. "name", "experience.title", "experience.bullets", "education.gpa". List each used
   placeholder once.
+- A field that is a list (education.details, experience.bullets, projects.bullets,
+  projects.links, skillGroups.items) may be used ONLY inside its own {{#each ...}} block. Writing
+  it as a plain {{...}} tag outside such a block prints nothing. For a one-line skills list, use
+  {{#each skillGroups}}{{category}}: {{itemsLine}}{{/each}} -- itemsLine is a single string.
+- Every \\item must sit inside a list environment (\\begin{itemize}...\\end{itemize}, enumerate,
+  or description). Never put \\item in a section that has no list around it.
 - Do not fabricate resume content -- only replace it with placeholders, never write new text.
 - Do not wrap the output in markdown code fences.
 - In the JSON value for "compiledTemplate", every line break must be a real, single-escaped

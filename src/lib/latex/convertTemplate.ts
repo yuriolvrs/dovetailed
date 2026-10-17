@@ -16,6 +16,7 @@ import {
 } from '../../prompts/convertLatexTemplate';
 import { repairBareCommandBraces } from './fillTemplate';
 import { splitTexIntoChunks } from './splitTemplate';
+import { validateTemplate } from './validateTemplate';
 
 export interface ConvertProgress {
   /** 1-based index of the chunk being converted. */
@@ -23,17 +24,44 @@ export interface ConvertProgress {
   total: number;
 }
 
+/** A conversion result plus any problems validateTemplate still found in it. */
+export interface ConvertedTemplate extends LatexConversionResult {
+  problems: string[];
+}
+
 /**
- * Converts a whole template, chunk by chunk. Chunks run sequentially rather
- * than in parallel: the provider's cap is tokens *per minute*, so firing them
- * at once would just trip it -- llm.ts's 429 backoff then paces the run,
- * which is why this can take a while and reports progress.
- * In plain terms: converts your template one piece at a time, telling you
- * which piece it's on.
+ * Converts a whole template, chunk by chunk, then checks it with
+ * validateTemplate. If the check finds problems, converts once more with the
+ * problems added to the prompt. A result that still has problems is returned
+ * with them, so the UI can show them instead of saving silently.
+ * Chunks run sequentially rather than in parallel: the provider's cap is
+ * tokens *per minute*, so firing them at once would just trip it -- llm.ts's
+ * 429 backoff then paces the run, which is why this can take a while and
+ * reports progress.
+ * In plain terms: converts your template one piece at a time, tries again
+ * once if the result is broken, and reports what is still wrong.
  */
 export async function convertTemplate(
   rawTex: string,
   options: { onProgress?: (progress: ConvertProgress) => void; signal?: AbortSignal } = {},
+): Promise<ConvertedTemplate> {
+  const first = await convertChunks(rawTex, [], options);
+  const firstProblems = validateTemplate(first.compiledTemplate);
+  if (firstProblems.length === 0) return { ...first, problems: [] };
+
+  const second = await convertChunks(rawTex, firstProblems, options);
+  return { ...second, problems: validateTemplate(second.compiledTemplate) };
+}
+
+/**
+ * One full pass over all chunks. `problems` (may be empty) are added to each
+ * chunk's prompt on the retry.
+ * In plain terms: one try at converting the whole template.
+ */
+async function convertChunks(
+  rawTex: string,
+  problems: string[],
+  options: { onProgress?: (progress: ConvertProgress) => void; signal?: AbortSignal },
 ): Promise<LatexConversionResult> {
   const chunks = splitTexIntoChunks(rawTex);
   const compiled: string[] = [];
@@ -41,10 +69,11 @@ export async function convertTemplate(
 
   for (const [i, chunk] of chunks.entries()) {
     options.onProgress?.({ part: i + 1, total: chunks.length });
-    const prompt = buildConvertLatexTemplatePrompt(chunk, { index: i + 1, total: chunks.length });
+    const prompt = buildConvertLatexTemplatePrompt(chunk, { index: i + 1, total: chunks.length }, problems);
     const result = await generateStructured(prompt, isLatexConversionResult, {
       maxTokens: estimateConversionMaxTokens(prompt, chunk),
       reasoningEffort: CONVERSION_REASONING_EFFORT,
+      temperature: 0,
       signal: options.signal,
     });
     // Deterministic repair pass, not another LLM call -- see
