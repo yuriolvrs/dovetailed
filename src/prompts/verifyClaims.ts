@@ -9,6 +9,12 @@ export interface ClaimItem {
   index: number;
   sentence: string;
   evidence: string[];
+  /** The whole paragraph the sentence sits in. Shown to the repair step only. */
+  context?: string;
+  /** Labels of the profile entries the evidence comes from. Shown to the repair step only. */
+  from?: string[];
+  /** An issue found by a code check. The sentence counts as failed with this issue. */
+  forcedIssue?: string;
 }
 
 export interface ClaimVerdict {
@@ -72,9 +78,31 @@ ${renderItems(items)}
 Reply with the JSON object only.`;
 }
 
+/** Failed items grouped by paragraph: the paragraph once, then each failed sentence in it. */
+function renderRepairItems(items: FailedClaimItem[]): string {
+  const groups = new Map<string, FailedClaimItem[]>();
+  for (const item of items) {
+    const key = item.context ?? '';
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return [...groups.entries()]
+    .map(([context, group]) => {
+      const lines = group
+        .map((i) => {
+          const from = i.from && i.from.length > 0 ? `\n  from: ${i.from.join('; ')}` : '';
+          return `${renderItems([i])}${from}`;
+        })
+        .join('\n\n');
+      return context === '' ? lines : `PARAGRAPH: "${context}"\n\n${lines}`;
+    })
+    .join('\n\n---\n\n');
+}
+
 /**
- * Builds the prompt that rewrites failed sentences to match their evidence.
- * In plain terms: asks the AI to cut each flagged sentence back to what the profile really says.
+ * Builds the prompt that rewrites failed sentences to match their evidence. Each failed sentence
+ * comes with the whole paragraph it sits in, so the fix reads well and repeats nothing.
+ * In plain terms: asks the AI to cut each flagged sentence back to what the profile really says,
+ * while looking at the paragraph around it.
  */
 export function buildRepairClaimsPrompt(items: FailedClaimItem[]): string {
   return `You fix cover letter sentences that say more than their evidence. Reply with ONE JSON
@@ -84,15 +112,19 @@ Exact shape (no markdown, no code fences, no commentary):
 {"repairs":[{"index":0,"text":"..."}]}
 
 Rules:
-- Return one repair per sentence, with the same "index" as the input.
-- Rewrite each sentence so it says ONLY what its evidence lines say. Keep the evidence's own
+- Return one repair per FAILED sentence, with the same "index" as the input. Do not return the
+  other sentences of the paragraph.
+- Rewrite each failed sentence so it says ONLY what its evidence lines say. Keep the evidence's own
   ownership verb ("assisted" stays "assisted"). Remove any result, number, scale, or tool the
-  evidence does not state. Fix the problem named in "issue".
-- Keep it one sentence, in plain ASCII punctuation, in the same voice as the original.
+  evidence does not state. Fix the problem named in "issue". If the issue is a wrong employer,
+  name the employer in "from" or name none.
+- Read the whole PARAGRAPH first. The new sentence must fit between its neighbours and must not repeat what another sentence in the paragraph already says.
+- Keep it one sentence, in plain ASCII punctuation, in the same voice as the original. Never write
+  "my profile" or "my resume".
 - ${UNTRUSTED}
 
 === SENTENCES TO FIX ===
-${renderItems(items)}
+${renderRepairItems(items)}
 === END ===
 
 Reply with the JSON object only.`;

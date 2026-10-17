@@ -73,8 +73,8 @@ describe('generateCoverLetterContent', () => {
     const result = await generateCoverLetterContent(profile(), posting(), [offered]);
 
     expect(result.sourceMap).toEqual([
-      { generatedText: 'I love React.', atomIds: ['real1'], claim: true },
-      { generatedText: 'I am excited.', atomIds: [], claim: false },
+      { generatedText: 'I love React.', atomIds: ['real1'], claim: true, requirementIds: [] },
+      { generatedText: 'I am excited.', atomIds: [], claim: false, requirementIds: [] },
     ]);
     expect(result.content).toEqual({
       greeting: 'Dear Hiring Manager,',
@@ -188,6 +188,163 @@ describe('generateCoverLetterContent claim check', () => {
   });
 });
 
+describe('generateCoverLetterContent letter plan and checks', () => {
+  beforeEach(() => generateStructuredMock.mockReset());
+
+  const hospitalLabel = 'Experience: Scribe, St. Mary Hospital';
+  const clinicLabel = 'Experience: Volunteer, Riverside Clinic';
+  const hospitalAtom = atom({ id: 'h1', source: 'experience', sourceLabel: hospitalLabel, text: 'Documented patient visits' });
+  const clinicAtom = atom({ id: 'c1', source: 'experience', sourceLabel: clinicLabel, text: 'Welcomed patients at the front desk' });
+  const letterProfile = profile({
+    experience: [
+      { company: 'St. Mary Hospital', title: 'Scribe', current: false, bullets: ['Documented patient visits'] },
+      { company: 'Riverside Clinic', title: 'Volunteer', current: false, bullets: ['Welcomed patients at the front desk'] },
+    ],
+  });
+  const planned = posting({
+    analysis: analysis({
+      requirements: [{ id: 'r1', text: 'Document patient care', severity: 'required', order: 1 }],
+      matches: [{ requirementId: 'r1', status: 'full', atomIds: ['h1'] }],
+    }),
+  });
+  const reply = (sentences: unknown[][]) => ({
+    greeting: 'Dear Hiring Manager,',
+    paragraphs: sentences.map((s) => ({ sentences: s })),
+    closing: 'Sincerely,',
+  });
+
+  it('puts the plan in the prompt and carries valid requirementIds into the sourceMap', async () => {
+    generateStructuredMock.mockResolvedValueOnce(
+      reply([
+        [
+          { text: 'I documented patient visits.', claim: true, atomIds: ['h1'], requirementIds: ['r1', 'bogus'] },
+          { text: 'I welcomed patients.', claim: true, atomIds: ['c1'], requirementIds: 'r1' },
+          { text: 'Thank you.', claim: false, atomIds: [] },
+        ],
+      ]),
+    );
+    generateStructuredMock.mockResolvedValue({ results: [{ index: 0, supported: true, issue: '' }, { index: 1, supported: true, issue: '' }] });
+    const result = await generateCoverLetterContent(letterProfile, planned, [hospitalAtom, clinicAtom]);
+    const prompt = generateStructuredMock.mock.calls[0][0] as string;
+    expect(prompt).toContain('LETTER PLAN');
+    expect(prompt).toContain('Body paragraph 1 answers requirement id "r1"');
+    expect(prompt).toContain(hospitalLabel);
+    expect(result.sourceMap.map((e) => e.requirementIds)).toEqual([['r1'], [], []]);
+  });
+
+  it('flags a sentence that names the wrong employer and repairs it with its paragraph in view', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(
+        reply([
+          [
+            { text: 'I documented patient visits.', claim: true, atomIds: ['h1'] },
+            { text: 'At St. Mary Hospital I welcomed patients at the front desk.', claim: true, atomIds: ['c1'] },
+          ],
+        ]),
+      )
+      // The model check passes both; the employer check still fails the second.
+      .mockResolvedValueOnce({
+        results: [
+          { index: 0, supported: true, issue: '' },
+          { index: 1, supported: true, issue: '' },
+        ],
+      })
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'At Riverside Clinic I welcomed patients at the front desk.' }] })
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: true, issue: '' }] });
+    const result = await generateCoverLetterContent(letterProfile, planned, [hospitalAtom, clinicAtom]);
+
+    const repairPrompt = generateStructuredMock.mock.calls[2][0] as string;
+    expect(repairPrompt).toContain('PARAGRAPH: "I documented patient visits. At St. Mary Hospital I welcomed');
+    expect(repairPrompt).toContain('issue: names the wrong employer');
+    expect(repairPrompt).toContain(`from: ${clinicLabel}`);
+    expect(result.content.paragraphs).toEqual([
+      'I documented patient visits. At Riverside Clinic I welcomed patients at the front desk.',
+    ]);
+    expect(result.sourceMap[1].supported).toBe(true);
+  });
+
+  it('keeps the flag when the repair still names the wrong employer', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(
+        reply([[{ text: 'At St. Mary Hospital I welcomed patients at the front desk.', claim: true, atomIds: ['c1'] }]]),
+      )
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: true, issue: '' }] })
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'At St. Mary Hospital I greeted patients.' }] });
+    const result = await generateCoverLetterContent(letterProfile, planned, [hospitalAtom, clinicAtom]);
+    expect(result.sourceMap[0].supported).toBe(false);
+    expect(result.content.paragraphs[0]).toContain('At St. Mary Hospital I welcomed patients at the front desk.');
+  });
+
+  it('removes a repeated sentence and its sourceMap entry', async () => {
+    generateStructuredMock.mockResolvedValueOnce(
+      reply([
+        [
+          { text: 'I documented patient visits at the hospital.', claim: false, atomIds: [] },
+          { text: 'At the hospital I documented patient visits.', claim: false, atomIds: [] },
+          { text: 'I enjoy teamwork.', claim: false, atomIds: [] },
+        ],
+      ]),
+    );
+    const result = await generateCoverLetterContent(letterProfile, planned, [hospitalAtom]);
+    expect(result.content.paragraphs).toEqual(['I documented patient visits at the hospital. I enjoy teamwork.']);
+    expect(result.sourceMap.map((e) => e.generatedText)).toEqual([
+      'I documented patient visits at the hospital.',
+      'I enjoy teamwork.',
+    ]);
+  });
+
+  it('strips meta phrases about the profile and drops an emptied paragraph', async () => {
+    generateStructuredMock.mockResolvedValueOnce(
+      reply([
+        [{ text: 'I documented patient visits, as stated in my profile.', claim: false, atomIds: [] }],
+        [{ text: 'My profile shows a record of care.', claim: false, atomIds: [] }],
+      ]),
+    );
+    const result = await generateCoverLetterContent(letterProfile, planned, [hospitalAtom]);
+    expect(result.content.paragraphs).toEqual(['I documented patient visits.']);
+    expect(result.sourceMap).toHaveLength(1);
+  });
+
+  it('a repair that repeats another sentence is removed after repair', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(
+        reply([
+          [
+            { text: 'I documented patient visits at the hospital.', claim: true, atomIds: ['h1'] },
+            { text: 'I managed all hospital records.', claim: true, atomIds: ['h1'] },
+          ],
+        ]),
+      )
+      .mockResolvedValueOnce({
+        results: [
+          { index: 0, supported: true, issue: '' },
+          { index: 1, supported: false, issue: 'managed' },
+        ],
+      })
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'At the hospital I documented patient visits.' }] })
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: true, issue: '' }] });
+    const result = await generateCoverLetterContent(letterProfile, planned, [hospitalAtom]);
+    expect(result.content.paragraphs).toEqual(['I documented patient visits at the hospital.']);
+    expect(result.sourceMap).toHaveLength(1);
+  });
+
+  it('holistic route: simple plan with no requirements and no gap, summary offered when present', async () => {
+    const summary = atom({ id: 'sum', source: 'additional', sourceLabel: 'Summary', text: 'Moving into health IT' });
+    generateStructuredMock.mockResolvedValueOnce(reply([[{ text: 'I want health IT work.', claim: true, atomIds: ['sum'] }]]));
+    generateStructuredMock.mockResolvedValue({ results: [{ index: 0, supported: true, issue: '' }] });
+    const chosen = atom({ id: 'h1', text: 'Documented visits' });
+    await generateCoverLetterContent(letterProfile, posting({ analysis: undefined }), [chosen, summary], {
+      holistic: { atoms: [chosen], roleSummary: 'A role.' },
+    });
+    const prompt = generateStructuredMock.mock.calls[0][0] as string;
+    expect(prompt).toContain('citing the Summary line (id sum)');
+    expect(prompt).toContain('id: sum |');
+    expect(prompt).not.toContain('Body paragraph 1');
+    expect(prompt).not.toContain('Gap:');
+  });
+});
+
+
 describe('generateCoverLetterContent on the direct route', () => {
   beforeEach(() => generateStructuredMock.mockReset());
 
@@ -250,5 +407,26 @@ describe('withoutRepeatedGreeting', () => {
 
   it('keeps a first paragraph that is only the greeting rather than emptying it', () => {
     expect(withoutRepeatedGreeting('Dear Team,', ['Dear Team,'])).toEqual(['Dear Team,']);
+  });
+});
+
+describe('generateCoverLetterContent target company', () => {
+  beforeEach(() => generateStructuredMock.mockReset());
+
+  it('does not flag an opening sentence that names the company applied to', async () => {
+    const worked = profile({
+      experience: [{ company: 'Riverside Clinic', title: 'Volunteer', current: false, bullets: ['Greeted patients'] }],
+    });
+    const other = atom({ id: 'o1', source: 'experience', sourceLabel: 'Experience: Scribe, Hospital', text: 'Charted visits' });
+    generateStructuredMock
+      .mockResolvedValueOnce({
+        greeting: 'Dear Hiring Manager,',
+        paragraphs: [{ sentences: [{ text: 'I would value the role at Riverside Clinic.', claim: true, atomIds: ['o1'] }] }],
+        closing: 'Sincerely,',
+      })
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: true, issue: '' }] });
+    const result = await generateCoverLetterContent(worked, posting({ company: 'Riverside Clinic' }), [other]);
+    expect(result.sourceMap[0].supported).toBe(true);
+    expect(generateStructuredMock).toHaveBeenCalledTimes(2);
   });
 });

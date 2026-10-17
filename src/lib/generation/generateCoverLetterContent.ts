@@ -1,16 +1,14 @@
-// What this file is: orchestrates one LLM call to write a tailored cover
-// letter -- picks which real profile atoms to offer the model as evidence
-// (same "confirmed matches first, additionalInfo next, rest of the profile
-// as filler" priority selectResumeContent.ts uses for its own evidence
-// pool), builds the prompt, calls the LLM, and enforces that any atomIds it
-// comes back with are actually ones it was offered (an extra safety net on
-// top of the prompt's own instruction not to invent ids, same defensive
-// pattern runMatching.ts uses for matchRequirement.ts's response). The model
-// answers sentence by sentence; this joins the sentences into paragraphs and
-// keeps one sourceMap entry per sentence.
-// In plain terms: the code that picks your most relevant real accomplishments,
-// asks the AI to write a cover letter grounded in them, and double-checks it
-// didn't cite anything it wasn't actually given.
+// What this file is: orchestrates cover letter generation. Flow: (1) plan in code -- the 2-3 most
+// important covered requirements, each with its best evidence line, one key gap to admit, and the
+// Summary line (letterPlan.ts); (2) one LLM call that writes the letter sentence by sentence, with
+// atomIds and requirementIds checked against what was offered; (3) tidy -- strip meta phrases and
+// drop repeated sentences (letterChecks.ts); (4) claim check -- each cited sentence is verified
+// against its evidence, a sentence naming the wrong employer fails, and failures are repaired with
+// their whole paragraph in view (verifyClaims.ts); (5) tidy again, because a repair can bring back
+// a banned phrase or a repeat. It also picks the evidence pool (confirmed matches first,
+// additionalInfo next, rest of the profile as filler).
+// In plain terms: decides what the letter should say, asks the AI to write it from your real
+// accomplishments, then checks and cleans the result before you see it.
 
 import type { CoverLetterContent, JobAnalysis, JobPosting, Profile, ProfileAtom, SourceMapEntry } from '../../types';
 import { generateStructured, type GenerateOptions } from '../llm';
@@ -18,10 +16,14 @@ import {
   buildGenerateCoverLetterPrompt,
   isCoverLetterGeneration,
   MAX_CANDIDATES,
+  plannedRequirementIds,
   type CoverLetterCandidate,
 } from '../../prompts/generateCoverLetter';
+import type { ClaimItem } from '../../prompts/verifyClaims';
 import { stripAtomIdReferences } from './runHolisticSelection';
 import { verifyClaimSentences } from './verifyClaims';
+import { planCoverLetter } from './letterPlan';
+import { cleanMetaPhrases, findDuplicateSentences, findWrongEmployer } from './letterChecks';
 
 /**
  * Picks which profile atoms to offer the model as citable evidence:
@@ -81,11 +83,27 @@ export async function generateCoverLetterContent(
   // On the direct route the pass has already chosen the evidence and read the
   // role, so there is nothing to rank and no requirement list to send; the
   // prompt renders "(none listed)" for requirements on its own.
-  const candidateAtoms = options.holistic
+  const baseAtoms = options.holistic
     ? options.holistic.atoms.slice(0, MAX_CANDIDATES)
     : selectEvidenceCandidates(analysis!, atoms);
   const roleSummary = options.holistic ? options.holistic.roleSummary : analysis!.roleSummary;
   const requirements = options.holistic ? [] : analysis!.requirements.map((r) => r.text);
+
+  // The plan is decided in code. Its evidence atoms are always offered to the model.
+  const plan = planCoverLetter(options.holistic ? undefined : analysis, atoms);
+  const known = new Map([...atoms, ...baseAtoms].map((a) => [a.id, a]));
+  const pinned = [
+    ...plan.requirements.map((r) => r.evidence.atomId),
+    plan.gap?.evidence.atomId,
+    plan.summaryAtomId,
+  ]
+    .map((id) => (id ? known.get(id) : undefined))
+    .filter((a): a is ProfileAtom => a !== undefined);
+  const seen = new Set<string>();
+  const candidateAtoms = [...pinned, ...baseAtoms]
+    .filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
+    .slice(0, MAX_CANDIDATES);
+  const planIds = new Set([...plan.requirements.map((r) => r.id), ...(plan.gap ? [plan.gap.id] : [])]);
 
   const candidates: CoverLetterCandidate[] = candidateAtoms.map((a) => ({
     id: a.id,
@@ -105,6 +123,7 @@ export async function generateCoverLetterContent(
     requirements,
     candidates,
     styleSample,
+    plan,
   });
 
   const result = await generateStructured(prompt, isCoverLetterGeneration, {
@@ -122,62 +141,96 @@ export async function generateCoverLetterContent(
   });
 
   const atomsById = new Map(candidateAtoms.map((a) => [a.id, a]));
-  const sourceMap: SourceMapEntry[] = [];
-  const paragraphs = result.paragraphs.map((paragraph, p) => {
-    const sentences = paragraph.sentences.map((sentence, s) => {
+  let items: LetterItem[] = result.paragraphs.flatMap((paragraph, p) =>
+    paragraph.sentences.map((sentence, s) => {
       // Ids the model wrote into its prose come out, as in interview prep.
       let text = normalizeHyphens(stripAtomIdReferences(sentence.text, candidateIds)).trim();
       // The greeting prints on its own line; drop it if the letter repeats it.
       if (p === 0 && s === 0) text = withoutRepeatedGreeting(result.greeting, [text])[0];
-      return { ...sentence, text };
-    });
-    for (const sentence of sentences) {
-      sourceMap.push({
-        generatedText: sentence.text,
+      const entry: SourceMapEntry = {
+        generatedText: text,
         // Defensive: only trust ids that were actually offered, even though
         // the prompt already forbids inventing one.
         atomIds: sentence.atomIds.filter((id) => candidateIds.has(id)),
         claim: sentence.claim,
-      });
-    }
-    return sentences.map((sentence) => sentence.text).join(' ');
-  });
+        requirementIds: plannedRequirementIds(sentence, planIds),
+      };
+      return { p, entry };
+    }),
+  );
+  items = tidyItems(items);
 
-  // Claim check: every claim sentence that cites lines is tested against those lines.
-  const toCheck = sourceMap
-    .map((entry, index) => ({
+  // Claim check: every claim sentence that cites lines is tested against those lines. A sentence
+  // that names an employer its lines do not belong to fails first, whatever the model says.
+  const wrongEmployerOf = (text: string, atomIds: string[]) =>
+    findWrongEmployer(
+      text,
+      atomIds.map((id) => atomsById.get(id)?.sourceLabel ?? ''),
+      profile,
+      posting.company,
+    );
+  const paragraphText = (p: number) =>
+    items.filter((i) => i.p === p).map((i) => i.entry.generatedText).join(' ');
+  const toCheck: ClaimItem[] = [];
+  items.forEach(({ p, entry }, index) => {
+    const evidence = entry.atomIds.map((id) => atomsById.get(id)?.text ?? '').filter((t) => t !== '');
+    if (entry.claim === false || entry.atomIds.length === 0 || evidence.length === 0) return;
+    const wrong = wrongEmployerOf(entry.generatedText, entry.atomIds);
+    if (wrong) entry.supported = false;
+    toCheck.push({
       index,
       sentence: entry.generatedText,
-      evidence: entry.atomIds.map((id) => atomsById.get(id)?.text ?? '').filter((t) => t !== ''),
-      claim: entry.claim,
-      cited: entry.atomIds.length > 0,
-    }))
-    .filter((i) => i.claim !== false && i.cited && i.evidence.length > 0)
-    .map(({ index, sentence, evidence }) => ({ index, sentence, evidence }));
-  const repairedText = new Map<string, string>();
-  for (const verdict of await verifyClaimSentences(toCheck, { signal: options.signal })) {
-    const entry = sourceMap[verdict.index];
-    if (verdict.supported !== undefined) entry.supported = verdict.supported;
-    const fixed = normalizeHyphens(verdict.text);
-    if (fixed !== entry.generatedText) {
-      repairedText.set(entry.generatedText, fixed);
-      entry.generatedText = fixed;
-    }
-  }
-  // A repaired sentence is replaced in place inside its paragraph.
-  const finalParagraphs = paragraphs.map((paragraph) => {
-    let next = paragraph;
-    for (const [from, to] of repairedText) next = next.replace(from, to);
-    return next;
+      evidence,
+      context: paragraphText(p),
+      from: [...new Set(entry.atomIds.map((id) => atomsById.get(id)?.sourceLabel ?? '').filter((l) => l !== ''))],
+      ...(wrong ? { forcedIssue: 'names the wrong employer' } : {}),
+    });
   });
+  for (const verdict of await verifyClaimSentences(toCheck, {
+    signal: options.signal,
+    // A repair must not name a wrong employer either.
+    acceptRepair: (item, text) => !wrongEmployerOf(text, items[item.index].entry.atomIds),
+  })) {
+    const entry = items[verdict.index].entry;
+    if (verdict.supported !== undefined) entry.supported = verdict.supported;
+    entry.generatedText = normalizeHyphens(verdict.text);
+  }
+  // A repair can bring back a banned phrase or repeat another sentence.
+  items = tidyItems(items);
+
+  const paragraphs: string[] = [];
+  for (const p of [...new Set(items.map((i) => i.p))]) paragraphs.push(paragraphText(p));
 
   const content: CoverLetterContent = {
     greeting: normalizeHyphens(result.greeting),
-    paragraphs: finalParagraphs,
+    paragraphs,
     closing: normalizeHyphens(result.closing),
   };
 
-  return { content, sourceMap };
+  return { content, sourceMap: items.map((i) => i.entry) };
+}
+
+/** One sentence of the letter with the paragraph it belongs to. */
+interface LetterItem {
+  p: number;
+  entry: SourceMapEntry;
+}
+
+/**
+ * Applies the deterministic text checks: removes meta phrases and stock openers or closers
+ * (dropping a sentence that cannot be cleaned), then drops later copies of repeated sentences.
+ * In plain terms: tidies the letter with fixed rules, no AI.
+ */
+function tidyItems(items: LetterItem[]): LetterItem[] {
+  const cleaned: LetterItem[] = [];
+  for (const item of items) {
+    const text = cleanMetaPhrases(item.entry.generatedText);
+    if (text === null) continue;
+    item.entry.generatedText = text;
+    cleaned.push(item);
+  }
+  const duplicates = findDuplicateSentences(cleaned.map((i) => i.entry.generatedText));
+  return cleaned.filter((_, i) => !duplicates.has(i));
 }
 
 /**

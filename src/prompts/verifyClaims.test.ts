@@ -34,6 +34,21 @@ describe('repair prompt', () => {
   });
 });
 
+describe('paragraph repair prompt', () => {
+  it('shows each paragraph once with its failed sentences, numbered by position', () => {
+    const para = 'First fine sentence. Bad one. Another bad one.';
+    const prompt = buildRepairClaimsPrompt([
+      { ...item, index: 0, sentence: 'Bad one.', context: para, issue: 'wrong employer', from: ['Experience: Scribe, Hospital'] },
+      { ...item, index: 1, sentence: 'Another bad one.', context: para, issue: 'adds a result' },
+    ]);
+    expect(prompt.split(`PARAGRAPH: "${para}"`)).toHaveLength(2);
+    expect(prompt).toContain('[0] sentence: "Bad one."');
+    expect(prompt).toContain('[1] sentence: "Another bad one."');
+    expect(prompt).toContain('from: Experience: Scribe, Hospital');
+    expect(prompt).toContain('must not repeat what another sentence in the paragraph');
+  });
+});
+
 describe('validators', () => {
   it('accepts well-formed verify and repair replies', () => {
     expect(isClaimVerification({ results: [{ index: 0, supported: true, issue: '' }] })).toBe(true);

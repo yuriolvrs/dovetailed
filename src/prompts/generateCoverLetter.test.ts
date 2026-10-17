@@ -4,7 +4,12 @@
 // and we correctly recognize a good vs. bad AI reply.
 
 import { describe, expect, it } from 'vitest';
-import { buildGenerateCoverLetterPrompt, isCoverLetterGeneration } from './generateCoverLetter';
+import {
+  buildGenerateCoverLetterPrompt,
+  isCoverLetterGeneration,
+  plannedRequirementIds,
+  type CoverLetterPlan,
+} from './generateCoverLetter';
 
 const validResult = {
   greeting: 'Dear Hiring Manager,',
@@ -63,6 +68,59 @@ describe('buildGenerateCoverLetterPrompt', () => {
     expect(buildGenerateCoverLetterPrompt({ ...base, styleSample: 'My own voice.' })).toContain(
       'WRITING STYLE SAMPLE',
     );
+  });
+});
+
+describe('plan in the prompt', () => {
+  const base = { candidateName: 'Jane Doe', roleSummary: 'Builds widgets.', requirements: [], candidates: [] };
+  const ev = (atomId: string, sourceLabel: string) => ({ atomId, sourceLabel, text: `text of ${atomId}` });
+  const plan: CoverLetterPlan = {
+    requirements: [
+      { id: 'r1', text: 'Chart documentation', evidence: ev('e1', 'Experience: Scribe, Hospital') },
+      { id: 'r2', text: 'Triage calls', evidence: ev('e2', 'Experience: Volunteer, Clinic') },
+    ],
+    gap: { id: 'r3', text: 'Epic EHR', evidence: ev('e3', 'Experience: Scribe, Hospital') },
+    summaryAtomId: 'sum1',
+  };
+
+  it('asks for one body paragraph per planned requirement and lists the plan', () => {
+    const prompt = buildGenerateCoverLetterPrompt({ ...base, plan });
+    expect(prompt).toContain('EXACTLY 4 paragraphs');
+    expect(prompt).toContain('Body paragraph 1 answers requirement id "r1"');
+    expect(prompt).toContain('Body paragraph 2 answers requirement id "r2"');
+    expect(prompt).toContain('Gap: the posting asks for "Epic EHR"');
+    expect(prompt).toContain('citing the Summary line (id sum1)');
+    expect(prompt).toContain('"requirementIds":["…"]');
+    expect(prompt).toContain('"r1", "r2", "r3"');
+  });
+
+  it('uses 3 paragraphs for one requirement or none, with no gap line when there is no gap', () => {
+    const one = buildGenerateCoverLetterPrompt({ ...base, plan: { requirements: [plan.requirements[0]] } });
+    expect(one).toContain('EXACTLY 3 paragraphs');
+    expect(one).not.toContain('Gap:');
+    expect(buildGenerateCoverLetterPrompt(base)).toContain('EXACTLY 3 paragraphs');
+    expect(buildGenerateCoverLetterPrompt(base)).not.toContain('LETTER PLAN (decided');
+  });
+});
+
+describe('plannedRequirementIds', () => {
+  const ids = new Set(['r1', 'r2']);
+  const s = (requirementIds?: unknown) => ({ text: 'x', claim: true, atomIds: [], requirementIds });
+
+  it('keeps known ids, drops unknown ones, and treats a missing or malformed field as []', () => {
+    expect(plannedRequirementIds(s(['r1', 'zzz', 5]), ids)).toEqual(['r1']);
+    expect(plannedRequirementIds(s(), ids)).toEqual([]);
+    expect(plannedRequirementIds(s('r1'), ids)).toEqual([]);
+  });
+
+  it('is accepted by the validator with or without the field', () => {
+    const reply = (extra: object) => ({
+      greeting: 'Hi,',
+      paragraphs: [{ sentences: [{ text: 'x', claim: false, atomIds: [], ...extra }] }],
+      closing: 'Bye,',
+    });
+    expect(isCoverLetterGeneration(reply({}))).toBe(true);
+    expect(isCoverLetterGeneration(reply({ requirementIds: ['r1'] }))).toBe(true);
   });
 });
 

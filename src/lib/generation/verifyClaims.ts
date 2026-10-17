@@ -22,6 +22,8 @@ export interface VerifiedClaim {
 export interface VerifyClaimOptions {
   /** Set false to skip the repair step (reword suggestions are dropped, not fixed). Default true. */
   repair?: boolean;
+  /** Extra code check on a repair that passed the re-verify. Return false to reject it. */
+  acceptRepair?: (item: ClaimItem, text: string) => boolean;
   signal?: GenerateOptions['signal'];
 }
 
@@ -66,12 +68,16 @@ export async function verifyClaimSentences(
   // renumbered its repairs that way even when given other indexes, so each
   // repair landed on the wrong sentence. Positions are mapped back here.
   const verdicts = await verify(numbered(items), options.signal);
-  if (!verdicts) return results;
+  if (!verdicts) {
+    // A code-check issue stands even when the model check could not run.
+    for (const [n, item] of items.entries()) if (item.forcedIssue) results[n].supported = false;
+    return results;
+  }
 
   const failed: { n: number; item: ClaimItem; issue: string }[] = [];
   for (const [n, item] of items.entries()) {
-    if (!verdicts.has(n)) continue;
-    const issue = verdicts.get(n);
+    if (!verdicts.has(n) && !item.forcedIssue) continue;
+    const issue = item.forcedIssue ?? verdicts.get(n);
     if (issue === null || issue === undefined) results[n].supported = true;
     else {
       results[n].supported = false;
@@ -94,8 +100,9 @@ export async function verifyClaimSentences(
   }
 
   const candidates = failed
-    .map((f, k) => ({ n: f.n, sentence: repairs.get(k), evidence: f.item.evidence }))
-    .filter((c): c is { n: number; sentence: string; evidence: string[] } => Boolean(c.sentence));
+    .map((f, k) => ({ n: f.n, item: f.item, sentence: repairs.get(k), evidence: f.item.evidence }))
+    .filter((c): c is { n: number; item: ClaimItem; sentence: string; evidence: string[] } => Boolean(c.sentence))
+    .filter((c) => options.acceptRepair?.(c.item, c.sentence) ?? true);
   if (candidates.length === 0) return results;
 
   const recheck = await verify(

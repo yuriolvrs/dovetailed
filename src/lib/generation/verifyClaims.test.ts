@@ -104,6 +104,39 @@ describe('verifyClaimSentences', () => {
   });
 });
 
+describe('verifyClaimSentences with code-check issues', () => {
+  beforeEach(() => generateStructuredMock.mockReset());
+  const forced = [
+    { index: 0, sentence: 'At Hospital I greeted patients.', evidence: ['Greeted patients'], context: 'Para.', forcedIssue: 'names the wrong employer' },
+  ];
+
+  it('fails a forced item even when the model passes it, then sends the paragraph to repair', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(verdicts([0, true]))
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'I greeted patients.' }] })
+      .mockResolvedValueOnce(verdicts([0, true]));
+    const out = await verifyClaimSentences(forced);
+    expect(out[0]).toMatchObject({ text: 'I greeted patients.', supported: true });
+    const repairPrompt = generateStructuredMock.mock.calls[1][0] as string;
+    expect(repairPrompt).toContain('PARAGRAPH: "Para."');
+    expect(repairPrompt).toContain('issue: names the wrong employer');
+  });
+
+  it('rejects a repair that acceptRepair refuses and keeps the unsupported mark', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(verdicts([0, true]))
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'At Hospital I greeted.' }] });
+    const out = await verifyClaimSentences(forced, { acceptRepair: () => false });
+    expect(out[0]).toMatchObject({ text: 'At Hospital I greeted patients.', supported: false });
+    expect(generateStructuredMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('still marks a forced item unsupported when the model check cannot run', async () => {
+    generateStructuredMock.mockRejectedValueOnce(new Error('down'));
+    expect((await verifyClaimSentences(forced))[0].supported).toBe(false);
+  });
+});
+
 describe('dropUnsupportedRewords', () => {
   beforeEach(() => generateStructuredMock.mockReset());
   const original = 'Assisted with billing issues';
