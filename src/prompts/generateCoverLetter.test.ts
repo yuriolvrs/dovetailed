@@ -45,6 +45,7 @@ describe('buildGenerateCoverLetterPrompt', () => {
     expect(prompt).toContain('Never open with "I am excited to apply"');
     expect(prompt).toContain('I look forward to\n     discussing how my experience can contribute');
     expect(prompt).toContain('seamless, aligns');
+    expect(prompt).toContain('Never mention the profile');
     expect(prompt).toContain('career change or an employment gap');
     expect(prompt).toContain('plain ASCII hyphens');
     expect(prompt).not.toContain('business value');
