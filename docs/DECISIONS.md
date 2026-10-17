@@ -29,3 +29,10 @@ Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reas
 **Decision:** No per-entry bullet cap. Bullets are ordered by weighted coverage (fit-score weight times match status, summed over requirements), and `fitToOnePage` trims from the bottom as before. Self-negative bullets are not printed, and a self-negative parenthetical is cut from a skill item. A project with a description and no bullets is kept. `Profile.summary` is imported verbatim and printed under the contact line. Experience prints before Education when there is any experience. A location already inside the company text is not repeated.
 **Reason:** The page-fit step already measures the real page, so a fixed cap only removed evidence. A self-negative line hurts the candidate; a dropped bullet stays one click away in the editor's "more from your profile" list, so a false positive is recoverable.
 **Status:** Accepted
+
+## 2026-10-17 — Follow-ups from re-running the personas (plan 03)
+
+**Context:** Re-running the three evaluation personas on the new code showed: duties filled the 14-item cap and pushed out a key qualification; the claim repairs were never applied; the letter could not name a career change because the profile summary was not offered as evidence.
+**Decision:** Analysis takes up to 12 qualifications and 8 duties and never drops a qualification for a duty. Each claim-check call numbers its items 0..n-1 and the code maps answers back, because the model renumbers by position. The profile summary is an atom labelled "Summary": it can be cited in the letter, but `runMatching` never offers it as evidence for a requirement, and it does not count as profile content on its own. Self-praise ("strong", "solid", "proven") is a fact the claim check must find in the evidence.
+**Reason:** The live run showed each problem directly. A self-description is the user's own aim, which is fair to state in a letter, but it is not proof that a requirement is met.
+**Status:** Accepted
