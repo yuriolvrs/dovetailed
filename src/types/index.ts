@@ -331,6 +331,11 @@ export interface SourceMapEntry {
    * result, scope, or ownership). Absent when the check did not run.
    */
   supported?: boolean;
+  /**
+   * Cover letters only: the posting requirements this sentence answers.
+   * Absent on resumes and on letters written before the letter plan existed.
+   */
+  requirementIds?: string[];
 }
 
 export interface Generation {
