@@ -8,7 +8,8 @@
 
 import type { JobPosting, Profile } from '../../types';
 import { buildAnalyzePostingPrompt, isExtractedAnalysis, toJobAnalysis } from '../../prompts/analyzePosting';
-import { generateStructured } from '../llm';
+import { EmptyResponseError, ProxyRequestError, generateStructured } from '../llm';
+import { JsonParseError } from '../json';
 import { fillPostingDetails, saveJobPosting } from '../jobStore';
 import { buildProfileAtoms } from '../profileAtoms';
 import { runMatching } from '../matching/runMatching';
@@ -36,6 +37,32 @@ export interface PipelineOptions {
 }
 
 /**
+ * True for failures that often pass on a second try: a broken or empty model
+ * answer, a proxy server error, or a dropped connection. Never true for a stop.
+ * In plain terms: decides if a failed AI step is worth one more automatic try.
+ */
+function isRetryable(err: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return false;
+  if (err instanceof JsonParseError || err instanceof EmptyResponseError) return true;
+  if (err instanceof ProxyRequestError) return err.status >= 500;
+  return err instanceof TypeError && /fetch|network|load failed/i.test(err.message);
+}
+
+/**
+ * Runs an AI step, and runs it once more if the first try fails in a way
+ * isRetryable accepts. The second failure is thrown as it is.
+ * In plain terms: gives a step one automatic second chance.
+ */
+async function withOneRetry<T>(run: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    if (!isRetryable(err, signal)) throw err;
+    return run();
+  }
+}
+
+/**
  * Runs the four steps in order and returns the posting with its analysis and
  * matches filled in. Throws on the first failure. Work that finished before
  * the failure is already saved, so calling this again resumes there.
@@ -53,13 +80,17 @@ export async function buildDocuments(
   // Step 1: read the posting into a requirement list.
   if (!posting.analysis) {
     onProgress?.({ step: 'read' });
-    const extracted = await generateStructured(buildAnalyzePostingPrompt(posting.rawText), isExtractedAnalysis, {
-      temperature: 0.2,
-      // Up to 20 requirements plus the reasoning model's own thinking; 2500
-      // ran out on a long hospital posting.
-      maxTokens: 4000,
+    const extracted = await withOneRetry(
+      () =>
+        generateStructured(buildAnalyzePostingPrompt(posting.rawText), isExtractedAnalysis, {
+          temperature: 0.2,
+          // Up to 20 requirements plus the reasoning model's own thinking; 2500
+          // ran out on a long hospital posting.
+          maxTokens: 4000,
+          signal,
+        }),
       signal,
-    });
+    );
     posting = { ...fillPostingDetails(posting, extracted), analysis: toJobAnalysis(extracted) };
     await saveJobPosting(posting);
   }
@@ -69,7 +100,9 @@ export async function buildDocuments(
 
   // Step 2: match every requirement against the profile.
   if (posting.analysis!.matches.length === 0 && posting.analysis!.requirements.length > 0) {
-    onProgress?.({ step: 'match', done: 0, total: posting.analysis!.requirements.length });
+    // One more than the requirement count: matching may add a final "second
+    // look" step, and a total that only grows keeps the bar from moving back.
+    onProgress?.({ step: 'match', done: 0, total: posting.analysis!.requirements.length + 1 });
     const matches = await runMatching(
       posting.analysis!.requirements,
       atoms,
@@ -95,10 +128,14 @@ export async function buildDocuments(
 
   // Step 4: write the cover letter from the same matches.
   onProgress?.({ step: 'coverLetter' });
-  const letter = await generateCoverLetterContent(profile, posting, atoms, {
-    useWritingStyle: profile.writingSamples.some((s) => s.trim() !== ''),
+  const letter = await withOneRetry(
+    () =>
+      generateCoverLetterContent(profile, posting, atoms, {
+        useWritingStyle: profile.writingSamples.some((s) => s.trim() !== ''),
+        signal,
+      }),
     signal,
-  });
+  );
   await saveGeneration(newGeneration(posting.id, 'coverLetter', letter.content, letter.sourceMap, 'matched'));
   onStepDone?.('coverLetter', posting);
 

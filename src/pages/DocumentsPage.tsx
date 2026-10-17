@@ -49,6 +49,7 @@ import { DocumentEmptyState } from '../components/ui/DocumentEmptyState';
 import { PaneSwitch, paneClass, type Pane } from '../components/ui/PaneSwitch';
 import { CoverLetterSection } from '../components/coverLetter/CoverLetterSection';
 import { InterviewPrepSection } from '../components/interviewPrep/InterviewPrepSection';
+import { getBuild, subscribeBuild, stopBuild, type BuildState } from '../lib/pipeline/buildRunner';
 import { useAutosaveIndicator } from '../lib/useAutosaveIndicator';
 import { useEscapeKey } from '../lib/useEscapeKey';
 import { Btn, Card, PageSkeleton, SavedIndicator } from '../components/ui/primitives';
@@ -126,6 +127,15 @@ export default function DocumentsPage() {
   // TexTemplateSection), if any -- gates whether "Export .tex" appears at all.
   const [template, setTemplate] = useState<LatexTemplate | null>(null);
   const [texExportError, setTexExportError] = useState<string | null>(null);
+
+  // The posting's build, if one is running (the letter may still be written
+  // after the resume opens this page). Passed to the Cover Letter tab.
+  const [build, setBuild] = useState<BuildState | null>(() => (id ? (getBuild(id) ?? null) : null));
+  useEffect(() => {
+    if (!id) return;
+    setBuild(getBuild(id) ?? null);
+    return subscribeBuild(id, setBuild);
+  }, [id]);
 
   const refresh = useCallback(() => {
     if (!id) return;
@@ -613,6 +623,8 @@ export default function DocumentsPage() {
           profile={profile}
           strategy={strategy}
           actionsPortalTarget={sideActionsEl}
+          build={strategy === 'matched' ? build : null}
+          onStopBuild={() => stopBuild(posting.id)}
         />
       ) : tab === 'interviewPrep' ? (
         <InterviewPrepSection posting={posting} profile={profile} actionsPortalTarget={sideActionsEl} />

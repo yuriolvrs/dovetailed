@@ -27,6 +27,7 @@ import { buildProfileAtoms } from '../../lib/profileAtoms';
 import { loadGeneration, listSnapshots, newGeneration, saveGeneration, snapshotGeneration } from '../../lib/genStore';
 import { generateCoverLetterContent } from '../../lib/generation/generateCoverLetterContent';
 import { llmErrorMessage } from '../../lib/llm';
+import type { BuildState } from '../../lib/pipeline/buildRunner';
 import { useAutosaveIndicator } from '../../lib/useAutosaveIndicator';
 import { useEscapeKey } from '../../lib/useEscapeKey';
 import { coverLetterToMarkdown } from '../../lib/export/toMarkdown';
@@ -45,6 +46,8 @@ export function CoverLetterSection({
   profile,
   strategy = 'matched',
   actionsPortalTarget,
+  build = null,
+  onStopBuild,
 }: {
   posting: JobPosting;
   profile: Profile;
@@ -59,6 +62,11 @@ export function CoverLetterSection({
    * portal into it so they land in the same header position the resume
    * tab's actions use, instead of appearing in their own row lower down. */
   actionsPortalTarget: HTMLDivElement | null;
+  /** The posting's Build run, if any. While it is still writing the letter,
+   * this tab shows that instead of the "write" prompt, and loads the letter
+   * when the build saves it. */
+  build?: BuildState | null;
+  onStopBuild?: () => void;
 }) {
   const [generation, setGeneration] = useState<Generation | null | 'none'>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -94,6 +102,15 @@ export function CoverLetterSection({
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Loads the letter once the build saves it.
+  const letterSaved = Boolean(build?.doneSteps.includes('coverLetter'));
+  useEffect(() => {
+    if (letterSaved) refresh();
+  }, [letterSaved, refresh]);
+
+  const buildWriting = build?.status === 'running' && !letterSaved;
+  const buildError = build?.status === 'error' ? llmErrorMessage(build.error, 'Writing your cover letter') : null;
 
   async function handleGenerate() {
     const selection = posting.holisticSelection;
@@ -333,14 +350,29 @@ export function CoverLetterSection({
         </div>
       )}
 
-      {!hasLetter ? (
+      {!hasLetter && buildWriting ? (
+        <DocumentEmptyState
+          ghost="letter"
+          title="Writing your cover letter…"
+          action={
+            onStopBuild && (
+              <Btn variant="secondary" onClick={onStopBuild}>
+                Stop
+              </Btn>
+            )
+          }
+        >
+          Your resume is ready. The letter is the last step and shows here as soon as it is saved. This
+          can take a minute.
+        </DocumentEmptyState>
+      ) : !hasLetter ? (
         <DocumentEmptyState
           ghost="letter"
           title="Write a tailored cover letter"
           action={
             <Btn onClick={handleGenerate} disabled={status === 'loading'}>
               <Sparkles size={14} />
-              {status === 'loading' ? 'Writing…' : 'Write cover letter'}
+              {status === 'loading' ? 'Writing…' : buildError ? 'Try again' : 'Write cover letter'}
             </Btn>
           }
           extra={
@@ -364,10 +396,10 @@ export function CoverLetterSection({
                   .
                 </p>
               )}
-              {status === 'error' && error && (
+              {((status === 'error' && error) || buildError) && (
                 <p role="alert" className="flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400">
                   <AlertTriangle size={14} className="shrink-0" />
-                  {error}
+                  {status === 'error' && error ? error : buildError}
                 </p>
               )}
             </>

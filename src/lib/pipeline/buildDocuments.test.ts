@@ -6,6 +6,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildDocuments } from './buildDocuments';
+import { JsonParseError } from '../json';
 import type { JobAnalysis, JobPosting, Profile } from '../../types';
 
 const m = vi.hoisted(() => ({
@@ -17,7 +18,10 @@ const m = vi.hoisted(() => ({
   fitToOnePage: vi.fn(),
   generateCoverLetterContent: vi.fn(),
 }));
-vi.mock('../llm', () => ({ generateStructured: m.generateStructured }));
+vi.mock('../llm', async () => ({
+  ...(await vi.importActual<typeof import('../llm')>('../llm')),
+  generateStructured: m.generateStructured,
+}));
 vi.mock('../jobStore', () => ({ saveJobPosting: m.saveJobPosting, fillPostingDetails: (p: unknown) => p }));
 vi.mock('../matching/runMatching', () => ({ runMatching: m.runMatching }));
 vi.mock('../genStore', () => ({
@@ -109,5 +113,56 @@ describe('buildDocuments', () => {
     const seen: unknown[] = [];
     await buildDocuments(posting(), profile, { onProgress: (p) => seen.push(p) });
     expect(seen).toContainEqual({ step: 'match', done: 1, total: 1 });
+  });
+
+  it('retries the letter once on an unusable response, then succeeds', async () => {
+    m.generateCoverLetterContent.mockRejectedValueOnce(new JsonParseError('bad'));
+    await buildDocuments(posting(), profile);
+    expect(m.generateCoverLetterContent).toHaveBeenCalledTimes(2);
+    expect(m.saveGeneration.mock.calls.map((c) => c[0].type)).toEqual(['resume', 'coverLetter']);
+  });
+
+  it('surfaces the error after the second letter failure', async () => {
+    m.generateCoverLetterContent.mockRejectedValue(new JsonParseError('bad'));
+    await expect(buildDocuments(posting(), profile)).rejects.toThrow('bad');
+    expect(m.generateCoverLetterContent).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry after a stop', async () => {
+    const controller = new AbortController();
+    m.generateCoverLetterContent.mockImplementation(async () => {
+      controller.abort();
+      throw new JsonParseError('bad');
+    });
+    await expect(buildDocuments(posting(), profile, { signal: controller.signal })).rejects.toThrow();
+    expect(m.generateCoverLetterContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry a plain error', async () => {
+    m.generateCoverLetterContent.mockRejectedValue(new Error('boom'));
+    await expect(buildDocuments(posting(), profile)).rejects.toThrow('boom');
+    expect(m.generateCoverLetterContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries the posting analysis once on an unusable response', async () => {
+    m.generateStructured.mockRejectedValueOnce(new JsonParseError('bad')).mockResolvedValue({});
+    await buildDocuments(posting(), profile);
+    expect(m.generateStructured).toHaveBeenCalledTimes(2);
+  });
+
+  it('has the resume saved and reported before the letter starts', async () => {
+    const order: string[] = [];
+    m.generateCoverLetterContent.mockImplementation(async () => {
+      order.push('letter');
+      return { content: {}, sourceMap: [] };
+    });
+    await buildDocuments(posting(), profile, { onStepDone: (s) => order.push(s) });
+    expect(order.indexOf('resume')).toBeLessThan(order.indexOf('letter'));
+  });
+
+  it('starts the match bar with a total that cannot shrink the bar later', async () => {
+    const seen: { done?: number; total?: number }[] = [];
+    await buildDocuments(posting(), profile, { onProgress: (p) => p.step === 'match' && seen.push(p) });
+    expect(seen[0]).toEqual({ step: 'match', done: 0, total: 2 });
   });
 });

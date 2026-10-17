@@ -72,9 +72,12 @@ export default function BuildPage() {
     });
   }, [id]);
 
+  // The resume is ready before the letter, so open the documents as soon as
+  // it is saved. The Cover Letter tab there shows the letter being written.
+  const resumeReady = build?.status === 'done' || Boolean(build?.doneSteps.includes('resume'));
   useEffect(() => {
-    if (id && build?.status === 'done') navigate(`/jobs/${id}/documents`, { replace: true });
-  }, [build?.status, id, navigate]);
+    if (id && resumeReady) navigate(`/jobs/${id}/documents`, { replace: true });
+  }, [resumeReady, id, navigate]);
 
   // Reloads the posting first, so a retry starts from what the failed run saved.
   // In plain terms: tries again from the step that stopped.
