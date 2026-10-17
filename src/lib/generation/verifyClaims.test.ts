@@ -34,11 +34,29 @@ describe('verifyClaimSentences', () => {
   it('repairs a failed sentence and keeps the repair when it re-verifies', async () => {
     generateStructuredMock
       .mockResolvedValueOnce(verdicts([0, true], [1, false]))
-      .mockResolvedValueOnce({ repairs: [{ index: 1, text: 'I tracked no-shows in a spreadsheet.' }] })
-      .mockResolvedValueOnce(verdicts([1, true]));
+      // Each call numbers its items by position, so the one failed item is 0.
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'I tracked no-shows in a spreadsheet.' }] })
+      .mockResolvedValueOnce(verdicts([0, true]));
     const out = await verifyClaimSentences(items);
     expect(out[1]).toMatchObject({ text: 'I tracked no-shows in a spreadsheet.', supported: true });
     expect(generateStructuredMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('maps answers back by position when the caller indexes do not start at 0', async () => {
+    const sparse = [
+      { index: 5, sentence: 'I wrote copy that grew sales.', evidence: ['Wrote some product descriptions'] },
+      { index: 9, sentence: 'I used Canva.', evidence: ['Made Canva graphics'] },
+    ];
+    generateStructuredMock
+      .mockResolvedValueOnce(verdicts([0, false], [1, true]))
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'I wrote some product descriptions.' }] })
+      .mockResolvedValueOnce(verdicts([0, true]));
+    const out = await verifyClaimSentences(sparse);
+    expect(out).toEqual([
+      { index: 5, text: 'I wrote some product descriptions.', supported: true },
+      { index: 9, text: 'I used Canva.', supported: true },
+    ]);
+    expect(generateStructuredMock.mock.calls[0][0]).toContain('[1] sentence: "I used Canva."');
   });
 
   it('keeps the original and marks it unsupported when the repair still fails', async () => {

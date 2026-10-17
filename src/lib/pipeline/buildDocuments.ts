@@ -55,7 +55,9 @@ export async function buildDocuments(
     onProgress?.({ step: 'read' });
     const extracted = await generateStructured(buildAnalyzePostingPrompt(posting.rawText), isExtractedAnalysis, {
       temperature: 0.2,
-      maxTokens: 2500,
+      // Up to 20 requirements plus the reasoning model's own thinking; 2500
+      // ran out on a long hospital posting.
+      maxTokens: 4000,
       signal,
     });
     posting = { ...fillPostingDetails(posting, extracted), analysis: toJobAnalysis(extracted) };
