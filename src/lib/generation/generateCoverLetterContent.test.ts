@@ -127,6 +127,67 @@ describe('generateCoverLetterContent', () => {
   });
 });
 
+describe('generateCoverLetterContent claim check', () => {
+  beforeEach(() => generateStructuredMock.mockReset());
+
+  const letter = (text: string) => ({
+    greeting: 'Dear Hiring Manager,',
+    paragraphs: [{ sentences: [{ text, claim: true, atomIds: ['a1'] }] }],
+    closing: 'Sincerely,',
+  });
+
+  it('replaces U+2011 hyphens and uses temperature 0.3', async () => {
+    generateStructuredMock.mockResolvedValueOnce({
+      ...letter('I did full‑time work.'),
+      greeting: 'Dear Hiring‑Manager,',
+      closing: 'Best‐wishes,',
+    });
+    const result = await generateCoverLetterContent(profile(), posting(), [atom({ id: 'a1', text: 'Worked full-time' })]);
+    expect(result.content.paragraphs).toEqual(['I did full-time work.']);
+    expect(result.content.greeting).toBe('Dear Hiring-Manager,');
+    expect(result.content.closing).toBe('Best-wishes,');
+    expect(result.sourceMap[0].generatedText).toBe('I did full-time work.');
+    expect(generateStructuredMock.mock.calls[0][2].temperature).toBe(0.3);
+  });
+
+  it('sets supported from the verifier and applies a passing repair', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(letter('I managed the front desk.'))
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: false, issue: 'managed' }] })
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'I assisted at the front desk.' }] })
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: true, issue: '' }] });
+    const result = await generateCoverLetterContent(profile(), posting(), [
+      atom({ id: 'a1', text: 'Assisted at the front desk' }),
+    ]);
+    expect(result.content.paragraphs).toEqual(['I assisted at the front desk.']);
+    expect(result.sourceMap[0]).toMatchObject({ generatedText: 'I assisted at the front desk.', supported: true });
+  });
+
+  it('marks a sentence supported: false when the repair fails and keeps its text', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(letter('I managed the front desk.'))
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: false, issue: 'managed' }] })
+      .mockResolvedValueOnce({ repairs: [{ index: 0, text: 'I ran the front desk.' }] })
+      .mockResolvedValueOnce({ results: [{ index: 0, supported: false, issue: 'ran' }] });
+    const result = await generateCoverLetterContent(profile(), posting(), [
+      atom({ id: 'a1', text: 'Assisted at the front desk' }),
+    ]);
+    expect(result.content.paragraphs).toEqual(['I managed the front desk.']);
+    expect(result.sourceMap[0].supported).toBe(false);
+  });
+
+  it('leaves supported undefined and still returns the letter when the check errors', async () => {
+    generateStructuredMock
+      .mockResolvedValueOnce(letter('I assisted at the front desk.'))
+      .mockRejectedValueOnce(new Error('down'));
+    const result = await generateCoverLetterContent(profile(), posting(), [
+      atom({ id: 'a1', text: 'Assisted at the front desk' }),
+    ]);
+    expect(result.content.paragraphs).toEqual(['I assisted at the front desk.']);
+    expect(result.sourceMap[0].supported).toBeUndefined();
+  });
+});
+
 describe('generateCoverLetterContent on the direct route', () => {
   beforeEach(() => generateStructuredMock.mockReset());
 

@@ -21,6 +21,7 @@ import {
   type CoverLetterCandidate,
 } from '../../prompts/generateCoverLetter';
 import { stripAtomIdReferences } from './runHolisticSelection';
+import { verifyClaimSentences } from './verifyClaims';
 
 /**
  * Picks which profile atoms to offer the model as citable evidence:
@@ -107,7 +108,7 @@ export async function generateCoverLetterContent(
   });
 
   const result = await generateStructured(prompt, isCoverLetterGeneration, {
-    temperature: 0.5,
+    temperature: 0.3,
     // Generous headroom: openai/gpt-oss-120b is a reasoning model whose
     // chain-of-thought (billed separately as "reasoning" tokens, but still
     // deducted from max_tokens) can itself run past 1000 tokens for this
@@ -120,11 +121,12 @@ export async function generateCoverLetterContent(
     signal: options.signal,
   });
 
+  const atomsById = new Map(candidateAtoms.map((a) => [a.id, a]));
   const sourceMap: SourceMapEntry[] = [];
   const paragraphs = result.paragraphs.map((paragraph, p) => {
     const sentences = paragraph.sentences.map((sentence, s) => {
       // Ids the model wrote into its prose come out, as in interview prep.
-      let text = stripAtomIdReferences(sentence.text, candidateIds).trim();
+      let text = normalizeHyphens(stripAtomIdReferences(sentence.text, candidateIds)).trim();
       // The greeting prints on its own line; drop it if the letter repeats it.
       if (p === 0 && s === 0) text = withoutRepeatedGreeting(result.greeting, [text])[0];
       return { ...sentence, text };
@@ -141,9 +143,49 @@ export async function generateCoverLetterContent(
     return sentences.map((sentence) => sentence.text).join(' ');
   });
 
-  const content: CoverLetterContent = { greeting: result.greeting, paragraphs, closing: result.closing };
+  // Claim check: every claim sentence that cites lines is tested against those lines.
+  const toCheck = sourceMap
+    .map((entry, index) => ({
+      index,
+      sentence: entry.generatedText,
+      evidence: entry.atomIds.map((id) => atomsById.get(id)?.text ?? '').filter((t) => t !== ''),
+      claim: entry.claim,
+      cited: entry.atomIds.length > 0,
+    }))
+    .filter((i) => i.claim !== false && i.cited && i.evidence.length > 0)
+    .map(({ index, sentence, evidence }) => ({ index, sentence, evidence }));
+  const repairedText = new Map<string, string>();
+  for (const verdict of await verifyClaimSentences(toCheck, { signal: options.signal })) {
+    const entry = sourceMap[verdict.index];
+    if (verdict.supported !== undefined) entry.supported = verdict.supported;
+    const fixed = normalizeHyphens(verdict.text);
+    if (fixed !== entry.generatedText) {
+      repairedText.set(entry.generatedText, fixed);
+      entry.generatedText = fixed;
+    }
+  }
+  // A repaired sentence is replaced in place inside its paragraph.
+  const finalParagraphs = paragraphs.map((paragraph) => {
+    let next = paragraph;
+    for (const [from, to] of repairedText) next = next.replace(from, to);
+    return next;
+  });
+
+  const content: CoverLetterContent = {
+    greeting: normalizeHyphens(result.greeting),
+    paragraphs: finalParagraphs,
+    closing: normalizeHyphens(result.closing),
+  };
 
   return { content, sourceMap };
+}
+
+/**
+ * Replaces the non-breaking and special hyphens (U+2010, U+2011, U+2012) with a plain "-".
+ * In plain terms: swaps odd hyphen characters for the normal one.
+ */
+export function normalizeHyphens(text: string): string {
+  return text.replace(/[‐‑‒]/g, '-');
 }
 
 /**

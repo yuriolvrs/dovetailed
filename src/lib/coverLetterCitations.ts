@@ -27,7 +27,7 @@ export interface CitedSpan {
  * In plain terms: is this sentence backed, harmless, or in need of a check.
  */
 function statusOf(entry: SourceMapEntry, text: string, isLast: boolean, context: string): SpanStatus {
-  if (entry.atomIds.length > 0) return 'cited';
+  if (entry.atomIds.length > 0) return entry.supported === false ? 'flagged' : 'cited';
   // A sentence the model marked as no claim still counts as one if it names
   // something the posting doesn't (an employer, a tool, a figure).
   if (entry.claim === false) return isPlainClosing(text, context) ? 'plain' : 'flagged';

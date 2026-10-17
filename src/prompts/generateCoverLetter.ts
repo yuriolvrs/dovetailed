@@ -72,31 +72,35 @@ Rules:
   no more than 3-4 sentences per paragraph. Only add a 4th paragraph if the evidence genuinely
   needs it to avoid cramming unrelated points into one paragraph -- 3 is the default. Follow this
   narrative structure:
-  1. Interest & positioning: state enthusiasm for this specific role/company and give a brief,
-     1-sentence value proposition summarizing how the candidate's core background fits. 2-3
-     sentences max.
+  1. Opening: start with the most relevant concrete fact from the evidence, then add a brief,
+     1-sentence statement of how the candidate's core background fits this role. 2-3 sentences
+     max. Never open with "I am excited to apply" or any similar stock opener.
   2. Primary fit: select the candidate's MOST relevant skills/experience for
      "${roleTitle ?? 'this role'}". Anchor this paragraph to the specific employer name and/or job
      title behind that experience (drawn from the evidence's sourceLabel) so the letter reads as
      connected to a real resume, not a vague list of abstract skills. Do not list duties
-     chronologically -- group related accomplishments together and frame them around impact,
-     outcomes, and business value. Cover only the 1-2 most relevant experiences, not a survey of
+     chronologically -- group related accomplishments together. State plainly what the
+     candidate did, in the evidence's own words. Cover only the 1-2 most relevant experiences, not a survey of
      everything in the evidence list.
   3. Closing: this paragraph is REQUIRED in every letter -- never drop it. It must contain BOTH:
      (a) a thank-you to the reader for their time/consideration in reviewing the application, and
      (b) a forward-looking line expressing interest in discussing the role/interview next steps
-     (e.g. "Thank you for considering my application. I look forward to discussing how my
-     experience aligns with ${company ? `${company}'s` : `the company's`} goals."). Keep it to 1-2
+     (e.g. "Thank you for considering my application. I would welcome the chance to talk about
+     ${company ? `the role at ${company}` : `the role`}."). Never write "I look forward to
+     discussing how my experience can contribute" or a close to it. Keep it to 1-2
      short sentences -- do not restate qualifications already covered in earlier paragraphs, and do
      not introduce any new skills or complementary strengths here.
   Writing style: avoid robotic, resume-like cataloging ("My duties included...", "I was
   responsible for...", or listing unrelated tasks back-to-back in one sentence). Avoid run-on
   sentences: keep each sentence to roughly 25-30 words max, and do not chain multiple clauses
   together with semicolons or repeated "and"/"where" connectors. Favor fewer, more concentrated
-  claims over covering many. You may reframe
-  operational tasks in terms of their impact (e.g. "edited descriptions and pricing" ->
-  "optimized product listings to improve visibility") as long as you add no fact beyond what the
-  evidence states -- do not invent outcomes, metrics, or scope that aren't in the evidence.
+  claims over covering many. Keep the profile's ownership verb: "assisted" stays "assisted", and
+  "helped with" never becomes "led" or "managed". Never add a result, a number, a scale (such as
+  "high-volume"), or an improvement that the cited line does not state. Never praise the company
+  with facts that are not in the posting. Do not use these words or phrases: seamless, aligns
+  perfectly, honed, dynamic, passionate, synergy, leverage. Use plain ASCII hyphens only. If the
+  profile shows a career change or an employment gap, say so in one plain sentence and cite the
+  profile entries that show it (it is a claim).
   Maintain smooth thematic transitions between sentences and paragraphs. Maintain an authentic,
   professional tone -- do NOT inflate levels of authority, seniority, or project scope (e.g. do
   not turn "assisted with" or "helped with" into "spearheaded", "led", "oversaw", "managed",

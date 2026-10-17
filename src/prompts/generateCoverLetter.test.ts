@@ -34,6 +34,23 @@ describe('buildGenerateCoverLetterPrompt', () => {
     expect(prompt).toContain('React');
   });
 
+  it('keeps the ownership verb, bans stock phrases and impact framing', () => {
+    const prompt = buildGenerateCoverLetterPrompt({
+      candidateName: 'Jane Doe',
+      roleSummary: 'Builds widgets.',
+      requirements: [],
+      candidates: [],
+    });
+    expect(prompt).toContain('"assisted" stays "assisted"');
+    expect(prompt).toContain('Never open with "I am excited to apply"');
+    expect(prompt).toContain('I look forward to\n     discussing how my experience can contribute');
+    expect(prompt).toContain('seamless, aligns');
+    expect(prompt).toContain('career change or an employment gap');
+    expect(prompt).toContain('plain ASCII hyphens');
+    expect(prompt).not.toContain('business value');
+    expect(prompt).not.toContain('in terms of their impact');
+  });
+
   it('includes a style sample block only when one is provided', () => {
     const base = {
       candidateName: 'Jane Doe',

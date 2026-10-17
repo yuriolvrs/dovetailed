@@ -88,7 +88,9 @@ function EvidenceNote({
     }
     const message =
       active.status === 'flagged'
-        ? 'No profile line backs this claim. Check that it is true, or rewrite it.'
+        ? active.entry && active.entry.atomIds.length > 0
+          ? 'This sentence goes beyond the profile lines it cites. Check that it is true, or rewrite it.'
+          : 'No profile line backs this claim. Check that it is true, or rewrite it.'
         : active.status === 'edited'
           ? 'Your own wording. It is not checked against your profile.'
           : 'No claim here, so it needs no evidence.';

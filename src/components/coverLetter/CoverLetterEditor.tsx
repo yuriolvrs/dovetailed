@@ -136,7 +136,10 @@ export function CoverLetterEditor({
           ) : (
             <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
               <Check size={15} aria-hidden />
-              Every claim cites your profile
+              {sourceMap.some((e) => e.atomIds.length > 0) &&
+              sourceMap.every((e) => e.atomIds.length === 0 || e.claim === false || e.supported === true)
+                ? 'Every claim checked against your profile'
+                : 'Every claim cites your profile'}
             </p>
           )}
           <p className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">

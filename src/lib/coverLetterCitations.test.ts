@@ -25,6 +25,15 @@ describe('citeParagraph', () => {
     ]);
   });
 
+  it('flags a cited sentence the claim check rejected, and keeps supported ones cited', () => {
+    const checked: SourceMapEntry[] = [
+      { generatedText: 'I ran the spring fair.', atomIds: ['e1'], claim: true, supported: true },
+      { generatedText: 'I managed the fair.', atomIds: ['e1'], claim: true, supported: false },
+    ];
+    const spans = citeParagraph('I ran the spring fair. I managed the fair.', checked, opts);
+    expect(spans.filter((s) => s.status !== 'space').map((s) => s.status)).toEqual(['cited', 'flagged']);
+  });
+
   it('treats changed or added text as the user\'s own', () => {
     const spans = citeParagraph('I am eager to join Brightline. I ran the big spring fair.', map, opts);
     expect(spans.map((s) => s.status)).toEqual(['plain', 'edited']);
@@ -58,6 +67,12 @@ describe('carryCitations', () => {
       { generatedText: 'I ran the fair and wrote the newsletter.', atomIds: ['e1', 'e2'], claim: true },
     ]);
     expect(citeParagraph('I ran the fair and wrote the newsletter.', next, opts)[0].status).toBe('cited');
+  });
+
+  it('keeps a reworded paragraph flagged when it held an unsupported cited sentence', () => {
+    const unsupported: SourceMapEntry[] = [{ generatedText: 'I managed the fair.', atomIds: ['e1'], claim: true, supported: false }];
+    const next = carryCitations(unsupported, 'I managed the fair.', 'I handled the fair.', opts);
+    expect(citeParagraph('I handled the fair.', next, opts)[0].status).toBe('flagged');
   });
 
   it('keeps a reworded paragraph flagged when it held an unbacked claim', () => {
