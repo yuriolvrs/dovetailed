@@ -10,7 +10,8 @@
     "build:favicon": "node scripts/build-favicon.ts",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval": "vitest run --config eval/vitest.config.ts"
   },
   "dependencies": {
     "dexie": "^4.0.11",

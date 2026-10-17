@@ -1,0 +1,18 @@
+{
+  "persona": "A",
+  "note": "Matching is by lowercase substring. 'match' is tested against requirement text, 'coveredBy' and 'mustNotBeCoveredBy' against profile line text. Empty coveredBy means the profile has no honest evidence (a gap is correct).",
+  "items": [
+    { "id": "appointment-scheduling", "match": ["appointment", "scheduling"], "coveredBy": ["scheduling of infusion chairs", "Book appointments", "Epic (infusion scheduling"], "mustNotBeCoveredBy": [] },
+    { "id": "orient-train-staff", "match": ["orient", "new employee"], "coveredBy": ["Trained new nurses"], "mustNotBeCoveredBy": ["scheduling of infusion chairs"] },
+    { "id": "ms-office", "match": ["ms office", "microsoft office", "outlook"], "coveredBy": ["MS Word, Excel"], "mustNotBeCoveredBy": [] },
+    { "id": "communication-skills", "match": ["communication"], "coveredBy": [], "mustNotBeCoveredBy": ["Spanish (conversational)"] },
+    { "id": "bilingual", "match": ["bilingual", "spanish"], "coveredBy": ["Spanish (conversational)"], "mustNotBeCoveredBy": [] },
+    { "id": "epic-systems-expert", "match": ["expert user", "systems software", "computer applications"], "coveredBy": ["Epic go-live", "Epic (infusion scheduling"], "mustNotBeCoveredBy": [] },
+    { "id": "customer-service", "match": ["customer service"], "coveredBy": ["helping front desk"], "mustNotBeCoveredBy": [] },
+    { "id": "managed-care-authorizations", "match": ["managed care", "authorization", "medicare", "medicaid"], "coveredBy": [], "mustNotBeCoveredBy": ["Epic (infusion scheduling"] },
+    { "id": "medical-terminology", "match": ["medical terminology"], "coveredBy": ["Patient care", "Discharge teaching", "Charge nurse"], "mustNotBeCoveredBy": [] },
+    { "id": "unkept-appointments", "match": ["unkept", "scheduling errors", "no-show"], "coveredBy": ["spreadsheet to track no-shows"], "mustNotBeCoveredBy": [] },
+    { "id": "template-creation", "match": ["template"], "coveredBy": [], "mustNotBeCoveredBy": [] },
+    { "id": "leadership-oversight", "match": ["leadership", "oversight"], "coveredBy": ["Charge nurse 2-3 shifts"], "mustNotBeCoveredBy": [] }
+  ]
+}

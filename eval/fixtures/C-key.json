@@ -1,0 +1,14 @@
+{
+  "persona": "C",
+  "note": "Matching is by lowercase substring. 'Windows (no Mac experiance)' is a self-negative line and must never count as Mac evidence.",
+  "items": [
+    { "id": "estimates", "match": ["estimate"], "coveredBy": ["compared actual costs to estimates"], "mustNotBeCoveredBy": [] },
+    { "id": "mac-and-excel", "match": ["mac-based", "advanced excel", "excel functions"], "coveredBy": ["Excel (advanced", "Built Excel reports"], "mustNotBeCoveredBy": ["Windows (no Mac"] },
+    { "id": "customer-service-experience", "match": ["customer service", "project support"], "coveredBy": ["Answered vendor phone and email questions", "Worked with production and sales on billing issues"], "mustNotBeCoveredBy": [] },
+    { "id": "communication", "match": ["communicat"], "coveredBy": ["Worked with production and sales on billing issues", "Answered vendor phone and email questions"], "mustNotBeCoveredBy": [] },
+    { "id": "associate-degree", "match": ["associate degree", "degree"], "coveredBy": ["Accounting"], "mustNotBeCoveredBy": [] },
+    { "id": "job-tickets", "match": ["job ticket"], "coveredBy": [], "mustNotBeCoveredBy": ["Job costing for customer print orders"] },
+    { "id": "proofs-press-checks", "match": ["proof", "press check"], "coveredBy": [], "mustNotBeCoveredBy": [] },
+    { "id": "physical-travel", "match": ["lifting", "travel between"], "coveredBy": [], "mustNotBeCoveredBy": [] }
+  ]
+}

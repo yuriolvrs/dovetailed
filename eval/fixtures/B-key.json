@@ -1,0 +1,16 @@
+{
+  "persona": "B",
+  "note": "Matching is by lowercase substring. The senior thesis is a project with no bullets, so it is not a profile line the matcher can cite (known import gap).",
+  "items": [
+    { "id": "social-media", "match": ["social media"], "coveredBy": ["Helped with social media", "Made Canva graphics for Instagram", "Posted on the office's Instagram"], "mustNotBeCoveredBy": [] },
+    { "id": "photography-image-editing", "match": ["photograph", "photoshop", "adobe", "image editing"], "coveredBy": ["Took product photos", "Adobe Photoshop"], "mustNotBeCoveredBy": [] },
+    { "id": "copywriting", "match": ["copywriting", "website copy", "written"], "coveredBy": ["Wrote some product descriptions"], "mustNotBeCoveredBy": [] },
+    { "id": "tools-shopify-canva-office", "match": ["shopify", "canva", "microsoft office"], "coveredBy": ["Shopify", "Canva", "Microsoft Office"], "mustNotBeCoveredBy": [] },
+    { "id": "email-marketing", "match": ["email"], "coveredBy": ["weekly email newsletter", "Mailchimp"], "mustNotBeCoveredBy": [] },
+    { "id": "customer-service", "match": ["customer service"], "coveredBy": ["Customer service in busy cafe"], "mustNotBeCoveredBy": [] },
+    { "id": "events", "match": ["event", "trade show"], "coveredBy": ["Helped plan events"], "mustNotBeCoveredBy": [] },
+    { "id": "press-releases", "match": ["press release", "media alert"], "coveredBy": [], "mustNotBeCoveredBy": ["social media", "newsletter"] },
+    { "id": "quickbooks", "match": ["quickbooks"], "coveredBy": [], "mustNotBeCoveredBy": [] },
+    { "id": "print-collateral", "match": ["brochure", "flyer"], "coveredBy": [], "mustNotBeCoveredBy": [] }
+  ]
+}

@@ -1,0 +1,10 @@
+// What this file is: TypeScript compiler settings for the evaluation harness in eval/. Same
+// strict rules as the app, plus Node types for file access.
+// In plain terms: lets `tsc -b` check the eval scripts for mistakes too.
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  },
+  "include": ["eval", "src/vite-env.d.ts"]
+}
