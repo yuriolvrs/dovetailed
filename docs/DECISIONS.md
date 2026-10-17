@@ -36,3 +36,17 @@ Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reas
 **Decision:** Analysis takes up to 12 qualifications and 8 duties and never drops a qualification for a duty. Each claim-check call numbers its items 0..n-1 and the code maps answers back, because the model renumbers by position. The profile summary is an atom labelled "Summary": it can be cited in the letter, but `runMatching` never offers it as evidence for a requirement, and it does not count as profile content on its own. Self-praise ("strong", "solid", "proven") is a fact the claim check must find in the evidence.
 **Reason:** The live run showed each problem directly. A self-description is the user's own aim, which is fair to state in a letter, but it is not proof that a requirement is met.
 **Status:** Accepted
+
+## 2026-10-17 — Cover letters are planned in code and tidied by code (round 2)
+
+**Context:** The blind re-judge after plan 03 still rejected every letter. Facts appeared under the wrong employer, sentences repeated after repair, "as stated in my profile" leaked, the letters recited the profile, and they never admitted a gap.
+**Decision:** Code picks the plan before the model writes: the 2-3 most important covered requirements with their best line, one key gap, and the summary line. Their atoms are always offered. Each sentence returns the requirement ids it answers. After writing and after repair, fixed rules remove meta phrases and stock openers or closers and drop repeated sentences. A sentence that names an employer its cited lines do not belong to fails the claim check; the company applied to is never counted. Repairs see the whole paragraph.
+**Reason:** Choosing what to say is deterministic work, so code is more reliable than the prompt. Text rules cannot be argued with by the model. Paragraph context stops a repair from copying its neighbour.
+**Status:** Accepted
+
+## 2026-10-17 — The resume opens before the letter; bad replies retry once (round 2)
+
+**Context:** A build took 60–130 s, most of it the letter. One letter call failed with an unusable reply and needed a manual retry.
+**Decision:** The build page opens the documents page when the resume is saved. The Cover Letter tab shows the letter being written, with Stop, and loads it when saved. On a letter failure the tab offers its own generate button, not a full rebuild, so resume edits are kept. Posting analysis and the letter retry once on a JSON parse error, an empty reply, a proxy 5xx or a dropped connection, never after Stop and never on 4xx (a 429 already has its own backoff).
+**Reason:** The resume is useful on its own, so the user should not wait for the letter. One retry fixes most malformed replies at low cost; more retries would hide real failures and burn the daily token budget.
+**Status:** Accepted
