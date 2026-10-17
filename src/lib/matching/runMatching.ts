@@ -13,8 +13,10 @@ import { matchDegree } from './degreeMatch';
 import { SUMMARY_LABEL } from '../profileAtoms';
 import {
   buildBatchMatchPrompt,
+  buildGapLookPrompt,
   buildMatchRequirementPrompt,
   isBatchMatchVerification,
+  isGapLookReply,
   isMatchVerification,
   type MatchCandidate,
   type MatchVerification,
@@ -34,6 +36,11 @@ const CONCURRENCY = 2;
 // with the same results within the run-to-run noise of single calls. The
 // free tier's daily token budget is what a busy day runs out of first.
 const BATCH_SIZE = 6;
+
+// Limits for the second-look call on gaps: how many gap requirements and how
+// many profile lines one call carries.
+const SECOND_LOOK_MAX_REQUIREMENTS = 12;
+const SECOND_LOOK_MAX_LINES = 60;
 
 // Education isn't eligible evidence for requirement matching -- a degree
 // doesn't demonstrate a skill or requirement the way a skill/experience/
@@ -79,11 +86,26 @@ interface Prepared {
   candidates: { atom: ProfileAtom }[];
 }
 
+/**
+ * Orders atom ids so experience and project bullets come before skills and
+ * additional lines, keeping the model's order inside each group. The fit panel
+ * and the letter show the first id as the covering line.
+ * In plain terms: puts the job bullets ahead of bare skill tags.
+ */
+function strongestFirst(ids: string[], atoms: ProfileAtom[]): string[] {
+  const bySource = new Map(atoms.map((a) => [a.id, a.source]));
+  const isBullet = (id: string) => bySource.get(id) === 'experience' || bySource.get(id) === 'projects';
+  return [...ids.filter(isBullet), ...ids.filter((id) => !isBullet(id))];
+}
+
 // Turns the model's answer for one requirement into a match, trusting only
 // ids from that requirement's own candidate list.
 function toMatch({ requirement, candidates }: Prepared, verification: MatchVerification): RequirementMatch {
   const candidateIds = new Set(candidates.map((c) => c.atom.id));
-  const confirmedIds = verification.atomIds.filter((id) => candidateIds.has(id));
+  const confirmedIds = strongestFirst(
+    verification.atomIds.filter((id) => candidateIds.has(id)),
+    candidates.map((c) => c.atom),
+  );
   if (confirmedIds.length === 0) {
     return {
       requirementId: requirement.id,
@@ -142,6 +164,49 @@ async function verifyBatch(batch: Prepared[], signal?: AbortSignal): Promise<Req
 }
 
 /**
+ * One batched call that looks again at gap requirements against the user's
+ * experience, project and additional lines (not only retrieved candidates).
+ * Returns an upgraded match for each requirement the model supports, using
+ * only line numbers from the offered list. Any failure returns nothing, so
+ * the gaps stay; an aborted signal is rethrown.
+ * In plain terms: asks the AI to search the whole profile again for
+ * requirements that found nothing, and keeps the gaps if that fails.
+ */
+async function secondLook(gaps: Requirement[], lines: ProfileAtom[], signal?: AbortSignal): Promise<RequirementMatch[]> {
+  const offered = gaps.slice(0, SECOND_LOOK_MAX_REQUIREMENTS);
+  const offeredLines = lines.slice(0, SECOND_LOOK_MAX_LINES);
+  const prompt = buildGapLookPrompt(
+    offered.map((r, n) => ({ n, requirementText: r.text })),
+    offeredLines.map((a, n) => ({ n, sourceLabel: a.sourceLabel, text: a.text })),
+  );
+  try {
+    const reply = await generateStructured(prompt, isGapLookReply, {
+      temperature: 0.1,
+      // The reasoning model thinks before it answers; analysis ran out at a
+      // tighter budget on a long posting.
+      maxTokens: 2000 + 200 * offered.length,
+      signal,
+    });
+    const upgraded = new Map<string, RequirementMatch>();
+    for (const result of reply.results) {
+      const requirement = offered[result.requirement];
+      if (!requirement || upgraded.has(requirement.id)) continue;
+      const ids = [...new Set(result.lines.map((n) => offeredLines[n]?.id).filter((id): id is string => !!id))];
+      if (ids.length === 0) continue;
+      upgraded.set(requirement.id, {
+        requirementId: requirement.id,
+        status: result.status,
+        atomIds: strongestFirst(ids, offeredLines),
+      });
+    }
+    return [...upgraded.values()];
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return [];
+  }
+}
+
+/**
  * Runs the full matching pass; verification calls run with limited
  * concurrency. `onProgress` (if given) fires after each requirement
  * finishes, so callers can show something better than an indefinite spinner
@@ -182,9 +247,15 @@ export async function runMatching(
   const batches: Prepared[][] = [];
   for (let i = 0; i < toVerify.length; i += BATCH_SIZE) batches.push(toVerify.slice(i, i + BATCH_SIZE));
 
-  // Progress still counts requirements, so the bar means the same thing.
+  // The second look reads experience, project and additional lines (no
+  // skills, summary or education). With none, or nothing to match, it never runs.
+  const lookLines = pool.filter((a) => a.source === 'experience' || a.source === 'projects' || a.source === 'additional');
+  const secondLookPossible = lookLines.length > 0 && rest.length > 0;
+  // Progress counts requirements, plus one step for the second look when it
+  // may run, so the bar never stalls at the end or moves backwards.
+  const total = requirements.length + (secondLookPossible ? 1 : 0);
   let done = byId.size;
-  if (done > 0) onProgress?.(done, requirements.length);
+  if (done > 0) onProgress?.(done, total);
   await mapWithConcurrency(
     batches,
     CONCURRENCY,
@@ -192,11 +263,22 @@ export async function runMatching(
       const matches = await verifyBatch(batch, signal);
       for (const match of matches) byId.set(match.requirementId, match);
       done += batch.length;
-      onProgress?.(done, requirements.length);
+      onProgress?.(done, total);
     },
     undefined,
     signal,
   );
+
+  if (secondLookPossible) {
+    const gaps = rest.filter((r) => {
+      const status = byId.get(r.id)?.status;
+      return status === 'gap_no_candidates' || status === 'gap_unverified';
+    });
+    if (gaps.length > 0) {
+      for (const match of await secondLook(gaps, lookLines, signal)) byId.set(match.requirementId, match);
+    }
+    onProgress?.(total, total);
+  }
 
   return requirements.map((r) => byId.get(r.id)!);
 }

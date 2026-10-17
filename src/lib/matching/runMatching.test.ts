@@ -173,3 +173,115 @@ describe('runMatching education routing', () => {
     ]);
   });
 });
+
+describe('runMatching second look at gaps', () => {
+  const bullet = atom({
+    id: 'b1',
+    source: 'experience',
+    sourceLabel: 'Experience: Assistant, Shop',
+    text: 'Wrote some product descriptions',
+  });
+  const gapReq = requirement({ id: 'cs', text: 'Kubernetes orchestration' });
+
+  it('upgrades a no-candidates gap to the status the model returns, mapping by position', async () => {
+    generateStructuredMock.mockReset();
+    generateStructuredMock.mockResolvedValueOnce({ results: [{ requirement: 0, lines: [0], status: 'partial' }] });
+    const progress: [number, number][] = [];
+
+    const result = await runMatching([gapReq], [bullet], (d, t) => progress.push([d, t]));
+
+    expect(result).toEqual([{ requirementId: 'cs', status: 'partial', atomIds: ['b1'] }]);
+    expect(generateStructuredMock).toHaveBeenCalledTimes(1);
+    expect(generateStructuredMock.mock.calls[0][0]).toContain('Wrote some product descriptions');
+    expect(progress.at(-1)).toEqual([2, 2]);
+    expect(progress.every(([d, t]) => d <= t)).toBe(true);
+  });
+
+  it('also upgrades a gap_unverified requirement', async () => {
+    generateStructuredMock.mockReset();
+    const req = requirement({ id: 'ps', text: 'Photoshop editing' });
+    const atoms = [
+      atom({ id: 'ps-skill', text: 'Photoshop' }),
+      atom({ id: 'ps-b', source: 'projects', sourceLabel: 'Project: Store', text: 'Edited photos in Photoshop' }),
+    ];
+    generateStructuredMock
+      .mockResolvedValueOnce({ atomIds: [], status: 'full' })
+      .mockResolvedValueOnce({ results: [{ requirement: 0, lines: [0], status: 'full' }] });
+
+    const result = await runMatching([req], atoms);
+
+    expect(result).toEqual([{ requirementId: 'ps', status: 'full', atomIds: ['ps-b'] }]);
+  });
+
+  it('skips education requirements and excludes Summary and education atoms from the offered lines', async () => {
+    generateStructuredMock.mockReset();
+    const edu = requirement({ id: 'ed', text: "Master's degree in Physics", kind: 'education' });
+    const atoms = [
+      bullet,
+      atom({ id: 'sum', source: 'additional', sourceLabel: 'Summary', text: 'Summary unique words here' }),
+      atom({ id: 'deg', source: 'education', sourceLabel: 'Education: B.S.', text: 'Education unique words here' }),
+    ];
+    generateStructuredMock.mockResolvedValueOnce({ results: [] });
+
+    await runMatching([edu, gapReq], atoms);
+
+    const prompt = generateStructuredMock.mock.calls[0][0] as string;
+    expect(generateStructuredMock).toHaveBeenCalledTimes(1);
+    expect(prompt).toContain('Kubernetes orchestration');
+    expect(prompt).not.toContain('Master');
+    expect(prompt).not.toContain('Summary unique');
+    expect(prompt).not.toContain('Education unique');
+  });
+
+  it('drops out-of-range line and requirement numbers', async () => {
+    generateStructuredMock.mockReset();
+    generateStructuredMock.mockResolvedValueOnce({
+      results: [
+        { requirement: 5, lines: [0], status: 'full' },
+        { requirement: 0, lines: [9], status: 'full' },
+      ],
+    });
+
+    const result = await runMatching([gapReq], [bullet]);
+
+    expect(result).toEqual([{ requirementId: 'cs', status: 'gap_no_candidates', atomIds: [] }]);
+  });
+
+  it('keeps the gaps when the second call fails', async () => {
+    generateStructuredMock.mockReset();
+    generateStructuredMock.mockRejectedValueOnce(new Error('boom'));
+
+    const result = await runMatching([gapReq], [bullet]);
+
+    expect(result).toEqual([{ requirementId: 'cs', status: 'gap_no_candidates', atomIds: [] }]);
+  });
+
+  it('rethrows when the abort signal fired', async () => {
+    generateStructuredMock.mockReset();
+    const controller = new AbortController();
+    generateStructuredMock.mockImplementationOnce(async () => {
+      controller.abort();
+      throw new DOMException('Aborted', 'AbortError');
+    });
+
+    await expect(runMatching([gapReq], [bullet], undefined, controller.signal)).rejects.toThrow('Aborted');
+  });
+});
+
+describe('runMatching atomIds order', () => {
+  it('puts experience and project bullets before skills, keeping the model order within groups', async () => {
+    generateStructuredMock.mockReset();
+    const req = requirement({ text: 'Photoshop editing' });
+    const atoms = [
+      atom({ id: 'skill', source: 'skills', text: 'Photoshop' }),
+      atom({ id: 'add', source: 'additional', sourceLabel: 'Additional', text: 'Photoshop hobbyist' }),
+      atom({ id: 'exp', source: 'experience', sourceLabel: 'Experience: X', text: 'Edited images in Photoshop' }),
+      atom({ id: 'proj', source: 'projects', sourceLabel: 'Project: Y', text: 'Photoshop mockups' }),
+    ];
+    generateStructuredMock.mockResolvedValueOnce({ atomIds: ['skill', 'add', 'proj', 'exp'], status: 'full' });
+
+    const result = await runMatching([req], atoms);
+
+    expect(result[0].atomIds).toEqual(['proj', 'exp', 'skill', 'add']);
+  });
+});
