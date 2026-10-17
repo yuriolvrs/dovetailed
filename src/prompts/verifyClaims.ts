@@ -59,6 +59,8 @@ Rules:
 - A sentence is NOT supported if it raises the candidate's ownership (for example "assisted"
   becomes "managed"), adds a result or a number, adds scale, or names a tool the evidence does
   not name.
+- A self-assessment is a fact too: "strong", "solid", "excellent", "proven", "extensive" or
+  "deep" skills or abilities are supported only when the evidence states that quality.
 - Statements of interest or fit about the job posting are fine. They need no evidence.
 - "issue" is a short phrase naming what goes beyond the evidence. It is "" when supported.
 - ${UNTRUSTED}

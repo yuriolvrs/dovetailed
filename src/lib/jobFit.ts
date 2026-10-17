@@ -6,6 +6,7 @@
 // which of the job's requirements your resume already answers.
 
 import type { HolisticSelection, JobAnalysis, ProfileAtom, Requirement, ResumeContent } from '../types';
+import { degreeLine } from './profileAtoms';
 
 /** Why a line is recommended for this job. */
 export interface FitReason {
@@ -49,7 +50,7 @@ export function normalizeLine(text: string): string {
 }
 
 /**
- * Every printed line of a resume (bullets, skills, education details),
+ * Every printed line of a resume (bullets, skills, degrees, education details),
  * normalized.
  * In plain terms: the set of lines that are on the resume right now.
  */
@@ -59,7 +60,10 @@ export function resumeLines(content: ResumeContent): Set<string> {
   for (const entry of content.experience) entry.bullets.forEach(add);
   for (const entry of content.projects) entry.bullets.forEach(add);
   for (const group of content.skills) group.items.forEach(add);
-  for (const entry of content.education) (entry.details ?? []).forEach(add);
+  for (const entry of content.education) {
+    add(degreeLine(entry));
+    (entry.details ?? []).forEach(add);
+  }
   return lines;
 }
 

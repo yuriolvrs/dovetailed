@@ -200,7 +200,7 @@ export const SYNONYM_GROUPS: string[][] = [
   ['roas', 'return on ad spend', 'marketing roi', 'mroi'],
   ['conversion rate optimization', 'cro', 'conversion optimization', 'landing page optimization'],
   ['a/b testing', 'split testing', 'multivariate testing', 'ab testing'],
-  ['copywriting', 'copywriter', 'content writing', 'ad copywriting'],
+  ['copywriting', 'copywriter', 'content writing', 'ad copywriting', 'product descriptions', 'product copy'],
   ['brand identity', 'brand guidelines', 'visual identity', 'brand voice', 'brand style guide'],
   ['on-page seo', 'off-page seo', 'technical seo', 'link building'],
   ['keyword research', 'search intent', 'keyword strategy', 'search volume analysis'],
@@ -238,6 +238,11 @@ export const SYNONYM_GROUPS: string[][] = [
   ['affiliate marketing', 'partner marketing', 'affiliate management', 'referral programs'],
   ['account-based marketing', 'abm', 'key account marketing'],
   ['omnichannel marketing', 'multi-channel marketing', 'cross-channel marketing'],
+  // Everyday work outside tech. Retrieval only offers these lines to the
+  // matcher; the matcher still decides whether they count.
+  ['customer service', 'customer support', 'client service', 'phone and email', 'answer phones', 'answered phones', 'front desk'],
+  ['scheduling', 'schedule', 'booked appointments', 'book appointments', 'appointment booking'],
+  ['bilingual', 'spanish', 'french', 'mandarin', 'cantonese', 'vietnamese', 'tagalog', 'korean', 'arabic', 'russian'],
 ];
 
 let canonicalIndex: Map<string, string> | null = null;

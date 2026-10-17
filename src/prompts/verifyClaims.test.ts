@@ -12,6 +12,11 @@ import {
 const item = { index: 3, sentence: 'I managed no-show tracking.', evidence: ['Made a spreadsheet to track no-shows'] };
 
 describe('verify prompt', () => {
+  it('treats a self-assessment as a fact that needs evidence', () => {
+    const prompt = buildVerifyClaimsPrompt([{ index: 0, sentence: 'I bring strong skills.', evidence: ['Did X'] }]);
+    expect(prompt).toContain('A self-assessment is a fact too');
+  });
+
   it('lists each sentence with its index and evidence and states the support rule', () => {
     const prompt = buildVerifyClaimsPrompt([item]);
     expect(prompt).toContain('[3] sentence: "I managed no-show tracking."');

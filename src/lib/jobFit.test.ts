@@ -82,4 +82,16 @@ describe('buildJobFit', () => {
     const fit = buildJobFit(atoms, resume([], ['Figma']), { analysis });
     expect(fit.coverage.find((c) => c.requirement.id === 'r2')?.status).toBe('onResume');
   });
+
+  it('counts a printed degree as covering a degree requirement', () => {
+    const degreeAtom: ProfileAtom = { id: 'd1', source: 'education', sourceLabel: 'Education: Uni', text: 'B.S. in Accounting' };
+    const degreeAnalysis: JobAnalysis = {
+      ...analysis,
+      requirements: [{ id: 'r9', text: 'Associate degree', severity: 'preferred', order: 0, kind: 'education' }],
+      matches: [{ requirementId: 'r9', status: 'full', atomIds: ['d1'] }],
+    };
+    const content = { ...resume([]), education: [{ school: 'Uni', degree: 'B.S.', field: 'Accounting' }] } as ResumeContent;
+    const fit = buildJobFit([...atoms, degreeAtom], content, { analysis: degreeAnalysis });
+    expect(fit.coverage.find((c) => c.requirement.id === 'r9')?.status).toBe('onResume');
+  });
 });

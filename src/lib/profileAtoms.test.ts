@@ -14,6 +14,13 @@ function profile(overrides: Partial<Profile>): Profile {
 }
 
 describe('buildProfileAtoms', () => {
+  it('indexes the summary as one Summary atom', () => {
+    const atoms = buildProfileAtoms(profile({ summary: '  Accountant moving into project coordination. ' }));
+    expect(atoms).toEqual([
+      expect.objectContaining({ source: 'additional', sourceLabel: 'Summary', text: 'Accountant moving into project coordination.' }),
+    ]);
+  });
+
   it('indexes one atom per skill, labeled with its category', () => {
     const atoms = buildProfileAtoms(
       profile({ skills: [{ category: 'Languages', items: ['Java', 'TypeScript'] }] }),

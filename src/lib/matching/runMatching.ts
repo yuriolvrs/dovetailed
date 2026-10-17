@@ -10,6 +10,7 @@
 import type { ProfileAtom, Requirement, RequirementMatch } from '../../types';
 import { retrieveCandidates } from './retrieval';
 import { matchDegree } from './degreeMatch';
+import { SUMMARY_LABEL } from '../profileAtoms';
 import {
   buildBatchMatchPrompt,
   buildMatchRequirementPrompt,
@@ -42,7 +43,7 @@ const BATCH_SIZE = 6;
 // In plain terms: leaves education entries out of automatic matching, since
 // a degree isn't evidence for a specific skill.
 function matchable(atoms: ProfileAtom[]): ProfileAtom[] {
-  return atoms.filter((atom) => atom.source !== 'education');
+  return atoms.filter((atom) => atom.source !== 'education' && atom.sourceLabel !== SUMMARY_LABEL);
 }
 
 async function mapWithConcurrency<T, R>(

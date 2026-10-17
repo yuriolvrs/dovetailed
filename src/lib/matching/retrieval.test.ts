@@ -14,6 +14,18 @@ function atom(overrides: Partial<ProfileAtom>): ProfileAtom {
 }
 
 describe('retrieveCandidates', () => {
+  it('offers everyday evidence for a customer-service or language requirement', () => {
+    const atoms = [
+      atom({ id: 'phones', source: 'experience', text: 'Answered vendor phone and email questions' }),
+      atom({ id: 'lang', text: 'Spanish (conversational)' }),
+      atom({ id: 'gl', text: 'Journal entries' }),
+    ];
+    const service = retrieveCandidates('1-2 years of experience in customer service', atoms).map((c) => c.atom.id);
+    expect(service).toContain('phones');
+    expect(service).not.toContain('gl');
+    expect(retrieveCandidates('Bilingual preferred', atoms).map((c) => c.atom.id)).toContain('lang');
+  });
+
   it('matches a requirement phrased with a synonym not literally in the profile', () => {
     const atoms = [atom({ id: 'java', text: 'Java' }), atom({ id: 'python', text: 'Python' })];
     const candidates = retrieveCandidates('Solid experience with Java and the JVM ecosystem', atoms);

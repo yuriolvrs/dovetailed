@@ -138,9 +138,10 @@ describe('requirement kinds', () => {
     ).toBe(true);
   });
 
-  it('the prompt asks for duties, kinds, splitting, degrees, and 14 items', () => {
+  it('the prompt asks for duties, kinds, splitting, degrees, and 20 items', () => {
     const prompt = buildAnalyzePostingPrompt('Some posting');
-    expect(prompt).toContain('at most 14');
+    expect(prompt).toContain('at most 20');
+    expect(prompt).toContain('Never leave out a qualification');
     expect(prompt).toContain('"duty"');
     expect(prompt).toContain('"education"');
     expect(prompt).toContain('"qualification"');

@@ -4,7 +4,7 @@
 // browser's storage.
 
 import { db } from './db';
-import { buildProfileAtoms } from './profileAtoms';
+import { buildProfileAtoms, SUMMARY_LABEL } from './profileAtoms';
 import type { Profile, SkillGroup } from '../types';
 
 /**
@@ -74,7 +74,11 @@ export function hasProfileContent(profile: Profile): boolean {
   // A degree line is an atom too (for degree requirements), but it alone is
   // not evidence, so it does not count here; education details still do.
   const hasEducationDetail = profile.education.some((e) => (e.details ?? []).some((d) => d.trim() !== ''));
-  return buildProfileAtoms(profile).some((a) => a.source !== 'education') || hasEducationDetail;
+  // The summary alone is not matchable evidence either.
+  return (
+    buildProfileAtoms(profile).some((a) => a.source !== 'education' && a.sourceLabel !== SUMMARY_LABEL) ||
+    hasEducationDetail
+  );
 }
 
 // Whether a job or project has at least one non-blank bullet. Bullets are the

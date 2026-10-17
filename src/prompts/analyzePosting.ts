@@ -42,11 +42,14 @@ Rules:
 - location is the place only. Leave out words like Remote, Hybrid or On-site; they go in arrangement.
 - arrangement: "Onsite", "Hybrid" or "Remote" when the posting states it, otherwise "".
 - roleSummary: one or two sentences describing the role and what it does.
-- requirements: at most 14 concrete items, taken from the WHOLE posting. Include both what the
-  candidate must bring (required skills, years of experience, tools, certifications) and the
-  main responsibilities/duties of the job (e.g. "coordinate with other teams", "troubleshoot
-  production issues"). Postings often separate a "Responsibilities" section from a
-  "Requirements" or "Qualifications" section; read both.
+- requirements: at most 20 concrete items, taken from the WHOLE posting: up to 12
+  qualifications and education items (what the candidate must bring: required skills, years
+  of experience, tools, certifications, degrees) and up to 8 of the main
+  responsibilities/duties of the job (e.g. "coordinate with other teams", "troubleshoot
+  production issues"). Never leave out a qualification to make room for a duty; drop the
+  least important duties instead. Leave out physical, travel and safety-policy conditions.
+  Postings often separate a "Responsibilities" section from a "Requirements" or
+  "Qualifications" section; read both.
 - kind: give every requirement a "kind":
   - "qualification": a skill, tool, years of experience, certification, language or licence
     the candidate must have. Language and licence requirements ("Bilingual", "active RN

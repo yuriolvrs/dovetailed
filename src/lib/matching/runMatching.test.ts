@@ -21,6 +21,16 @@ function atom(overrides: Partial<ProfileAtom>): ProfileAtom {
 }
 
 describe('runMatching', () => {
+  it('never offers the Summary line as evidence for a requirement', async () => {
+    const req = requirement({ text: 'Attention to detail' });
+    const atoms = [atom({ source: 'additional', sourceLabel: 'Summary', text: 'Strong attention to detail' })];
+
+    const result = await runMatching([req], atoms);
+
+    expect(result).toEqual([{ requirementId: 'r1', status: 'gap_no_candidates', atomIds: [] }]);
+    expect(generateStructuredMock).not.toHaveBeenCalled();
+  });
+
   it('marks gap_no_candidates when retrieval finds nothing, without calling the LLM', async () => {
     const req = requirement({ text: 'Experience with Kubernetes' });
     const atoms = [atom({ text: 'Photoshop' })];

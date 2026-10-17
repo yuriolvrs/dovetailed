@@ -54,6 +54,21 @@ function educationLabel(entry: EducationEntry): string {
   return `Education: ${entry.degree}, ${entry.school}`;
 }
 
+/**
+ * The degree line as one text ("B.S. in Accounting"), or '' when there is no
+ * degree. Shared with jobFit.ts so the printed degree counts as on the resume.
+ * In plain terms: how a degree reads as one line of evidence.
+ */
+export function degreeLine(entry: Pick<EducationEntry, 'degree' | 'field'>): string {
+  const degree = entry.degree.trim();
+  const field = entry.field?.trim();
+  if (degree === '') return '';
+  return field && !degree.toLowerCase().includes(field.toLowerCase()) ? `${degree} in ${field}` : degree;
+}
+
+/** sourceLabel of the atom made from Profile.summary. */
+export const SUMMARY_LABEL = 'Summary';
+
 export function buildProfileAtoms(profile: Profile): ProfileAtom[] {
   const atoms: ProfileAtom[] = [];
 
@@ -85,16 +100,20 @@ export function buildProfileAtoms(profile: Profile): ProfileAtom[] {
     const label = educationLabel(entry);
     // The degree line itself is the first atom of the entry, so a degree
     // requirement can cite it (see lib/matching/degreeMatch.ts).
-    const degree = entry.degree.trim();
-    if (degree !== '') {
-      const field = entry.field?.trim();
-      const text = field && !degree.toLowerCase().includes(field.toLowerCase()) ? `${degree} in ${field}` : degree;
-      atoms.push({ id: atomId('education', text), source: 'education', sourceLabel: label, text });
-    }
+    const text = degreeLine(entry);
+    if (text !== '') atoms.push({ id: atomId('education', text), source: 'education', sourceLabel: label, text });
     for (const detail of entry.details ?? []) {
       if (detail.trim() === '') continue;
       atoms.push({ id: atomId('education', detail), source: 'education', sourceLabel: label, text: detail });
     }
+  }
+
+  // The user's own summary: citable in a cover letter (it states their aim,
+  // such as a career change), but kept out of requirement matching, where a
+  // self-description is not evidence (see runMatching.ts).
+  const summary = profile.summary?.trim() ?? '';
+  if (summary !== '') {
+    atoms.push({ id: atomId('additional', summary), source: 'additional', sourceLabel: SUMMARY_LABEL, text: summary });
   }
 
   for (const info of profile.additionalInfo) {

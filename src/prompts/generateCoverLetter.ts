@@ -100,7 +100,9 @@ Rules:
   with facts that are not in the posting. Do not use these words or phrases: seamless, aligns
   perfectly, honed, dynamic, passionate, synergy, leverage. Use plain ASCII hyphens only. If the
   profile shows a career change or an employment gap, say so in one plain sentence and cite the
-  profile entries that show it (it is a claim).
+  profile entries that show it (it is a claim). An evidence line labelled "Summary" is the
+  candidate's own statement of their aim; cite it for that sentence. Do not describe the
+  candidate's skills as strong, solid, proven or excellent unless an evidence line says so.
   Maintain smooth thematic transitions between sentences and paragraphs. Maintain an authentic,
   professional tone -- do NOT inflate levels of authority, seniority, or project scope (e.g. do
   not turn "assisted with" or "helped with" into "spearheaded", "led", "oversaw", "managed",
