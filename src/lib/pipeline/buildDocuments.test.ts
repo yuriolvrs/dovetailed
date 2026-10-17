@@ -95,6 +95,12 @@ describe('buildDocuments', () => {
     expect(m.saveGeneration.mock.calls.map((c) => c[0].type)).toEqual(['resume']);
   });
 
+  it('passes the stop signal to the resume step', async () => {
+    const controller = new AbortController();
+    await buildDocuments(posting(), profile, { signal: controller.signal });
+    expect(m.fitToOnePage).toHaveBeenCalledWith({}, [], controller.signal);
+  });
+
   it('reports matching progress', async () => {
     m.runMatching.mockImplementation(async (_r, _a, onProgress) => {
       onProgress(1, 1);

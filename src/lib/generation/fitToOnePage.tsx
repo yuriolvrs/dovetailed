@@ -10,6 +10,7 @@
 // printed page, and keeps trimming (least important content first) until it
 // does or there's nothing left to trim.
 
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { ResumeContent, SourceMapEntry } from '../../types';
 import { ResumePrintView } from '../../components/resume/ResumePrintView';
@@ -37,17 +38,17 @@ export function overflowsOnePage(content: ResumeContent): Promise<boolean> {
     host.style.overflow = 'hidden';
     document.body.appendChild(host);
 
+    // Render synchronously, then read scrollHeight, which forces a layout pass
+    // on the spot. No requestAnimationFrame: browsers pause it in hidden or
+    // background tabs, and the build would then wait forever.
     const root = createRoot(host);
-    root.render(<ResumePrintView content={content} variant="measure" />);
-
-    // Two rAF ticks so the browser has committed layout before we read it.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve(host.scrollHeight > host.clientHeight);
-        root.unmount();
-        host.remove();
-      });
-    });
+    try {
+      flushSync(() => root.render(<ResumePrintView content={content} variant="measure" />));
+      resolve(host.scrollHeight > host.clientHeight);
+    } finally {
+      root.unmount();
+      host.remove();
+    }
   });
 }
 
@@ -60,12 +61,15 @@ export function overflowsOnePage(content: ResumeContent): Promise<boolean> {
  * always, since nextTrim() refuses to remove core work history, so the
  * caller has to be able to tell the user rather than silently print two
  * pages.
+ * Throws an AbortError between measurements once `signal` is aborted.
  * In plain terms: shrinks a generated resume to fit one page, reports what
- * got removed so the user can undo it, and says whether it succeeded.
+ * got removed so the user can undo it, and says whether it succeeded. Stops
+ * early if the user presses Stop.
  */
 export async function fitToOnePage(
   content: ResumeContent,
   sourceMap: SourceMapEntry[],
+  signal?: AbortSignal,
 ): Promise<{ content: ResumeContent; removedExperience: ResumeContent['experience']; fits: boolean }> {
   const matchedBulletTexts = new Set(sourceMap.map((e) => e.generatedText));
   let candidate = content;
@@ -79,6 +83,7 @@ export async function fitToOnePage(
   // <= maxSteps, not <, so the page is measured once more after the final
   // possible cut rather than being reported as still overflowing.
   for (let i = 0; i <= maxSteps; i++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (!(await overflowsOnePage(candidate))) return { content: candidate, removedExperience, fits: true };
     const step: TrimStep | null = nextTrim(candidate, matchedBulletTexts);
     if (!step) break;

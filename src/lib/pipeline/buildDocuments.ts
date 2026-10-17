@@ -82,7 +82,7 @@ export async function buildDocuments(
   // Step 3: build the resume from the matches. No LLM call.
   onProgress?.({ step: 'resume' });
   const selected = selectResumeContent(profile, posting.analysis!, atoms);
-  const { content, removedExperience, fits } = await fitToOnePage(selected.content, selected.sourceMap);
+  const { content, removedExperience, fits } = await fitToOnePage(selected.content, selected.sourceMap, signal);
   await saveGeneration({
     ...newGeneration(posting.id, 'resume', content, selected.sourceMap, 'matched'),
     removedForPageFit: removedExperience,
