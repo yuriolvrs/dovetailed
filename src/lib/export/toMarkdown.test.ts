@@ -42,6 +42,15 @@ describe('resumeToMarkdown', () => {
     expect(md).not.toContain('Empty Role');
   });
 
+  it('prints a name-only project as just its heading', () => {
+    const content = baseResume();
+    content.projects = [{ name: 'Senior thesis', description: '', bullets: [], links: [] }];
+    const md = resumeToMarkdown(content);
+    expect(md).toContain('### Senior thesis');
+    expect(md).not.toMatch(/### Senior thesis\n\n\n/);
+    expect(md).not.toContain('- \n');
+  });
+
   it('omits empty sections entirely', () => {
     const content = baseResume();
     content.projects = [];

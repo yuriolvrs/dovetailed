@@ -460,12 +460,15 @@ export function ContactSection({
   navNonce,
   summary,
   onSummaryChange,
+  summaryExtra,
 }: {
   value: Contact;
   onChange: (next: Contact) => void;
   /** The summary line under the contact details; the textarea shows only when onSummaryChange is given. */
   summary?: string;
   onSummaryChange?: (summary: string) => void;
+  /** Shown right under the summary textarea. */
+  summaryExtra?: ReactNode;
   /** The guided setup shows only the form, with no Done. */
   alwaysEditing?: boolean;
   /** Changes when a preview click asks to edit the contact details. */
@@ -477,7 +480,7 @@ export function ContactSection({
   if (alwaysEditing) {
     return (
       <div id="contact">
-        <ContactForm value={value} onChange={onChange} summary={summary} onSummaryChange={onSummaryChange} />
+        <ContactForm value={value} onChange={onChange} summary={summary} onSummaryChange={onSummaryChange} summaryExtra={summaryExtra} />
       </div>
     );
   }
@@ -485,7 +488,7 @@ export function ContactSection({
   if (editing) {
     return (
       <div id="contact" className="scroll-mt-20">
-        <ContactForm value={value} onChange={onChange} summary={summary} onSummaryChange={onSummaryChange} />
+        <ContactForm value={value} onChange={onChange} summary={summary} onSummaryChange={onSummaryChange} summaryExtra={summaryExtra} />
         <div className="mt-2 flex justify-end">
           <Btn size="sm" onClick={() => setEditing(false)}>
             <Check size={13} />

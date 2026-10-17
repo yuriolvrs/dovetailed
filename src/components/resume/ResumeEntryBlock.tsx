@@ -67,6 +67,8 @@ export function ResumeEntryBlock({
   profileBullets,
   reasonFor,
   postingTerms,
+  isSuggested,
+  printsWithoutBullets = false,
   onMoveUp,
   onMoveDown,
   onRemove,
@@ -91,6 +93,10 @@ export function ResumeEntryBlock({
   reasonFor: (text: string) => FitReason | null;
   /** Posting keywords for the "Posting's words" reword goal; empty hides it. */
   postingTerms: string[];
+  /** Whether a bullet is one of the few that answer the job's top requirements; those get a "Suggested wording" prompt. */
+  isSuggested?: (text: string) => boolean;
+  /** True for a named project: it prints with no bullets, so the "Not printed" note is hidden. */
+  printsWithoutBullets?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onRemove: () => void;
@@ -102,7 +108,13 @@ export function ResumeEntryBlock({
   // Which bullet's reword panel is open. Kept by position: applying a
   // suggestion changes the text, and the panel should stay open to offer Undo.
   const [rewording, setRewording] = useState<number | null>(null);
-  const goals = BULLET_REWORD_GOALS.filter((g) => g.id !== 'posting' || postingTerms.length > 0);
+  // True when the open panel came from "Suggested wording for this job": it
+  // starts on the posting's words instead of the first goal.
+  const [postingFirst, setPostingFirst] = useState(false);
+  const allGoals = BULLET_REWORD_GOALS.filter((g) => g.id !== 'posting' || postingTerms.length > 0);
+  const goals = postingFirst
+    ? [...allGoals.filter((g) => g.id === 'posting'), ...allGoals.filter((g) => g.id !== 'posting')]
+    : allGoals;
   const printed = bullets.filter((b) => b.trim() !== '');
   const ref = useRef<HTMLElement>(null);
 
@@ -142,7 +154,7 @@ export function ResumeEntryBlock({
 
       {detailsOpen && <div className="mt-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/40">{details}</div>}
 
-      {printed.length === 0 && (
+      {printed.length === 0 && !printsWithoutBullets && (
         <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
           <AlertCircle size={13} aria-hidden />
           Not printed until it has a bullet.
@@ -169,7 +181,10 @@ export function ResumeEntryBlock({
             value.trim() !== '' && (
               <button
                 type="button"
-                onClick={() => setRewording(rewording === index ? null : index)}
+                onClick={() => {
+                  setPostingFirst(false);
+                  setRewording(rewording === index ? null : index);
+                }}
                 aria-label="Reword with AI"
                 aria-expanded={rewording === index}
                 title="Reword with AI"
@@ -187,10 +202,24 @@ export function ResumeEntryBlock({
           }
           itemExtra={(value, update, index) => {
             const reason = value.trim() ? reasonFor(value) : null;
-            if (!reason && rewording !== index) return null;
+            const suggested = rewording !== index && value.trim() !== '' && postingTerms.length > 0 && isSuggested?.(value);
+            if (!reason && !suggested && rewording !== index) return null;
             return (
               <div className="px-2">
                 {reason && <FitLabel reason={reason} />}
+                {suggested && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostingFirst(true);
+                      setRewording(index);
+                    }}
+                    className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                  >
+                    <Sparkles size={12} aria-hidden />
+                    Suggested wording for this job
+                  </button>
+                )}
                 {rewording === index && (
                   <RewordPanel
                     text={value}

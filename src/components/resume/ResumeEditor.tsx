@@ -7,8 +7,9 @@
 // or add back a left-out profile line, with the lines the job asks for
 // marked. Profile entries the resume leaves out are offered at the end of
 // their section. Bullets start as verbatim copies of the profile (see
-// selectResumeContent.ts); the only AI call here is the opt-in "Reword" on
-// one bullet at a time.
+// selectResumeContent.ts); the only AI calls here are opt-in and start on a
+// click: "Reword" (or "Suggested wording for this job" on the top few
+// bullets) for one bullet, and "Suggest a summary for this job".
 // In plain terms: the screen where you shape a tailored resume -- what's on
 // it, in what order, in what words -- with the job's wishes marked.
 
@@ -40,6 +41,8 @@ import { JobFitPanel } from './JobFitPanel';
 import { ResumeEntryBlock } from './ResumeEntryBlock';
 import { ExperienceFields, ProjectFields } from './ResumeEntryFields';
 import { ResumeSkills } from './ResumeSkills';
+import { SuggestSummary } from './SuggestSummary';
+import { topRequirementLines, topResumeBullets } from '../../lib/topEvidence';
 
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
@@ -165,6 +168,19 @@ export function ResumeEditor({
   const atoms = useMemo(() => buildProfileAtoms(profile), [profile]);
   const fit = useMemo(() => buildJobFit(atoms, value, { analysis, holistic }), [atoms, value, analysis, holistic]);
   const postingTerms = analysis?.keywords ?? [];
+  // Evidence for a summary suggestion: the profile's own summary, then the
+  // lines matched to the job's top requirements.
+  const summaryLines = useMemo(
+    () => (analysis ? [profile.summary?.trim() ?? '', ...topRequirementLines(analysis, atoms)].filter(Boolean) : []),
+    [analysis, atoms, profile.summary],
+  );
+  // The few bullets that answer the job's heaviest requirements; each gets a
+  // quiet "Suggested wording" prompt.
+  const suggestedBullets = useMemo(
+    () => (analysis && analysis.keywords.length > 0 ? topResumeBullets(analysis, atoms, value) : new Set<string>()),
+    [analysis, atoms, value],
+  );
+  const isSuggestedBullet = (text: string) => suggestedBullets.has(normalizeLine(text));
   const [openDetails, setOpenDetails] = useState<OpenDetails>(null);
   const [removed, setRemoved] = useState<Removed | null>(null);
 
@@ -316,6 +332,7 @@ export function ResumeEditor({
         profileBullets={profileExperience.get(key)?.bullets ?? []}
         reasonFor={fit.reasonFor}
         postingTerms={postingTerms}
+        isSuggested={isSuggestedBullet}
         onMoveUp={prev === undefined ? undefined : () => swap(value.experience, index, prev, 'experience', setExperience)}
         onMoveDown={next === undefined ? undefined : () => swap(value.experience, index, next, 'experience', setExperience)}
         onRemove={() => {
@@ -450,6 +467,8 @@ export function ResumeEditor({
                 profileBullets={profileProjects.get(key)?.bullets ?? []}
                 reasonFor={fit.reasonFor}
                 postingTerms={postingTerms}
+                isSuggested={isSuggestedBullet}
+                printsWithoutBullets={entry.name.trim() !== ''}
                 onMoveUp={index === 0 ? undefined : () => swap(value.projects, index, index - 1, 'projects', setProjects)}
                 onMoveDown={
                   index === value.projects.length - 1
@@ -508,6 +527,16 @@ export function ResumeEditor({
         onChange={(contact) => onChange({ ...value, contact })}
         summary={value.summary}
         onSummaryChange={(summary) => onChange({ ...value, summary })}
+        summaryExtra={
+          analysis && (
+            <SuggestSummary
+              summary={value.summary ?? ''}
+              role={analysis.roleSummary}
+              lines={summaryLines}
+              onApply={(summary) => onChange({ ...value, summary })}
+            />
+          )
+        }
         navNonce={target?.section === 'contact' ? nonce : undefined}
       />
     </div>

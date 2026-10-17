@@ -173,15 +173,16 @@ describe('selectResumeContent', () => {
     expect('summary' in selectResumeContent(profile({ summary: '  ' }), analysis(), []).content).toBe(false);
   });
 
-  it('keeps a project that has a description but no bullets, and skips a fully empty one', () => {
+  it('keeps named projects with no bullets or description, and skips an unnamed one', () => {
     const p = profile({
       projects: [
         { name: 'Thesis rebrand', description: 'Logo, social templates, flyer set', bullets: [], links: [] },
-        { name: 'Empty', description: '', bullets: [], links: [] },
+        { name: 'Name only', description: '', bullets: [], links: [] },
+        { name: '  ', description: '', bullets: [], links: [] },
       ],
     });
     const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
-    expect(content.projects.map((x) => x.name)).toEqual(['Thesis rebrand']);
+    expect(content.projects.map((x) => x.name)).toEqual(['Thesis rebrand', 'Name only']);
   });
 
   it('Persona C: drops "no Mac" and keeps the billing line', () => {

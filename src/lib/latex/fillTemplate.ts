@@ -130,13 +130,18 @@ function renderNodes(nodes: TemplateNode[], context: unknown): string {
   return out;
 }
 
+// A list environment with only blanks inside, e.g. what a project with a name
+// but no bullets leaves behind. LaTeX stops with an error on such a list.
+const EMPTY_LIST_ENV = /\\begin\{(itemize|enumerate|description)\}(?:\[[^\]]*\])?(?:\s|%[^\n]*)*\\end\{\1\}/g;
+
 /**
  * Fills a placeholder LaTeX template with resume data (see
  * templateContext.ts's buildLatexContext for the available field shape).
+ * A list environment left with no items is removed.
  * In plain terms: produces the final filled-in .tex text.
  */
 export function fillLatexTemplate(compiledTemplate: string, context: Record<string, unknown>): string {
-  return renderNodes(parseLatexTemplate(compiledTemplate), context);
+  return renderNodes(parseLatexTemplate(compiledTemplate), context).replace(EMPTY_LIST_ENV, '');
 }
 
 // Real-model finding (recurring, and on a second template far more

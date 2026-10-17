@@ -29,8 +29,13 @@ describe('withRenderableEntries', () => {
     expect(withRenderableEntries(c).experience.map((e) => e.title)).toEqual(['Kept']);
   });
 
-  it('drops projects left with no bullets', () => {
-    const c = content({ projects: [project('Emptied', []), project('Kept', ['a bullet'])] });
+  it('keeps a named project with no bullets and no description', () => {
+    const c = content({ projects: [project('Name only', []), project('Kept', ['a bullet'])] });
+    expect(withRenderableEntries(c).projects.map((p) => p.name)).toEqual(['Name only', 'Kept']);
+  });
+
+  it('drops a project with a blank name', () => {
+    const c = content({ projects: [project('  ', ['a bullet']), project('Kept', [])] });
     expect(withRenderableEntries(c).projects.map((p) => p.name)).toEqual(['Kept']);
   });
 

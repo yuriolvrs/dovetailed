@@ -30,6 +30,12 @@ describe('buildExtractProfilePrompt', () => {
     expect(buildExtractProfilePrompt('x')).toMatch(/markdown/i);
   });
 
+  it('tells the model to split "Name (detail)" and "Name: detail" project lines', () => {
+    const prompt = buildExtractProfilePrompt('x');
+    expect(prompt).toContain('"Name (detail, detail)" or "Name: detail"');
+    expect(prompt).toMatch(/Do not add or change any word/);
+  });
+
   it('truncates a very long document instead of sending it whole', () => {
     const prompt = buildExtractProfilePrompt('y'.repeat(50_000));
     expect(prompt.length).toBeLessThan(25_000);

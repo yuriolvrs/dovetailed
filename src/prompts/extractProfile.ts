@@ -74,6 +74,7 @@ FIELD NOTES:
 - Dates are often at the far right of a line, after the school, degree, company, title or project name. Read them there too: "2022 – Present" on a degree line means startYear "2022" and "current": true.
 - A project's "name" is its full title as written, up to any "|" separator (keep subtitles such as "Name - What it is").
 - A project's "description" is the short text on its name line after the "|" separator, such as a tech stack (e.g. "Python, TensorFlow, OpenCV"), copied exactly. Do not put its dates there. Use "" if there is none.
+- A project written as one line with no bullets under it is still a project. If the line is "Name (detail, detail)" or "Name: detail", split it: "name" is the part before the "(" or ":", and "description" is the rest, copied verbatim without the parentheses or colon. Do not add or change any word. If the line has no such detail, keep the whole line as "name" and use "" for "description".
 - "bullets" is the list of description lines under an entry. If an entry has none, use an empty array.
 - Omit "projects" entries entirely if the document has no projects section; return an empty array.
 

@@ -1,29 +1,32 @@
 // What this file is: the one rule deciding which ResumeContent entries
-// actually make it onto a rendered resume -- an experience or project entry
-// with no bullets left is dropped entirely rather than printed as a bare
-// title/company/date header with nothing under it. Applied at render/export
-// time only (ResumePrintView, templateContext), never to stored data, so an
-// entry emptied in the editor stays there and comes straight back the moment
-// a bullet is added. Education is deliberately untouched: a degree line with
-// no detail bullets is a normal, complete entry.
-// In plain terms: if you delete all the bullet points from a job, activity or
-// project, it disappears from the resume instead of leaving a lonely heading
-// -- add a bullet back and it returns. A project that has a description but no
-// bullets is still printed (its title line alone says something).
+// actually make it onto a rendered resume -- an experience entry with no
+// bullets left is dropped entirely rather than printed as a bare
+// title/company/date header with nothing under it. A project is dropped only
+// when it has no name, because a named project line ("Senior thesis: rebrand
+// for a local food pantry") says something on its own. Applied at
+// render/export time only (ResumePrintView, templateContext), never to stored
+// data, so an entry emptied in the editor stays there and comes straight back
+// the moment a bullet is added. Education is deliberately untouched: a degree
+// line with no detail bullets is a normal, complete entry.
+// In plain terms: if you delete all the bullet points from a job, it
+// disappears from the resume instead of leaving a lonely heading -- add a
+// bullet back and it returns. A project with a name still prints, even with
+// no bullets. To hide a project, take it off the resume in the editor.
 
 import type { ResumeContent } from '../types';
 
 /**
  * A copy of `content` with every bullet-less experience entry, and every
- * project with neither bullets nor a description, removed. Section headings whose entries all vanish disappear with them,
- * since ResumePrintView groups whatever entries it's given.
- * In plain terms: strips out the jobs/projects that have nothing left to say.
+ * unnamed project, removed. Section headings whose entries all vanish disappear
+ * with them, since ResumePrintView groups whatever entries it's given.
+ * In plain terms: strips out the jobs with nothing left to say and projects
+ * with no name.
  */
 export function withRenderableEntries(content: ResumeContent): ResumeContent {
   return {
     ...content,
     experience: content.experience.filter((e) => e.bullets.length > 0),
-    projects: content.projects.filter((p) => p.bullets.length > 0 || p.description.trim() !== ''),
+    projects: content.projects.filter((p) => p.name.trim() !== ''),
   };
 }
 

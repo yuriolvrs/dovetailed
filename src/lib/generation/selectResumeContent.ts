@@ -205,16 +205,16 @@ export function selectResumeFromAtomIds(
     bullets: prioritize(entry.bullets, experienceLabel(entry), atoms, matchedIds, weights, sourceMap, notNegative),
   }));
 
-  // A project with bullets, or with a description to show, can be printed.
-  // One with neither would be dropped at render time, so it must not take
-  // one of the MAX_PROJECTS slots.
+  // A named project can be printed, even with no bullets or description (see
+  // renderableResume.ts). An unnamed one would be dropped at render time, so
+  // it must not take one of the MAX_PROJECTS slots.
   const rankedProjects = profile.projects
     .map((entry, index) => ({
       entry,
       index,
       score: totalScore(entry.bullets, projectLabel(entry), atoms, matchedIds, weights),
     }))
-    .filter(({ entry }) => entry.description.trim() !== '' || entry.bullets.some((b) => b.trim() !== ''))
+    .filter(({ entry }) => entry.name.trim() !== '')
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, MAX_PROJECTS)
     .sort((a, b) => a.index - b.index);

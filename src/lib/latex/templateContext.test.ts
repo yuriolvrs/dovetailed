@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ResumeContent } from '../../types';
 import { buildLatexContext } from './templateContext';
+import { fillLatexTemplate } from './fillTemplate';
 import { validateTemplate } from './validateTemplate';
 
 function resume(overrides: Partial<ResumeContent> = {}): ResumeContent {
@@ -30,6 +31,20 @@ describe('buildLatexContext', () => {
   it('blanks a job location the company text already contains', () => {
     const experience = buildLatexContext(resume()).experience as { location: string }[];
     expect(experience[0].location).toBe('');
+  });
+
+  it('keeps a name-only project, and fills it without an empty list', () => {
+    const projects = [{ name: 'Senior thesis', description: '', bullets: [], links: [] }];
+    const context = buildLatexContext(resume({ projects }));
+    expect((context.projects as { name: string }[]).map((p) => p.name)).toEqual(['Senior thesis']);
+    const template = String.raw`{{#each projects}}\textbf{{{name}}}
+\begin{itemize}
+{{#each bullets}}\item {{.}}
+{{/each}}\end{itemize}
+{{/each}}`;
+    const filled = fillLatexTemplate(template, context);
+    expect(filled).toContain(String.raw`\textbf{Senior thesis}`);
+    expect(filled).not.toContain('itemize');
   });
 
   it('accepts {{summary}} as a placeholder', () => {
