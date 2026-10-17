@@ -86,6 +86,7 @@ export function verifyExtractedProfile(
     if (text && !isPresentInCorpus(text, normalizedCorpus)) unverified.push({ path, text });
   };
 
+  check('summary', extracted.summary);
   check('contact.name', extracted.contact?.name);
   check('contact.email', extracted.contact?.email);
   check('contact.phone', extracted.contact?.phone);

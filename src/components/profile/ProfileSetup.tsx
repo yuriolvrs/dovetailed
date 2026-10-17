@@ -216,7 +216,13 @@ export function ProfileSetup({
 
         <div className="space-y-4">
           {step.id === 'contact' && (
-            <ContactSection value={profile.contact} onChange={(contact) => update({ contact })} alwaysEditing />
+            <ContactSection
+              value={profile.contact}
+              onChange={(contact) => update({ contact })}
+              summary={profile.summary}
+              onSummaryChange={(summary) => update({ summary })}
+              alwaysEditing
+            />
           )}
           {step.id === 'experience' && (
             <ExperienceSection

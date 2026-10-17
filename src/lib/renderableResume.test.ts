@@ -6,7 +6,7 @@
 // resume while everything else stays exactly as it was.
 
 import { describe, expect, it } from 'vitest';
-import { withRenderableEntries } from './renderableResume';
+import { experienceFirst, visibleLocation, withRenderableEntries } from './renderableResume';
 import type { ResumeContent } from '../types';
 
 function content(overrides: Partial<ResumeContent> = {}): ResumeContent {
@@ -43,5 +43,33 @@ describe('withRenderableEntries', () => {
     const c = content({ experience: [job('Emptied', [])] });
     withRenderableEntries(c);
     expect(c.experience).toHaveLength(1);
+  });
+});
+
+describe('withRenderableEntries: described projects', () => {
+  it('keeps a project with a description but no bullets', () => {
+    const c = content({ projects: [{ name: 'Thesis', description: 'Logo and flyers', bullets: [], links: [] }] });
+    expect(withRenderableEntries(c).projects.map((p) => p.name)).toEqual(['Thesis']);
+  });
+});
+
+describe('visibleLocation', () => {
+  it('hides a location the company text already contains', () => {
+    expect(visibleLocation('Riverbend Community Hospital, Vancouver, WA', 'Vancouver, WA')).toBe('');
+  });
+
+  it('shows a location the company text does not contain', () => {
+    expect(visibleLocation('Acme', 'Boston, MA')).toBe('Boston, MA');
+  });
+
+  it('returns empty for a missing location', () => {
+    expect(visibleLocation('Acme', undefined)).toBe('');
+  });
+});
+
+describe('experienceFirst', () => {
+  it('is true with an experience entry and false without', () => {
+    expect(experienceFirst(content({ experience: [job('A', ['x'])] }))).toBe(true);
+    expect(experienceFirst(content())).toBe(false);
   });
 });

@@ -54,7 +54,8 @@ function sectionCount(extracted: ExtractedProfile, section: SectionKey): number 
     case 'contact':
       return (
         Object.values(extracted.contact ?? {}).filter((v) => typeof v === 'string' && v.trim()).length +
-        (extracted.contact?.links ?? []).filter((l) => l.trim()).length
+        (extracted.contact?.links ?? []).filter((l) => l.trim()).length +
+        (extracted.summary?.trim() ? 1 : 0)
       );
     case 'skills':
       return (extracted.skills ?? []).reduce((n, g) => n + g.items.length, 0);

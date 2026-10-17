@@ -506,6 +506,8 @@ export function ResumeEditor({
       <ContactSection
         value={value.contact}
         onChange={(contact) => onChange({ ...value, contact })}
+        summary={value.summary}
+        onSummaryChange={(summary) => onChange({ ...value, summary })}
         navNonce={target?.section === 'contact' ? nonce : undefined}
       />
     </div>

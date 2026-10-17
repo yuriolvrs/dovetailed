@@ -88,3 +88,20 @@ describe('isExtractedProfile', () => {
     expect(isExtractedProfile({ ...VALID, contact: { name: 42 } })).toBe(false);
   });
 });
+
+describe('summary and company/location rules', () => {
+  it('asks for the summary verbatim and shows it in the JSON shape', () => {
+    const prompt = buildExtractProfilePrompt('x');
+    expect(prompt).toMatch(/"summary"/);
+    expect(prompt).toMatch(/summary[^\n]*verbatim/i);
+  });
+
+  it('tells the model to keep company and location apart', () => {
+    expect(buildExtractProfilePrompt('x')).toMatch(/never inside "company"/);
+  });
+
+  it('accepts a string summary and rejects a non-string one', () => {
+    expect(isExtractedProfile({ ...VALID, summary: 'Hello' })).toBe(true);
+    expect(isExtractedProfile({ ...VALID, summary: 5 })).toBe(false);
+  });
+});

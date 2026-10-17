@@ -65,3 +65,18 @@ describe('coverLetterToMarkdown', () => {
     expect(md).toContain('Sincerely, Jane');
   });
 });
+
+describe('resumeToMarkdown: summary and location', () => {
+  it('prints the summary under the contact line', () => {
+    const md = resumeToMarkdown({ ...baseResume(), summary: 'Staff accountant moving into project work.' });
+    expect(md).toContain('Staff accountant moving into project work.');
+    expect(md.indexOf('Staff accountant')).toBeLessThan(md.indexOf('## Skills'));
+  });
+
+  it('does not print a location the company text already holds', () => {
+    const r = baseResume();
+    r.experience[0] = { ...r.experience[0], company: 'Riverbend Hospital, Vancouver, WA', location: 'Vancouver, WA' };
+    const md = resumeToMarkdown(r);
+    expect(md.match(/Vancouver, WA/g)).toHaveLength(1);
+  });
+});

@@ -17,7 +17,7 @@ import {
 } from 'docx';
 import type { CoverLetterContent, Contact, ResumeContent } from '../../types';
 import { formatMonthYear } from '../../components/ui/primitives';
-import { withRenderableEntries } from '../renderableResume';
+import { visibleLocation, withRenderableEntries } from '../renderableResume';
 
 function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
@@ -74,6 +74,9 @@ function bulletParagraph(text: string): Paragraph {
 export async function resumeToDocx(rawContent: ResumeContent): Promise<Blob> {
   const content = withRenderableEntries(rawContent);
   const children: Paragraph[] = [nameHeading(content.contact.name), contactParagraph(content.contact)];
+  if (content.summary?.trim()) {
+    children.push(new Paragraph({ children: [new TextRun({ text: content.summary.trim(), size: 20 })], spacing: { after: 120 } }));
+  }
 
   if (content.skills.length > 0) {
     children.push(sectionHeading('Skills'));
@@ -103,7 +106,7 @@ export async function resumeToDocx(rawContent: ResumeContent): Promise<Blob> {
           spacing: ENTRY_SPACING,
         }),
       );
-      const meta = [e.location, range].filter(Boolean).join(' · ');
+      const meta = [visibleLocation(e.company, e.location), range].filter(Boolean).join(' · ');
       if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, italics: true, size: 19 })] }));
       for (const bullet of e.bullets) children.push(bulletParagraph(bullet));
     }

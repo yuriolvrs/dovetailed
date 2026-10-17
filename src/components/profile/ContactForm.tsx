@@ -5,14 +5,19 @@
 
 import type { Contact, ContactLink } from '../../types';
 import { EditableList } from '../EditableList';
-import { Card, FieldInput, SectionTitle } from '../ui/primitives';
+import { Card, FieldInput, FieldTextarea, SectionTitle } from '../ui/primitives';
 
 export function ContactForm({
   value,
   onChange,
+  summary,
+  onSummaryChange,
 }: {
   value: Contact;
   onChange: (contact: Contact) => void;
+  /** The summary line printed under the contact line. The textarea shows only when onSummaryChange is given. */
+  summary?: string;
+  onSummaryChange?: (summary: string) => void;
 }) {
   return (
     <Card className="p-6">
@@ -40,6 +45,16 @@ export function ContactForm({
           />
         </div>
       </div>
+      {onSummaryChange && (
+        <FieldTextarea
+          className="mb-5"
+          label="Summary"
+          rows={3}
+          placeholder="Optional. One or two lines, printed under your contact details."
+          value={summary ?? ''}
+          onChange={onSummaryChange}
+        />
+      )}
       <div>
         <span className="mb-2 block text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
           Links

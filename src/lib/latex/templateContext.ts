@@ -9,7 +9,7 @@
 
 import type { ResumeContent } from '../../types';
 import { formatMonthYear } from '../../components/ui/primitives';
-import { withRenderableEntries } from '../renderableResume';
+import { visibleLocation, withRenderableEntries } from '../renderableResume';
 
 function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
@@ -33,6 +33,7 @@ export function buildLatexContext(rawContent: ResumeContent): Record<string, unk
     email: content.contact.email,
     phone: content.contact.phone ?? '',
     location: content.contact.location ?? '',
+    summary: content.summary ?? '',
     links: content.contact.links.map((l) => ({ label: l.label, url: l.url })),
     education: content.education.map((e) => ({
       school: e.school,
@@ -48,7 +49,7 @@ export function buildLatexContext(rawContent: ResumeContent): Record<string, unk
     experience: content.experience.map((e) => ({
       title: e.title,
       company: e.company,
-      location: e.location ?? '',
+      location: visibleLocation(e.company, e.location),
       dateRange: dateRange(
         formatMonthYear(e.startMonth, e.startYear),
         e.current ? 'Present' : formatMonthYear(e.endMonth, e.endYear),

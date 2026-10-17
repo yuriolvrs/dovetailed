@@ -9,7 +9,7 @@
 
 import type { CoverLetterContent, Contact, ResumeContent } from '../../types';
 import { formatMonthYear } from '../../components/ui/primitives';
-import { withRenderableEntries } from '../renderableResume';
+import { visibleLocation, withRenderableEntries } from '../renderableResume';
 
 function dateRange(start: string, end: string): string {
   if (!start && !end) return '';
@@ -31,6 +31,7 @@ function contactLine(contact: Contact): string {
 export function resumeToMarkdown(rawContent: ResumeContent): string {
   const content = withRenderableEntries(rawContent);
   const lines: string[] = [`# ${content.contact.name || 'Resume'}`, '', contactLine(content.contact), ''];
+  if (content.summary?.trim()) lines.push(content.summary.trim(), '');
 
   if (content.skills.length > 0) {
     lines.push('## Skills', '');
@@ -48,7 +49,7 @@ export function resumeToMarkdown(rawContent: ResumeContent): string {
         e.current ? 'Present' : formatMonthYear(e.endMonth, e.endYear),
       );
       lines.push(`### ${e.title}${e.company ? ` — ${e.company}` : ''}`);
-      const meta = [e.location, range].filter(Boolean).join(' · ');
+      const meta = [visibleLocation(e.company, e.location), range].filter(Boolean).join(' · ');
       if (meta) lines.push(`*${meta}*`);
       lines.push('');
       for (const bullet of e.bullets) lines.push(`- ${bullet}`);

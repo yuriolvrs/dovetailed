@@ -8,8 +8,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  BULLET_CAP_BASE,
   isResumeContentVerbatim,
+  isSelfNegative,
   MAX_PROJECTS,
   selectResumeContent,
   selectResumeContentHolistic,
@@ -77,33 +77,29 @@ describe('selectResumeContent', () => {
     expect(content.experience).toHaveLength(2);
   });
 
-  it('caps unmatched bullets per experience entry at BULLET_CAP_BASE when nothing is matched', () => {
-    const bullets = Array.from({ length: BULLET_CAP_BASE + 3 }, (_, i) => `Bullet ${i}`);
-    const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
-    const atoms = buildProfileAtoms(p);
-    const { content } = selectResumeContent(p, analysis(), atoms);
-    expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
-  });
-
-  it('leaves out blank bullets instead of printing them or letting them take a slot', () => {
-    const bullets = ['', 'Shipped the billing service', '  ', ...Array.from({ length: BULLET_CAP_BASE }, (_, i) => `Bullet ${i}`)];
+  it('keeps every bullet of an entry (no cap) so the page can be filled', () => {
+    const bullets = Array.from({ length: 7 }, (_, i) => `Bullet ${i}`);
     const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
     const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
-    expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
-    expect(content.experience[0].bullets.every((b) => b.trim() !== '')).toBe(true);
-    expect(content.experience[0].bullets[0]).toBe('Shipped the billing service');
+    expect(content.experience[0].bullets).toEqual(bullets);
   });
 
-  it('caps unmatched bullets per project at BULLET_CAP_BASE when nothing is matched', () => {
-    const bullets = Array.from({ length: BULLET_CAP_BASE + 3 }, (_, i) => `Bullet ${i}`);
+  it('leaves out blank bullets instead of printing them', () => {
+    const bullets = ['', 'Shipped the billing service', '  ', 'Bullet 0'];
+    const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(content.experience[0].bullets).toEqual(['Shipped the billing service', 'Bullet 0']);
+  });
+
+  it('keeps every project bullet too', () => {
+    const bullets = Array.from({ length: 6 }, (_, i) => `Bullet ${i}`);
     const p = profile({ projects: [{ name: 'Alpha', description: '', bullets, links: [] }] });
-    const atoms = buildProfileAtoms(p);
-    const { content } = selectResumeContent(p, analysis(), atoms);
-    expect(content.projects[0].bullets).toHaveLength(BULLET_CAP_BASE);
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(content.projects[0].bullets).toEqual(bullets);
   });
 
-  it('keeps a single matched bullet plus up to BULLET_CAP_BASE total when only one of many bullets is matched', () => {
-    const bullets = ['Matched bullet', 'B1', 'B2', 'B3', 'B4', 'B5'];
+  it('puts matched bullets first and keeps the unmatched ones after them', () => {
+    const bullets = ['B1', 'Matched bullet', 'B2', 'B3'];
     const p = profile({ experience: [{ company: 'Acme', title: 'Account Officer', current: true, bullets }] });
     const atoms = buildProfileAtoms(p);
     const matchedAtom = atoms.find((a) => a.text === 'Matched bullet')!;
@@ -111,20 +107,107 @@ describe('selectResumeContent', () => {
 
     const { content } = selectResumeContent(p, a, atoms);
 
-    expect(content.experience[0].bullets).toHaveLength(BULLET_CAP_BASE);
-    expect(content.experience[0].bullets[0]).toBe('Matched bullet');
+    expect(content.experience[0].bullets).toEqual(['Matched bullet', 'B1', 'B2', 'B3']);
   });
 
-  it('keeps every matched bullet uncapped when matched count exceeds BULLET_CAP_BASE, adding no unmatched ones', () => {
-    const bullets = ['M1', 'M2', 'M3', 'M4', 'Unmatched'];
+  it('orders bullets by weighted coverage: required full beats the rest, ties keep original order', () => {
+    const bullets = ['Partial required', 'Full preferred', 'Full required', 'Unmatched'];
     const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
     const atoms = buildProfileAtoms(p);
-    const matchedIds = ['M1', 'M2', 'M3', 'M4'].map((text) => atoms.find((a) => a.text === text)!.id);
-    const a = analysis({ matches: [{ requirementId: 'r1', status: 'full', atomIds: matchedIds }] });
+    const id = (text: string) => atoms.find((a) => a.text === text)!.id;
+    const a = analysis({
+      requirements: [
+        { id: 'r1', text: 'one', severity: 'required', order: 0 },
+        { id: 'r2', text: 'two', severity: 'preferred', order: 0 },
+        { id: 'r3', text: 'three', severity: 'required', order: 0 },
+      ],
+      matches: [
+        { requirementId: 'r1', status: 'partial', atomIds: [id('Partial required')] }, // 2 * 0.5 = 1
+        { requirementId: 'r2', status: 'full', atomIds: [id('Full preferred')] }, // 1 * 1 = 1
+        { requirementId: 'r3', status: 'full', atomIds: [id('Full required')] }, // 2
+      ],
+    });
 
     const { content } = selectResumeContent(p, a, atoms);
 
-    expect(content.experience[0].bullets).toEqual(['M1', 'M2', 'M3', 'M4']);
+    expect(content.experience[0].bullets).toEqual(['Full required', 'Partial required', 'Full preferred', 'Unmatched']);
+  });
+
+  it('sums coverage when a bullet backs several requirements', () => {
+    const bullets = ['Single', 'Double'];
+    const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
+    const atoms = buildProfileAtoms(p);
+    const id = (text: string) => atoms.find((a) => a.text === text)!.id;
+    const a = analysis({
+      requirements: [
+        { id: 'r1', text: 'one', severity: 'preferred', order: 0 },
+        { id: 'r2', text: 'two', severity: 'preferred', order: 0 },
+      ],
+      matches: [
+        { requirementId: 'r1', status: 'full', atomIds: [id('Single'), id('Double')] },
+        { requirementId: 'r2', status: 'full', atomIds: [id('Double')] },
+      ],
+    });
+    expect(selectResumeContent(p, a, atoms).content.experience[0].bullets).toEqual(['Double', 'Single']);
+  });
+
+  it('never prints a self-negative bullet', () => {
+    const bullets = ['Built reports', 'No Mac experience at all', 'Never used Salesforce'];
+    const p = profile({ experience: [{ company: 'Acme', title: 'Engineer', current: true, bullets }] });
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(content.experience[0].bullets).toEqual(['Built reports']);
+  });
+
+  it('drops only the negative parenthetical from a skill', () => {
+    const p = profile({ skills: [{ category: 'Skills', items: ['QuickBooks', 'Windows (no Mac experiance)'] }] });
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(content.skills[0].items).toEqual(['QuickBooks', 'Windows']);
+    expect(isResumeContentVerbatim(content, p)).toBe(true);
+  });
+
+  it('copies the profile summary verbatim, and omits it when blank', () => {
+    const withSummary = profile({ summary: 'Staff accountant moving into project coordination.' });
+    expect(selectResumeContent(withSummary, analysis(), []).content.summary).toBe(
+      'Staff accountant moving into project coordination.',
+    );
+    expect('summary' in selectResumeContent(profile({ summary: '  ' }), analysis(), []).content).toBe(false);
+  });
+
+  it('keeps a project that has a description but no bullets, and skips a fully empty one', () => {
+    const p = profile({
+      projects: [
+        { name: 'Thesis rebrand', description: 'Logo, social templates, flyer set', bullets: [], links: [] },
+        { name: 'Empty', description: '', bullets: [], links: [] },
+      ],
+    });
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(content.projects.map((x) => x.name)).toEqual(['Thesis rebrand']);
+  });
+
+  it('Persona C: drops "no Mac" and keeps the billing line', () => {
+    const p = profile({
+      experience: [
+        {
+          company: 'Lakeshore Print & Packaging',
+          title: 'Staff Accountant',
+          current: true,
+          bullets: ['Month end close, reconciliations, journal entries', 'Worked with production and sales on billing issues'],
+        },
+      ],
+      skills: [{ category: 'Skills', items: ['Excel', 'QuickBooks', 'Windows (no Mac experiance)'] }],
+    });
+    const { content } = selectResumeContent(p, analysis(), buildProfileAtoms(p));
+    expect(JSON.stringify(content)).not.toMatch(/no Mac/i);
+    expect(content.experience[0].bullets).toContain('Worked with production and sales on billing issues');
+  });
+
+  it('isSelfNegative recognises the usual phrases and leaves normal lines alone', () => {
+    for (const t of ['no Mac experiance', 'Not familiar with SQL', 'Limited experience with Java', 'Never used Figma', '(no Linux)']) {
+      expect(isSelfNegative(t), t).toBe(true);
+    }
+    for (const t of ['Reduced no-show rates', 'Managed limited-edition releases', 'Excel (advanced: pivot tables)', 'Windows']) {
+      expect(isSelfNegative(t), t).toBe(false);
+    }
   });
 
   it(`caps included projects at MAX_PROJECTS (${MAX_PROJECTS}), preferring the ones with more matched bullets`, () => {

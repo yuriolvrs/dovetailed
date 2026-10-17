@@ -257,7 +257,12 @@ export default function ProfilePage() {
 
         <div className="flex min-w-0 flex-col gap-4">
           {importing && <ImportResumeSection profile={profile} onImported={replace} />}
-          <ContactSection value={profile.contact} onChange={(contact) => update({ contact })} />
+          <ContactSection
+            value={profile.contact}
+            onChange={(contact) => update({ contact })}
+            summary={profile.summary}
+            onSummaryChange={(summary) => update({ summary })}
+          />
           <ExperienceSection
             value={profile.experience}
             onChange={(experience) => update({ experience })}

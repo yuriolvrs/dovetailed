@@ -25,6 +25,8 @@ export type ExtractedContact = Partial<Omit<Contact, 'links'>> & { links?: strin
 /** What the extractor is allowed to return -- a Profile minus the app-managed fields. */
 export interface ExtractedProfile {
   contact: ExtractedContact;
+  /** The resume's own summary or objective text, verbatim. */
+  summary?: string;
   skills: SkillGroup[];
   experience: ExtractedExperience[];
   projects: ExtractedProject[];
@@ -54,6 +56,8 @@ CRITICAL RULES:
 - The document is in markdown. Strip markdown formatting (#, **, -, |) from the values you return, but do not change the words themselves.
 
 FIELD NOTES:
+- "summary" is the resume's own summary, profile or objective paragraph, copied verbatim, without its heading. Use "" if the resume has none. Do not write one.
+- "experience.company" is the employer name only. Put the city or state in "location", never inside "company". If the resume prints "Riverbend Community Hospital, Vancouver, WA", the company is "Riverbend Community Hospital" and the location is "Vancouver, WA".
 - "contact.links" lists every web address or profile link in the resume header (e.g. "linkedin.com/in/name", "github.com/name", a portfolio site), copied exactly. An email address is not a link.
 - "skills" groups skills under the document's own category headings (e.g. "Languages", "Tools"). If the resume lists skills without categories, use a single group with category "Skills".
 - "experience" is jobs/roles. "projects" is personal or academic projects. Do not move an item between them.
@@ -67,6 +71,7 @@ FIELD NOTES:
 Return ONLY valid JSON in exactly this shape, with no commentary and no markdown fences:
 {
   "contact": { "name": "", "email": "", "phone": "", "location": "", "links": [""] },
+  "summary": "",
   "skills": [{ "category": "", "items": [""] }],
   "experience": [{ "company": "", "title": "", "startMonth": "", "startYear": "", "endMonth": "", "endYear": "", "current": false, "location": "", "bullets": [""] }],
   "projects": [{ "name": "", "description": "", "bullets": [""] }],
@@ -101,6 +106,8 @@ function optionalString(value: unknown): boolean {
  */
 export function isExtractedProfile(value: unknown): value is ExtractedProfile {
   if (!isObject(value)) return false;
+
+  if (!optionalString(value.summary)) return false;
 
   if (!isObject(value.contact)) return false;
   const contact = value.contact;

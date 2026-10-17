@@ -222,6 +222,9 @@ export function mergeProfile(
         ? existing.contact.links
         : (c.links ?? []).filter((l) => l.trim()).map(toContactLink),
     };
+    // The summary travels with the contact section and follows the same
+    // rule: an existing summary stays; the imported one fills only a blank.
+    if (!existing.summary?.trim() && extracted.summary?.trim()) merged.summary = extracted.summary.trim();
   }
 
   if (selected.has('skills')) {

@@ -250,3 +250,20 @@ describe('mergeProfile', () => {
     expect(merged.experience).toHaveLength(1);
   });
 });
+
+describe('mergeProfile: summary', () => {
+  it('fills a blank summary when the contact section is selected', () => {
+    const merged = mergeProfile(baseProfile(), extraction({ summary: ' Staff accountant. ' }), ['contact']);
+    expect(merged.summary).toBe('Staff accountant.');
+  });
+
+  it('keeps an existing summary', () => {
+    const merged = mergeProfile(baseProfile({ summary: 'Mine' }), extraction({ summary: 'Theirs' }), ['contact']);
+    expect(merged.summary).toBe('Mine');
+  });
+
+  it('leaves the summary alone when the contact section is not selected', () => {
+    const merged = mergeProfile(baseProfile(), extraction({ summary: 'Theirs' }), ['skills']);
+    expect(merged.summary).toBeUndefined();
+  });
+});

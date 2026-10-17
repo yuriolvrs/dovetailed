@@ -20,7 +20,7 @@ import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import type { ExperienceEntry, ResumeContent } from '../../types';
 import { educationKey, experienceKey, projectKey, type ResumeFocusTarget, type ResumeNavTarget } from '../../lib/resumeEntryKeys';
 import { formatMonthYear } from '../ui/primitives';
-import { withRenderableEntries } from '../../lib/renderableResume';
+import { experienceFirst, visibleLocation, withRenderableEntries } from '../../lib/renderableResume';
 
 // Shared styling for a clickable preview region -- only applied on the
 // 'preview' variant (the print/measure variants render the exact same
@@ -157,6 +157,95 @@ export function ResumePrintView({
         ? 'text-slate-900 text-[15px] leading-snug font-sans'
         : 'hidden print:block text-slate-900 text-[15px] leading-snug font-sans';
 
+  // Experience leads when the resume has any; otherwise Education stays first.
+  const educationBlock = content.education.length > 0 && (
+    <section className="mb-3">
+      <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">Education</p>
+      {content.education.map((entry, i) => (
+        <div
+          key={i}
+          className={`mb-1 ${interactive ? navClickableClass : ''}`}
+          {...navProps({ section: 'education', entryKey: educationKey(entry) })}
+        >
+          <div className="flex justify-between">
+            <div>
+              <p className="font-bold">{entry.school}</p>
+              <p className="italic">
+                {entry.degree}
+                {entry.field ? `, ${entry.field}` : ''}
+              </p>
+            </div>
+            <div className="text-right">
+              <p></p>
+              <p className="italic">
+                {dateRange(
+                  formatMonthYear(entry.startMonth, entry.startYear),
+                  entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear),
+                )}
+              </p>
+              {entry.gpa && <p className="italic">{entry.gpa} GPA</p>}
+            </div>
+          </div>
+          {entry.details && entry.details.length > 0 && (
+            <ul className="list-disc ml-4 mt-0.5">
+              {entry.details.map((detail, j) => (
+                <li key={j}>{detail}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+
+  const experienceBlock = groupBySection(content.experience).map(({ section, entries }) => (
+    <section key={section} className="mb-3">
+      <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">{section}</p>
+      {entries.map((entry, i) => (
+        <div
+          key={i}
+          className={`mb-2 ${interactive ? navClickableClass : ''}`}
+          {...navProps({ section: 'experience', entryKey: experienceKey(entry) })}
+        >
+          <div className="flex justify-between">
+            <p className="font-bold">{entry.title}</p>
+            <p className="italic">
+              {dateRange(
+                formatMonthYear(entry.startMonth, entry.startYear),
+                entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear),
+              )}
+            </p>
+          </div>
+          <div className="flex justify-between italic">
+            <p>{entry.company}</p>
+            <p>{visibleLocation(entry.company, entry.location)}</p>
+          </div>
+          {entry.bullets.length > 0 && (
+            <ul className="list-disc ml-4 mt-0.5">
+              {entry.bullets.map((bullet, j) => {
+                const target: ResumeFocusTarget = { section: 'experience', entryKey: experienceKey(entry), bulletIndex: j };
+                const focused = variant === 'preview' && focusedTarget && bulletFocusKey(focusedTarget) === bulletFocusKey(target);
+                return (
+                  <li
+                    key={j}
+                    data-focus-key={bulletFocusKey(target)}
+                    {...navProps(target)}
+                    className={[
+                      focused ? 'bg-emerald-100' : '',
+                      interactive ? navClickableClass : 'transition-colors',
+                    ].join(' ')}
+                  >
+                    {bullet}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ))}
+    </section>
+  ));
+
   return (
     <div ref={rootRef} className={rootClass}>
       {variant === 'print' && <style>{'@page { size: letter; margin: 0.55in; }'}</style>}
@@ -176,95 +265,20 @@ export function ResumePrintView({
             .filter(Boolean)
             .join(' | ')}
         </p>
+        {content.summary?.trim() && <p className="mt-1.5">{content.summary}</p>}
       </div>
 
-      {content.education.length > 0 && (
-        <section className="mb-3">
-          <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">Education</p>
-          {content.education.map((entry, i) => (
-            <div
-              key={i}
-              className={`mb-1 ${interactive ? navClickableClass : ''}`}
-              {...navProps({ section: 'education', entryKey: educationKey(entry) })}
-            >
-              <div className="flex justify-between">
-                <div>
-                  <p className="font-bold">{entry.school}</p>
-                  <p className="italic">
-                    {entry.degree}
-                    {entry.field ? `, ${entry.field}` : ''}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p></p>
-                  <p className="italic">
-                    {dateRange(
-                      formatMonthYear(entry.startMonth, entry.startYear),
-                      entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear),
-                    )}
-                  </p>
-                  {entry.gpa && <p className="italic">{entry.gpa} GPA</p>}
-                </div>
-              </div>
-              {entry.details && entry.details.length > 0 && (
-                <ul className="list-disc ml-4 mt-0.5">
-                  {entry.details.map((detail, j) => (
-                    <li key={j}>{detail}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </section>
+      {experienceFirst(content) ? (
+        <>
+          {experienceBlock}
+          {educationBlock}
+        </>
+      ) : (
+        <>
+          {educationBlock}
+          {experienceBlock}
+        </>
       )}
-
-      {groupBySection(content.experience).map(({ section, entries }) => (
-        <section key={section} className="mb-3">
-          <p className="text-[15px] font-bold uppercase border-b border-slate-900 mb-1.5">{section}</p>
-          {entries.map((entry, i) => (
-            <div
-              key={i}
-              className={`mb-2 ${interactive ? navClickableClass : ''}`}
-              {...navProps({ section: 'experience', entryKey: experienceKey(entry) })}
-            >
-              <div className="flex justify-between">
-                <p className="font-bold">{entry.title}</p>
-                <p className="italic">
-                  {dateRange(
-                    formatMonthYear(entry.startMonth, entry.startYear),
-                    entry.current ? 'Present' : formatMonthYear(entry.endMonth, entry.endYear),
-                  )}
-                </p>
-              </div>
-              <div className="flex justify-between italic">
-                <p>{entry.company}</p>
-                <p>{entry.location}</p>
-              </div>
-              {entry.bullets.length > 0 && (
-                <ul className="list-disc ml-4 mt-0.5">
-                  {entry.bullets.map((bullet, j) => {
-                    const target: ResumeFocusTarget = { section: 'experience', entryKey: experienceKey(entry), bulletIndex: j };
-                    const focused = variant === 'preview' && focusedTarget && bulletFocusKey(focusedTarget) === bulletFocusKey(target);
-                    return (
-                      <li
-                        key={j}
-                        data-focus-key={bulletFocusKey(target)}
-                        {...navProps(target)}
-                        className={[
-                          focused ? 'bg-emerald-100' : '',
-                          interactive ? navClickableClass : 'transition-colors',
-                        ].join(' ')}
-                      >
-                        {bullet}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          ))}
-        </section>
-      ))}
 
       {content.projects.length > 0 && (
         <section className="mb-3">
