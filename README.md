@@ -8,7 +8,7 @@ Live at https://dovetailed.pages.dev
 
 I kept seeing advice, online and from friends, that tailored resumes do better than sending the same one everywhere. A software engineer application and an AI engineer application should emphasize different things, but rewriting a resume by hand for every posting takes time I didn't want to spend.
 
-Dovetailed is the tool I wanted: store your experience once, and let it draft a version for each job. You still review everything. The model only selects and reorders what is already in your profile, and anything it can't back up with evidence is flagged instead of presented as fact.
+So I built the thing I wished I had. You type your experience in once, paste in a posting, and it drafts a version for that job. I still go over every line before I use it. The model can only rearrange what's already in my profile, and if it can't back a claim up, it flags it instead of dressing it up.
 
 ## How your data is handled
 
