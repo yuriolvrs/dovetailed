@@ -7,7 +7,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Document, Packer, Paragraph } from 'docx';
-import { extractText, generate, generateStructured, llmErrorMessage, ProxyRequestError } from './llm';
+import { EmptyResponseError, extractText, generate, generateStructured, llmErrorMessage, ProxyRequestError } from './llm';
 
 interface Hello {
   hello: string;
@@ -70,6 +70,18 @@ describe('generate', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(truncatedResponse()));
 
     await expect(generate('say hi')).rejects.toThrow(/ran out of room/);
+  });
+
+  it('treats a reply cut off at the token limit as unusable, even with partial text', async () => {
+    const cutOff = {
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: '{"greeting":"Dear' }, finish_reason: 'length' }] }),
+      text: async () => '',
+    } as Response;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(cutOff));
+
+    await expect(generate('say hi')).rejects.toBeInstanceOf(EmptyResponseError);
   });
 
   it('repairs mis-decoded UTF-8 punctuation in the content (Groq mojibake)', async () => {

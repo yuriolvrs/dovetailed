@@ -137,6 +137,11 @@ export async function generateCoverLetterContent(
     // The per-sentence shape repeats text/claim/atomIds for every sentence,
     // so the answer itself is longer too; 3500 ran out live.
     maxTokens: 6000,
+    // The plan is decided in code, so the model needs little thinking. At the
+    // default effort 2 of 5 live runs failed twice with invalid JSON, most
+    // likely cut off at the limit. maxTokens cannot grow: prompt plus
+    // maxTokens must fit the provider's 8000 tokens-per-minute cap.
+    reasoningEffort: 'low',
     signal: options.signal,
   });
 

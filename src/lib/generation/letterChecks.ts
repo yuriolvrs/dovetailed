@@ -7,6 +7,7 @@ import type { Profile } from '../../types';
 
 const MIN_NAME_CHARS = 4;
 const DUPLICATE_OVERLAP = 0.6;
+const CONTAINED_OVERLAP = 0.8;
 const MIN_WORDS_FOR_OVERLAP = 3;
 
 const STOPWORDS = new Set(
@@ -64,7 +65,7 @@ export function findWrongEmployer(
 /** The sentence's lowercase content words (stopwords removed) as a set. */
 function contentWords(text: string): Set<string> {
   const words = text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
-  return new Set(words.filter((w) => !STOPWORDS.has(w)));
+  return new Set(words.filter((w) => w.length > 1 && !STOPWORDS.has(w)));
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
@@ -74,26 +75,48 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : shared / union;
 }
 
+/** Share of the smaller set's words that also appear in the other set. */
+function containment(small: Set<string>, other: Set<string>): number {
+  let shared = 0;
+  for (const w of small) if (other.has(w)) shared++;
+  return small.size === 0 ? 0 : shared / small.size;
+}
+
 /**
- * Returns the positions of sentences that repeat an earlier kept sentence. Two sentences repeat
- * when their content words overlap by 0.6 or more (Jaccard). A sentence with fewer than 3 content
- * words repeats only when its word set is identical.
- * In plain terms: finds the later copy when the letter says the same thing twice.
+ * Returns the positions of sentences to drop because they repeat another one. Two sentences repeat
+ * when their content words overlap by 0.6 or more (Jaccard); then the later one is dropped. A
+ * sentence whose words are 80% or more inside another sentence also repeats it; then the shorter
+ * one is dropped, wherever it is, because the longer one says the same and more. A sentence with
+ * fewer than 3 content words repeats only when its word set is identical.
+ * In plain terms: finds the copy when the letter says the same thing twice.
  */
 export function findDuplicateSentences(sentences: string[]): Set<number> {
   const duplicates = new Set<number>();
-  const kept: Set<string>[] = [];
+  const kept: { i: number; words: Set<string> }[] = [];
   sentences.forEach((sentence, i) => {
     const words = contentWords(sentence);
-    const repeated = kept.some((earlier) => {
-      if (words.size === 0 || earlier.size === 0) return false;
-      if (words.size < MIN_WORDS_FOR_OVERLAP || earlier.size < MIN_WORDS_FOR_OVERLAP) {
-        return words.size === earlier.size && [...words].every((w) => earlier.has(w));
+    if (words.size === 0) {
+      kept.push({ i, words });
+      return;
+    }
+    let repeated = false;
+    for (const earlier of [...kept]) {
+      if (earlier.words.size === 0) continue;
+      if (words.size < MIN_WORDS_FOR_OVERLAP || earlier.words.size < MIN_WORDS_FOR_OVERLAP) {
+        repeated = words.size === earlier.words.size && [...words].every((w) => earlier.words.has(w));
+      } else if (jaccard(words, earlier.words) >= DUPLICATE_OVERLAP) {
+        repeated = true;
+      } else if (words.size <= earlier.words.size) {
+        repeated = containment(words, earlier.words) >= CONTAINED_OVERLAP;
+      } else if (containment(earlier.words, words) >= CONTAINED_OVERLAP) {
+        // The earlier sentence is the short copy: drop it and keep this one.
+        duplicates.add(earlier.i);
+        kept.splice(kept.indexOf(earlier), 1);
       }
-      return jaccard(words, earlier) >= DUPLICATE_OVERLAP;
-    });
+      if (repeated) break;
+    }
     if (repeated) duplicates.add(i);
-    else kept.push(words);
+    else kept.push({ i, words });
   });
   return duplicates;
 }

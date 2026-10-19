@@ -42,7 +42,7 @@ export class EmptyResponseError extends Error {
   constructor(readonly finishReason?: string) {
     super(
       finishReason === 'length'
-        ? 'the model ran out of room before writing an answer. The input is likely too long — shorten it and try again.'
+        ? 'the model ran out of room before finishing its answer. Try again; if it keeps happening, shorten the input.'
         : 'the model returned an empty response.',
     );
     this.name = 'EmptyResponseError';
@@ -160,9 +160,12 @@ export async function generate(prompt: string, options: GenerateOptions = {}): P
     'LLM proxy',
   )) as ChatCompletionResponse;
 
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new EmptyResponseError(data.choices?.[0]?.finish_reason);
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content;
+  // A reply cut off at the token limit is unusable even when it has text: it
+  // is half a JSON object. Treat it like an empty reply, which is retried.
+  if (!content || choice?.finish_reason === 'length') {
+    throw new EmptyResponseError(choice?.finish_reason);
   }
   // The small model occasionally mis-emits multi-byte UTF-8 for special
   // punctuation (non-breaking hyphens, smart quotes, en/em dashes), so every

@@ -83,6 +83,30 @@ describe('findDuplicateSentences', () => {
   it('does not treat two short different sentences as copies', () => {
     expect(findDuplicateSentences(['Thank you.', 'Thanks for reading.']).size).toBe(0);
   });
+
+  // From a live letter: the short sentence came first and was repeated inside two longer ones.
+  it('drops a short sentence whose words sit inside a longer one, even when it comes first', () => {
+    const out = findDuplicateSentences([
+      "I posted on the office's Instagram and tracked likes.",
+      'At Hudson Valley State College I posted on the Office of Student Life Instagram account and tracked likes to gauge audience response.',
+      'I have not yet had formal responsibility for managing multiple projects simultaneously, though I did post on the office’s Instagram and tracked likes.',
+    ]);
+    expect([...out]).toEqual([0]);
+  });
+
+  it('drops a later short sentence that repeats part of an earlier long one', () => {
+    const out = findDuplicateSentences([
+      'At Riverbend I scheduled infusion chairs and helped the front desk when it was busy.',
+      'I scheduled infusion chairs.',
+    ]);
+    expect([...out]).toEqual([1]);
+  });
+
+  it('keeps a short sentence that shares only some words with a longer one', () => {
+    expect(
+      findDuplicateSentences(['I used Outlook and basic Excel.', 'I built an Excel tracker for no-shows in the clinic.']).size,
+    ).toBe(0);
+  });
 });
 
 describe('cleanMetaPhrases', () => {
