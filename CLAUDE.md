@@ -12,7 +12,7 @@ General working style, in addition to the project-specific rules below (Conventi
 
 **Surgical changes.** Touch only what the request requires. Don't refactor, reformat, or "improve" adjacent code/comments while in a file for an unrelated reason, and match existing style even when you'd choose differently. Clean up only the imports/variables/functions your own change made unused — flag pre-existing dead code instead of deleting it.
 
-**Goal-driven execution.** Turn vague asks into a verifiable goal before starting ("fix the bug" → reproduce it, then make the repro pass). For multi-step work, state a short plan up front with a concrete check per step, so progress can be verified without stopping to ask at each one.
+**Goal-driven execution.** Turn vague asks into a verifiable goal before starting ("fix the bug" → reproduce it, then make the repro pass). For multi-step work, give each step a concrete check, so progress can be verified without stopping to ask at each one.
 
 ## Architecture invariants (never violate)
 - All user data lives in the browser via Dexie/IndexedDB. Never add server-side storage, logging of user content, or analytics on content.
@@ -32,7 +32,7 @@ General working style, in addition to the project-specific rules below (Conventi
 - Anti-fabrication: generation prompts must require sourceMap evidence; UI flags unevidenced claims.
 - Unit tests (Vitest) required for: LaTeX escaping/filling, JSON export/import, schema validation. Mock all LLM calls in tests.
 - Keep dependencies minimal; justify any new package.
-- Before adding a new function, component, table, or UI pattern, search the codebase for an existing one that already does it (or close to it). Reuse or extend it rather than writing a duplicate. If similar UI already exists (tables, forms, buttons, cards, empty states), match its structure/styling so the app looks and behaves uniformly rather than each screen inventing its own look.
+- Before adding a new function, component, table, or UI pattern, run a targeted search (likely names, the obvious directory) for an existing one that already does it (or close to it). Reuse or extend it rather than writing a duplicate. If similar UI already exists (tables, forms, buttons, cards, empty states), match its structure/styling so the app looks and behaves uniformly rather than each screen inventing its own look.
 
 ## Guardrails
 - Do not invent APIs, packages, or provider endpoints. Before using any external API or npm package, verify it exists (check official docs or the package registry). If unsure, say so and ask rather than guessing.

@@ -23,7 +23,8 @@ Vite defaults to port 5173 but will pick the next free port (5174,
 ...) if occupied — check its stdout for the actual URL.
 
 ## Drive it (browser)
-No Playwright/browser MCP tool is wired into this environment. Use
+In the desktop app, use the built-in browser: add a `.claude/launch.json`
+entry for `npm run dev` and open it with `preview_start`. Elsewhere, use
 `npx playwright install chromium` (installs on demand, ~10s if cached)
 plus a throwaway Node script with `import { chromium } from 'playwright'`
 against the scratchpad's own `node_modules` (run `npm init -y && npm
