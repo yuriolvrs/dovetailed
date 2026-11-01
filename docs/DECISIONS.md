@@ -5,7 +5,7 @@ Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reas
 ## 2026-11-01 — Extension calls the proxy for resume import (plan 04, task 4.11)
 
 **Context:** The user asked to fill the profile from the stored resume. The extension had no network path, and the proxy allowlist refused extension origins.
-**Decision:** The extension reuses , the extraction prompt and the extraction check. It reads text locally and sends text only, after an inline notice and a Continue click. Scanned files fail with a message and are not sent to OCR. Values the check cannot find in the resume are dropped. The Chrome ID is fixed by a locally generated public key. The proxy allows that exact origin plus one Firefox prefix, .
+**Decision:** The extension reuses `src/lib/llm.ts`, the extraction prompt and the extraction check. It reads text locally and sends text only, after an inline notice and a Continue click. Scanned files fail with a message and are not sent to OCR. Values the check cannot find in the resume are dropped. The Chrome ID is fixed by a locally generated public key. The proxy allows that exact origin plus one Firefox prefix, `moz-extension://*`.
 **Reason:** Firefox origins are random per install, so an exact entry cannot exist. The Chrome dashboard route to a key costs money, and a local key costs nothing. The user approved this network path and the deploy.
 **Status:** Accepted
 
