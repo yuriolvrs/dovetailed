@@ -47,18 +47,22 @@ function resultText(r: FrameResult): string {
 
 const STYLE = `
 :host { all: initial; }
-.row { position: fixed; display: flex; align-items: center; gap: 2px; font: 12px/1.3 system-ui, sans-serif; }
+.row { position: fixed; z-index: 2147483647; display: flex; align-items: center; gap: 4px; font: 500 13px/1.3 system-ui, sans-serif;
+  animation: rise .18s ease-out; }
+@keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .row { animation: none; } }
 button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.fill { width: ${BUTTON_SIZE}px; height: ${BUTTON_SIZE}px; border-radius: 8px; background: #0f172a; color: #fff;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.6), 0 1px 4px rgba(0,0,0,.4); }
+.fill { gap: 6px; height: ${BUTTON_SIZE}px; padding: 0 12px 0 8px; border-radius: 8px; background: #0f172a; color: #fff;
+  white-space: nowrap; box-shadow: 0 0 0 1px rgba(255,255,255,.6), 0 2px 6px rgba(0,0,0,.4); }
 .fill:hover { background: #1e293b; }
 .fill[disabled] { opacity: .6; cursor: default; }
 .dismiss { width: 18px; height: 18px; border-radius: 9px; background: #0f172a; color: #fff; font-size: 12px;
   box-shadow: 0 0 0 1px rgba(255,255,255,.6), 0 1px 3px rgba(0,0,0,.4); }
 .dismiss:hover { background: #1e293b; }
 button:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
-.result { position: absolute; top: ${BUTTON_SIZE + 6}px; right: 0; width: max-content; max-width: 240px; padding: 6px 10px;
+.result { position: absolute; bottom: ${BUTTON_SIZE + 6}px; right: 0; width: max-content; max-width: 240px; padding: 6px 10px;
   border-radius: 8px; background: #0f172a; color: #fff; box-shadow: 0 0 0 1px rgba(255,255,255,.6), 0 2px 8px rgba(0,0,0,.4); }
+.row.below .result { bottom: auto; top: ${BUTTON_SIZE + 6}px; }
 .result:empty { display: none; }
 `;
 
@@ -112,7 +116,7 @@ export function installHint(doc: Document, options: HintOptions): () => void {
       path.setAttribute('d', d);
       svg.append(path);
     }
-    fillBtn.append(svg);
+    fillBtn.append(svg, 'Fill form');
 
     const dismiss = doc.createElement('button');
     dismiss.type = 'button';
@@ -160,10 +164,13 @@ export function installHint(doc: Document, options: HintOptions): () => void {
   function place() {
     if (!field || !row) return;
     const r = field.getBoundingClientRect();
-    const top = field instanceof HTMLTextAreaElement ? r.top + EDGE_GAP : r.top + (r.height - BUTTON_SIZE) / 2;
-    // The row is two controls wide. It sits against the field's right edge, inside it.
-    row.style.top = `${Math.round(top)}px`;
-    row.style.left = `${Math.round(r.right - EDGE_GAP - BUTTON_SIZE - 20)}px`;
+    // Above the field's right end, where it hides neither the text nor a left-aligned label.
+    // Below the field when there is no room above.
+    const above = r.top - EDGE_GAP - BUTTON_SIZE;
+    const below = above < EDGE_GAP;
+    row.classList.toggle('below', below);
+    row.style.top = `${Math.round(below ? r.bottom + EDGE_GAP : above)}px`;
+    row.style.right = `${Math.round(doc.documentElement.clientWidth - r.right)}px`;
   }
 
   function show(el: HTMLInputElement | HTMLTextAreaElement) {

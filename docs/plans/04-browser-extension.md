@@ -388,3 +388,23 @@ Approved by the user on 2026-11-01. See Task 4.11. Importing a Dovetailed JSON b
 **Done when:** Tests cover: no button on a non-form, password focus or blocked site; a synthetic click does nothing; no profile read before a trusted click. Playwright shows a real click fills a fixture, and that toggling off removes the script. Screenshots in light and dark on a white and a dark page.
 
 **Out of scope:** Auto-filling on page load, and any banner that interrupts the page.
+
+## Task 4.13: Phone country picker
+
+**Goal:** The user picks a country by name, flag or digits, and the calling code follows, in place of a typed number.
+
+**Files to touch:** `extension/package.json`, `extension/src/lib/callingCodes.ts` (new) plus test, `extension/src/types/profile.ts`, `extension/src/lib/phone.ts` plus test, `extension/src/components/ProfileEditor.tsx`.
+
+**Doc sections to read:** `docs/DECISIONS.md`, entry "Extension profile schema and blocked sites".
+
+**Steps:**
+1. Add `libphonenumber-js` (MIT, checked on npm). Read the installed package for the real API. Use its `min` metadata. Do not write a table by hand.
+2. Add `callingCodes.ts`. It is imported by the options page only, so the library never enters `fill.js` or `hint.js`. Give it `callingCode(code)`, `listPhoneCountries(countries)` (only countries with a calling code; `name` becomes "Philippines (+63)", so the existing search also finds digits) and `phoneCountry(phone, addressCountry)`.
+3. `phoneCountry` returns the first of these whose calling code equals the stored code: `phone.countryCode`, then the address country, then the library's main country for that code (US for 1, GB for 44, RU for 7), never the first by alphabet. Empty code gives undefined. Check how the metadata exposes the main country.
+4. Add optional `countryCode?: string` to `PhoneNumber`, an ISO code for display, because +1 and others are shared. `cleanPhone` keeps it. Filling ignores it. No version bump: old profiles have none.
+5. In `ProfileEditor`, replace the Calling code input with `CountryCombobox`, label "Phone country", no change to the combobox. Selecting sets `countryCode` and `countryCallingCode`; clearing empties both. Use two equal columns, stacked on narrow widths. Change the hint to "Digits only. A leading 0 is removed when you save."
+6. When the address Country changes and the stored calling code is empty, set the phone country from it. Never overwrite a chosen one.
+
+**Done when:** Vitest covers `callingCode`, `listPhoneCountries`, all three `phoneCountry` routes including a shared code, and `cleanPhone` keeping `countryCode`. `npm run test`, `npm run typecheck` and `npm run build` pass from `extension/`. `.output/chrome-mv3/fill.js` and `hint.js` do not contain the library.
+
+**Out of scope:** `parsePhone` in `resumeImport.ts`, `CountryCombobox.tsx`, `hint.ts`, `FillButtonSection.tsx`, the filling code and any other edits in progress in this checkout. Do not commit.

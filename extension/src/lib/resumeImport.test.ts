@@ -57,6 +57,18 @@ describe('mapExtracted', () => {
     expect(p.lastName).toBe('Cruz');
   });
 
+  it('leaves middle initials out of the first name', () => {
+    expect(mapExtracted(extracted({ name: 'Testa Ann G. Examplo' }), empty).profile).toMatchObject({
+      firstName: 'Testa Ann',
+      lastName: 'Examplo',
+    });
+    expect(mapExtracted(extracted({ name: 'Testa Q R Examplo' }), empty).profile.firstName).toBe('Testa');
+  });
+
+  it('keeps a leading initial', () => {
+    expect(mapExtracted(extracted({ name: 'T. Ann Examplo' }), empty).profile.firstName).toBe('T. Ann');
+  });
+
   it('gives a one-word name to the first name only', () => {
     const p = mapExtracted(extracted({ name: 'Testa' }), empty).profile;
     expect(p).toMatchObject({ firstName: 'Testa', lastName: '' });

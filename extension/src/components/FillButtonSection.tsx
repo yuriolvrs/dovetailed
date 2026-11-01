@@ -1,6 +1,7 @@
 // What this file is: the options section that turns the in-page Fill button on or off. Turning it on asks the browser for access to all sites.
 // In plain terms: a switch for the small button that can appear inside application forms. It is off until you turn it on.
 import { useEffect, useState } from 'react';
+import Logo from '../../../src/components/ui/Logo';
 import { getSettings, saveSettings } from '../lib/data';
 import { disableHint, enableHint } from '../lib/hintScript';
 import { SettingsSection } from './SettingsSection';
@@ -50,6 +51,19 @@ export function FillButtonSection() {
         />
         Show the button
       </label>
+      {/* A sample of what appears above a field. It is not a working control. */}
+      <div aria-hidden="true" className="mt-4 max-w-sm">
+        <div className="flex justify-end pb-1.5">
+          <span className="flex items-center gap-1.5 rounded-lg bg-slate-900 py-1.5 pl-2 pr-3 text-[13px] font-medium text-white dark:ring-1 dark:ring-white/60">
+            <Logo size={16} />
+            Fill form
+          </span>
+        </div>
+        <div className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">
+          First name
+        </div>
+      </div>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">It appears when you click into a field on an application form.</p>
       {message && (
         <p role="alert" className="mt-2 text-sm text-red-700 dark:text-red-400">
           {message}

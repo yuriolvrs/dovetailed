@@ -12,11 +12,11 @@ export function cleanNationalNumber(raw: string): string {
   return raw.replace(/\D/g, '').replace(/^0+/, '');
 }
 
-/** Cleans both parts. Returns undefined when both are empty. */
+/** Cleans both parts and keeps the display country. Returns undefined when both are empty. */
 export function cleanPhone(phone: PhoneNumber | undefined): PhoneNumber | undefined {
   if (!phone) return undefined;
   const countryCallingCode = cleanCallingCode(phone.countryCallingCode);
   const nationalNumber = cleanNationalNumber(phone.nationalNumber);
   if (!countryCallingCode && !nationalNumber) return undefined;
-  return { countryCallingCode, nationalNumber };
+  return phone.countryCode ? { countryCallingCode, nationalNumber, countryCode: phone.countryCode } : { countryCallingCode, nationalNumber };
 }

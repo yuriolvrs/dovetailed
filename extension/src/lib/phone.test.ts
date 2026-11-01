@@ -23,3 +23,13 @@ describe('phone cleanup', () => {
     expect(cleanPhone(undefined)).toBeUndefined();
   });
 });
+
+describe('cleanPhone countryCode', () => {
+  it('keeps the display country', () => {
+    expect(cleanPhone({ countryCallingCode: '+1', nationalNumber: '2025550100', countryCode: 'CA' })).toEqual({
+      countryCallingCode: '1',
+      nationalNumber: '2025550100',
+      countryCode: 'CA',
+    });
+  });
+});

@@ -7,6 +7,7 @@ import { EditableList } from '../../../src/components/EditableList';
 import { DateRangeCompact } from '../../../src/components/profile/DateRangeFields';
 import { Btn, FieldInput, fieldLabelClass } from '../../../src/components/ui/primitives';
 import type { ContactLink, EducationEntry, ExperienceEntry } from '../../../src/types';
+import { callingCode, listPhoneCountries, phoneCountry } from '../lib/callingCodes';
 import { listCountries } from '../lib/countries';
 import type { ExtensionProfile, PhoneNumber, PostalAddress } from '../types/profile';
 import { CountryCombobox } from './CountryCombobox';
@@ -89,7 +90,19 @@ export function ProfileEditor({
   const phone: PhoneNumber = value.phone ?? { countryCallingCode: '', nationalNumber: '' };
   const address: PostalAddress = value.address ?? {};
   const set = (patch: Partial<ExtensionProfile>) => onChange({ ...value, ...patch });
+  const phoneCountries = useMemo(() => listPhoneCountries(countries), [countries]);
+  const setPhoneCountry = (countryCode: string | undefined) =>
+    set({
+      phone: { ...phone, countryCode, countryCallingCode: (countryCode && callingCode(countryCode)) || '' },
+    });
   const setAddress = (patch: Partial<PostalAddress>) => set({ address: { ...address, ...patch } });
+  // A new address country sets the phone country only while none is stored.
+  const setAddressCountry = (countryCode: string | undefined) => {
+    const next = { ...value, address: { ...address, countryCode } };
+    const code = countryCode && callingCode(countryCode);
+    if (code && !phone.countryCallingCode) next.phone = { ...phone, countryCode, countryCallingCode: code };
+    onChange(next);
+  };
 
   return (
     <>
@@ -101,12 +114,12 @@ export function ProfileEditor({
             <FieldInput label="Email" type="email" value={value.email} onChange={(email) => set({ email })} />
           </div>
           <div className="sm:col-span-2">
-            <div className="grid grid-cols-[6rem_1fr] gap-4">
-              <FieldInput
-                label="Calling code"
-                placeholder="63"
-                value={phone.countryCallingCode}
-                onChange={(countryCallingCode) => set({ phone: { ...phone, countryCallingCode } })}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <CountryCombobox
+                label="Phone country"
+                value={phoneCountry(value.phone, address.countryCode)}
+                countries={phoneCountries}
+                onChange={setPhoneCountry}
               />
               <FieldInput
                 label="National number"
@@ -116,7 +129,7 @@ export function ProfileEditor({
               />
             </div>
             <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-              Phone: digits only. A leading + or 0 is removed when you save.
+              Digits only. A leading 0 is removed when you save.
             </p>
           </div>
         </div>
@@ -137,7 +150,7 @@ export function ProfileEditor({
             label="Country"
             value={address.countryCode}
             countries={countries}
-            onChange={(countryCode) => setAddress({ countryCode })}
+            onChange={setAddressCountry}
           />
           <FieldInput
             label="Postal code"

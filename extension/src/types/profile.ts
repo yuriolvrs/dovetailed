@@ -9,6 +9,8 @@ export interface PhoneNumber {
   countryCallingCode: string;
   /** Digits only, no trunk 0: "9171234567". */
   nationalNumber: string;
+  /** ISO 3166-1 alpha-2, for display only: "+1" is shared by many countries. Filling ignores it. */
+  countryCode?: string;
 }
 
 export interface PostalAddress {

@@ -42,7 +42,8 @@ function InlineSelect({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
-      className="min-w-0 rounded-lg bg-transparent px-2 py-1.5 text-sm hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04] transition-colors text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400/25 dark:focus:ring-blue-400/20 disabled:text-slate-400 dark:disabled:text-slate-500"
+      // The transparent box can give a white popup with light dark-theme text, so options set both colors.
+      className="min-w-0 rounded-lg bg-transparent px-2 py-1.5 text-sm hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04] transition-colors text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400/25 dark:focus:ring-blue-400/20 disabled:text-slate-400 dark:disabled:text-slate-500 [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-100"
     >
       <option value="">{placeholder}</option>
       {options.map((option) => (

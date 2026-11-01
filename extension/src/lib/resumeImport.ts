@@ -65,12 +65,17 @@ function parseLocation(raw: string): PostalAddress {
   return out;
 }
 
-/** Splits a full name. The last word is the last name. The rest is the first name. */
+/**
+ * Splits a full name. The last word is the last name. The rest is the first name, without
+ * middle initials such as "G.". A leading initial stays, because it can be how the person goes by.
+ * In plain terms: "Marc Yuri G. Olivares" becomes "Marc Yuri" and "Olivares".
+ */
 function parseName(raw: string): { firstName?: string; lastName?: string } {
   const words = raw.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return {};
   if (words.length === 1) return { firstName: words[0] };
-  return { firstName: words.slice(0, -1).join(' '), lastName: words[words.length - 1] };
+  const given = words.slice(0, -1).filter((word, i) => i === 0 || !/^\p{L}\.?$/u.test(word));
+  return { firstName: given.join(' '), lastName: words[words.length - 1] };
 }
 
 /**

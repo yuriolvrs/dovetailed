@@ -2,6 +2,20 @@
 
 Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reason** (why), **Status** (Accepted / Proposed).
 
+## 2026-11-01 — Phone country picker uses libphonenumber-js (plan 04, task 4.13)
+
+**Context:** The user had to type a calling code. A picker needs a code for every country, and codes such as +1 are shared.
+**Decision:** The options page picks a country by name, flag or digits with the existing combobox. `libphonenumber-js` supplies the codes and is imported by the options page only. `PhoneNumber` gains an optional display-only `countryCode`. The main country for a shared code comes from the library's `metadata.min.json`, because it has no public function for this.
+**Reason:** A hand-written table of about 240 codes needs its own checking and upkeep. The library stays out of the scripts that run on job sites.
+**Status:** Accepted
+
+## 2026-11-01 — Fill button is a labelled pill above the field (plan 04)
+
+**Context:** In testing, the icon-only button inside the field was easy to miss on first use. This replaces step 5 of task 4.12.
+**Decision:** The button reads "Fill form" and sits above the field's right end, or below the field when there is no room above. The setting shows a static sample.
+**Reason:** A label says what the button does, and a place above the field does not cover typed text. A sample alone helps only people who read the options page. It still appears on focus, so nothing scans a page on load.
+**Status:** Accepted
+
 ## 2026-11-01 — Extension calls the proxy for resume import (plan 04, task 4.11)
 
 **Context:** The user asked to fill the profile from the stored resume. The extension had no network path, and the proxy allowlist refused extension origins.
