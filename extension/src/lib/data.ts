@@ -1,7 +1,7 @@
 // What this file is: the only access path to profile and resume data. Every call sends a message to the background, which owns the database.
 // In plain terms: the one door every part of the extension uses to read or save your data.
 import { browser } from 'wxt/browser';
-import { base64ToBytes, bytesToBase64 } from './messages';
+import { base64ToBytes, bytesToBase64 } from './base64';
 import type { DataRequest, DataResponse, ResumePayload } from './messages';
 import type { ExtensionProfile, ResumeFileRef } from '../types/profile';
 

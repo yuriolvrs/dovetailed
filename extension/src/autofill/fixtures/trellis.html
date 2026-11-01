@@ -1,0 +1,22 @@
+<!-- Hand-made fixture, based on the field list in docs/plans/04-browser-extension.md (trellis.ph). Labels are not bound; name and placeholder carry the meaning. -->
+<main>
+  <form id="apply">
+    <div><span>Name</span><input name="firstName" placeholder="First name" required /></div>
+    <div><input name="lastName" placeholder="Last name" required /></div>
+    <div><input name="email" type="email" placeholder="Email address" required /></div>
+    <div>
+      <select name="phoneCode"><option value="63">+63</option><option value="1">+1</option></select>
+      <input name="phoneNumber" placeholder="Mobile number" required />
+    </div>
+    <div class="links">
+      <select name="linkType"><option>LinkedIn</option><option>GitHub</option><option>Portfolio</option><option>Google Drive</option><option>Other</option></select>
+      <input name="linkUrl" placeholder="Link URL" />
+      <button type="button">Add Link</button>
+    </div>
+    <button type="submit">Submit application</button>
+  </form>
+  <footer>
+    <input name="newsletter" type="email" placeholder="Your email" required />
+    <button type="button">Subscribe</button>
+  </footer>
+</main>

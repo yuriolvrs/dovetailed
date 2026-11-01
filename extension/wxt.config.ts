@@ -1,6 +1,7 @@
 // What this file is: WXT build config. It sets the extension manifest, permissions and Vite options.
 // In plain terms: the settings that decide how the extension is built and what it may do.
 import { defineConfig } from 'wxt';
+import { ATS_ORIGINS } from './src/autofill/atsHosts';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
@@ -8,16 +9,7 @@ export default defineConfig({
     name: 'Dovetailed Autofill',
     description: 'Fills job application forms from your stored profile. It never submits a form.',
     permissions: ['activeTab', 'scripting', 'unlimitedStorage'],
-    optional_host_permissions: [
-      '*://*.greenhouse.io/*',
-      '*://*.lever.co/*',
-      '*://*.ashbyhq.com/*',
-      '*://*.workable.com/*',
-      '*://*.smartrecruiters.com/*',
-      '*://*.icims.com/*',
-      '*://*.teamtailor.com/*',
-      '*://*.myworkdayjobs.com/*',
-    ],
+    optional_host_permissions: ATS_ORIGINS,
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

@@ -241,3 +241,57 @@ Tests (Vitest with jsdom, HTML fixtures of both forms): field matching, closest 
 **Done when:** `isBlockedSite` tests pass. Build and typecheck pass. In Chrome, the button reports a field count on a normal page.
 
 **Out of scope:** Matching or filling fields, the field report, iframes.
+
+## Task 4.7: Options page redesign
+
+**Goal:** The options page reads as one continuous settings page with no nested containers, and Country is a searchable dropdown with flags. Full spec is in the implementer brief of 2026-11-01. Runs in parallel with 4.5 and 4.6 on different files.
+
+## Later: Fill the profile from the resume
+
+**Goal:** A user uploads a resume and the options page offers to fill the profile from it, for review before saving.
+
+**Not started.** The web app already has this in `src/prompts/extractProfile.ts`, through the LLM proxy. The extension has no LLM path, so this needs a CORS and Worker decision first, because extension-to-proxy calls would be new network calls. A smaller first step is importing a Dovetailed JSON backup, which needs no network. Both need user approval before they start.
+
+## Task 4.5: Field detection
+
+**Goal:** A pure, tested function finds the application form on a page and says what each field is. It changes nothing on the page.
+
+**Files to touch:** `extension/src/autofill/detect.ts`, `extension/src/autofill/detect.test.ts`, `extension/src/autofill/fixtures/`.
+
+**Doc sections to read:** This plan: Phase 3, including both evidence tables and all rules.
+
+**Steps:**
+1. Collect fields, walking open shadow roots.
+2. Read each field's signals in this order: `autocomplete`, `name`/`id`, bound `<label>`, nearby text, `placeholder`, `aria-label`.
+3. Classify into: firstName, lastName, fullName, email, confirmEmail, phone, phoneCountry, street, city, stateProvince, country, postalCode, location, currentCompany, currentTitle, linkedin, github, portfolio, website, twitter, facebook, expectedSalary, noticePeriod, or unknown.
+4. Choose the scope: the container with the most identity fields. Fields outside it are ignored. Trap fixtures: the trellis.ph footer newsletter email, and Teamtailor's visible employee email input `full_email` ("Email address without domain").
+5. Negative terms beat a match: referr, reference, emergency, manager, employee, spouse, guardian, password. Skip EEO fields, passwords and hidden fields. Skip any `tel` or search input inside a phone picker's dropdown.
+6. Mark required fields, so required unknown fields can be reported.
+7. Write fixtures by hand as small HTML files, based on the field lists in this plan. Do not copy site pages. Cover Teamtailor, trellis.ph, Greenhouse, Lever, Ashby, SmartRecruiters (with shadow DOM built in the test) and Workable.
+
+**Done when:** A Vitest test per fixture asserts the classification of every field, including that each trap is ignored. Build and typecheck pass.
+
+**Out of scope:** Writing values, comboboxes, the popup, resume inputs.
+
+## Task 4.6: Filling and popup report
+
+**Goal:** Clicking "Fill this page" fills matched fields, in every reachable frame, and the popup reports what happened.
+
+**Files to touch:** `extension/src/autofill/fill.ts`, `extension/src/autofill/phone.ts`, `extension/src/autofill/select.ts`, their tests, `extension/entrypoints/fill.ts` (replaces `scan.ts`), `extension/entrypoints/popup/App.tsx`.
+
+**Doc sections to read:** This plan: Phase 3 rules, Phase 2 embedded forms and field report.
+
+**Steps:**
+1. Set values with the native prototype setter, then dispatch `input` and `change` with `bubbles: true`.
+2. Keep non-empty fields. Do not click Continue, Next or Submit. Do not call `submit()` anywhere. Do not touch checkboxes or buttons. Radios only for `noticePeriod`, in a labelled group.
+3. Selects: choose the closest option by normalised text. Match country by name or code, and phone country by calling code, ignoring flag emoji. If nothing is close, leave it and report it.
+4. Phone: with a separate country control, write the national number. With a `tel` input alone, use the placeholder as a hint: `+` means international, a leading `0` means trunk format, and otherwise international. Use trunk `0` only for countries that use one, from a small table.
+5. Comboboxes: set the text, wait up to 2 s for a listbox, click the closest option. If none appears, clear what we typed and report it.
+6. Inject with `allFrames: true`. Each frame checks `isBlockedSite(location.href)` first and does nothing on a match. Each frame gets data through `getProfile()`.
+7. The popup merges frame results: filled count, required fields left blank (labels only), and fields it could not complete.
+8. If a known ATS iframe gave no result, the popup offers a grant button through `browser.permissions.request`, then the user clicks Fill again.
+9. Add "Copy field report": field type, classification and label only. It must never contain a value.
+
+**Done when:** Unit tests in jsdom cover the native setter with a React-style value tracker, closest option, each phone format, the keep-non-empty rule, and a test that no submit happens. Build and typecheck pass. A Playwright run on the local fixtures fills them, using a build with a test-only host permission kept in the scratchpad.
+
+**Out of scope:** Resume upload (Phase 4), per-site code.

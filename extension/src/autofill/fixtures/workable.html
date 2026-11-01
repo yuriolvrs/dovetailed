@@ -1,0 +1,13 @@
+<!-- Hand-made fixture, based on the field list in docs/plans/04-browser-extension.md (Workable). GitHub and LinkedIn are textareas. -->
+<main>
+  <form id="apply">
+    <div><label for="firstname">First name</label><input id="firstname" name="firstname" required /></div>
+    <div><label for="lastname">Last name</label><input id="lastname" name="lastname" required /></div>
+    <div><label for="email">Email</label><input id="email" name="email" type="email" required /></div>
+    <div><label for="phone">Phone</label><input id="phone" name="phone" type="tel" /></div>
+    <div><label for="gh">GitHub</label><textarea id="gh"></textarea></div>
+    <div><label for="li">LinkedIn</label><textarea id="li"></textarea></div>
+    <label><input type="checkbox" id="gdpr" required /> I accept the data policy *</label>
+    <button type="submit">Submit application</button>
+  </form>
+</main>

@@ -1,0 +1,23 @@
+<!-- Hand-made fixture, based on the field list in docs/plans/04-browser-extension.md (Lever). The name is one field. -->
+<main>
+  <form id="application-form">
+    <label>Full name <input name="name" required /></label>
+    <label>Email <input name="email" type="email" required /></label>
+    <label>Phone <input name="phone" /></label>
+    <label>Current location <input name="location" /></label>
+    <label>Current company <input name="org" /></label>
+    <label>LinkedIn URL <input name="urls[LinkedIn]" /></label>
+    <label>Twitter URL <input name="urls[Twitter]" /></label>
+    <label>GitHub URL <input name="urls[GitHub]" /></label>
+    <label>Portfolio URL <input name="urls[Portfolio]" /></label>
+    <label>Other website <input name="urls[Other]" /></label>
+    <label>Referring employee (Full name) <input name="referrer" /></label>
+    <label>School <select name="school"><option value="">Select</option><option>Example University</option></select></label>
+    <fieldset><legend>Do you consent to data storage? *</legend>
+      <label><input type="radio" name="consent" value="y" required /> Yes</label>
+      <label><input type="radio" name="consent" value="n" /> No</label>
+    </fieldset>
+    <textarea name="h-captcha-response" style="display:none"></textarea>
+    <button type="submit">Submit application</button>
+  </form>
+</main>

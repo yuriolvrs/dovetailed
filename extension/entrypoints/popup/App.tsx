@@ -1,8 +1,10 @@
-// What this file is: the popup. It shows what is stored, refuses blocked sites, and injects the scan script on click.
-// In plain terms: the small window that opens from the toolbar. For now it only counts the fields on the page.
+// What this file is: the popup. It shows what is stored, refuses blocked sites, injects the fill script into all frames on click, and shows the merged result.
+// In plain terms: the small window that opens from the toolbar. It fills the form on the page and tells you what it did.
 import { useEffect, useState } from 'react';
 import { Btn } from '../../../src/components/ui/primitives';
 import { getProfile } from '../../src/lib/data';
+import { formatFieldReport, mergeResults } from '../../src/autofill/report';
+import type { FrameResult, MergedResult } from '../../src/autofill/report';
 import { isBlockedSite } from '../../src/lib/blockedSites';
 import type { ExtensionProfile } from '../../src/types/profile';
 
@@ -12,6 +14,8 @@ export default function App() {
   const [profile, setProfile] = useState<ExtensionProfile | null>(null);
   const [tab, setTab] = useState<TabInfo | null>(null);
   const [message, setMessage] = useState('');
+  const [result, setResult] = useState<MergedResult | null>(null);
+  const [frames, setFrames] = useState<FrameResult[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -24,25 +28,43 @@ export default function App() {
   const unknownSite = tab !== null && !tab.url;
   const hasProfile = !!profile && (profile.firstName !== '' || profile.lastName !== '' || profile.email !== '');
 
-  // Injects the scan script into the active tab and reports the count.
-  // In plain terms: runs the field counter on the page you are looking at.
+  // Injects the fill script into every frame of the active tab and merges the answers.
+  // In plain terms: the Fill button.
   async function fill() {
     if (tab?.id === undefined) return;
     setBusy(true);
     setMessage('');
+    setResult(null);
     try {
-      const [first] = await browser.scripting.executeScript({ target: { tabId: tab.id }, files: ['/scan.js'] });
-      const n = first?.result;
-      setMessage(
-        typeof n === 'number'
-          ? `Found ${n} fields. Filling arrives in the next phase.`
-          : 'The scan returned no result. Open the application form first.',
-      );
+      const injected = await browser.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        files: ['/fill.js'],
+      });
+      const got = injected.map((r) => r.result as FrameResult | undefined).filter((r): r is FrameResult => !!r);
+      setFrames(got);
+      const merged = mergeResults(got);
+      setResult(merged);
+      if (!merged.formFound && merged.unreachable.length === 0) {
+        setMessage('No application form found. Open the application form first, then click Fill.');
+      }
     } catch {
-      setMessage('This page cannot be scanned. Browser pages and extension store pages are closed to extensions.');
+      setMessage('This page cannot be filled. Browser pages and extension store pages are closed to extensions.');
     } finally {
       setBusy(false);
     }
+  }
+
+  // Asks for access to a known job-board host. The user must click Fill again afterwards.
+  async function grant(origin: string) {
+    const ok = await browser.permissions.request({ origins: [origin] });
+    setMessage(ok ? 'Access granted. Click Fill again.' : 'Access was not granted.');
+    if (ok) setResult(null);
+  }
+
+  // Copies field types, classifications and labels. It holds no values.
+  async function copyReport() {
+    await navigator.clipboard.writeText(formatFieldReport(frames));
+    setMessage('Field report copied.');
   }
 
   return (
@@ -68,6 +90,48 @@ export default function App() {
       <Btn onClick={fill} disabled={blocked || unknownSite || busy || tab?.id === undefined}>
         Fill this page
       </Btn>
+      {result && result.formFound && (
+        <div role="status" className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+          <p>Filled {result.filled} fields. Check the form, then submit it yourself.</p>
+          {result.requiredBlank.length > 0 && (
+            <div>
+              <p className="font-medium">Not filled (required):</p>
+              <ul className="list-disc pl-4">
+                {result.requiredBlank.map((l) => (
+                  <li key={l}>{l}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {result.incomplete.length > 0 && (
+            <div>
+              <p className="font-medium">Could not complete:</p>
+              <ul className="list-disc pl-4">
+                {result.incomplete.map((i, n) => (
+                  <li key={n}>
+                    {i.label} ({i.reason})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      {result?.unreachable.map((origin) => (
+        <div key={origin} className="space-y-1">
+          <p role="status" className="text-xs text-slate-700 dark:text-slate-300">
+            A form from {origin.replace('*://*.', '').replace('/*', '')} is embedded here and could not be reached.
+          </p>
+          <Btn size="sm" variant="secondary" onClick={() => void grant(origin)}>
+            Allow access
+          </Btn>
+        </div>
+      ))}
+      {frames.some((f) => f.fields.length > 0) && (
+        <Btn size="sm" variant="secondary" onClick={() => void copyReport()}>
+          Copy field report
+        </Btn>
+      )}
       {message && (
         <p role="status" className="text-xs text-slate-700 dark:text-slate-300">
           {message}

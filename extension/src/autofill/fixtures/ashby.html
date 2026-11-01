@@ -1,0 +1,15 @@
+<!-- Hand-made fixture, based on the field list in docs/plans/04-browser-extension.md (Ashby). There is no form element. -->
+<div id="app">
+  <div><label for="_systemfield_name">Legal Name *</label><input id="_systemfield_name" required /></div>
+  <div><label for="_systemfield_email">Email *</label><input id="_systemfield_email" type="email" required /></div>
+  <div><label for="phone">Phone</label><input id="phone" type="tel" /></div>
+  <div><label for="loc">Location</label><input id="loc" role="combobox" aria-haspopup="listbox" /></div>
+  <div><label for="li">LinkedIn</label><input id="li" /></div>
+  <div><span>Are you open to relocation?</span><button type="button">Yes</button><button type="button">No</button></div>
+  <fieldset><legend>I agree to receive SMS messages</legend>
+    <label><input type="radio" name="sms" value="y" /> Yes</label>
+    <label><input type="radio" name="sms" value="n" /> No</label>
+  </fieldset>
+  <input id="parser" type="file" />
+  <button type="button">Submit Application</button>
+</div>
