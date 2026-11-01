@@ -38,23 +38,23 @@ export default function App() {
     setProfile((p) => (p ? { ...p, resume } : p));
 
   return (
-    <main className="mx-auto max-w-2xl space-y-5 bg-[#f5f6f8] p-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <h1 className="text-lg font-semibold">Dovetailed Autofill</h1>
+    <main className="mx-auto max-w-4xl px-6 pt-10 text-slate-900 dark:text-slate-100 sm:px-10">
+      <h1 className="pb-8 text-xl font-semibold">Dovetailed Autofill</h1>
       {!profile ? (
-        <p className="text-sm text-slate-500">{error || 'Loading...'}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Loading...'}</p>
       ) : (
         <>
+          <ResumeSection resume={profile.resume} onChange={setResume} />
           <ProfileEditor value={profile} onChange={setProfile} />
-          <div className="flex items-center gap-3">
+          <div className="sticky bottom-0 z-10 -mx-6 flex items-center gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-950 sm:-mx-10 sm:px-10">
             <Btn onClick={() => void save()}>Save</Btn>
             <SavedIndicator visible={saved} />
             {error && (
-              <span role="alert" className="text-xs text-red-600">
+              <span role="alert" className="text-sm text-red-700 dark:text-red-400">
                 {error}
               </span>
             )}
           </div>
-          <ResumeSection resume={profile.resume} onChange={setResume} />
         </>
       )}
     </main>

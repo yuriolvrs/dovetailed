@@ -12,6 +12,27 @@ html.dark {
   color-scheme: dark;
 }
 
+/* One surface for the whole page, so nothing stops at a column edge. */
+html,
+body {
+  background-color: #ffffff;
+}
+
+html.dark,
+html.dark body {
+  background-color: #020617;
+}
+
 body {
   font-family: system-ui, sans-serif;
+}
+
+::selection {
+  background-color: #bfdbfe;
+  color: #0f172a;
+}
+
+html.dark ::selection {
+  background-color: #1e40af;
+  color: #f8fafc;
 }
