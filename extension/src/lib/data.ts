@@ -3,7 +3,7 @@
 import { browser } from 'wxt/browser';
 import { base64ToBytes, bytesToBase64 } from './base64';
 import type { DataRequest, DataResponse, ResumePayload } from './messages';
-import type { ExtensionProfile, ResumeFileRef } from '../types/profile';
+import type { ExtensionProfile, ExtensionSettings, ResumeFileRef } from '../types/profile';
 
 /** Sends a request and unwraps the reply. It throws if the background reports an error. */
 async function request<T>(req: DataRequest): Promise<T> {
@@ -45,4 +45,14 @@ export async function saveResume(file: File): Promise<ResumeFileRef> {
 /** Deletes the stored resume. */
 export async function deleteResume(): Promise<void> {
   await request<null>({ type: 'data/deleteResume' });
+}
+
+/** Returns the settings. The in-page button is off until the user turns it on. */
+export function getSettings(): Promise<ExtensionSettings> {
+  return request<ExtensionSettings>({ type: 'data/getSettings' });
+}
+
+/** Saves the settings. */
+export async function saveSettings(settings: ExtensionSettings): Promise<void> {
+  await request<null>({ type: 'data/saveSettings', settings });
 }

@@ -31,6 +31,12 @@ export interface ResumeFileRef {
   storage: 'local';
 }
 
+/** Extension settings. Stored apart from the profile. */
+export interface ExtensionSettings {
+  /** Show the in-page Fill button on application forms. Off by default. */
+  showFillButton: boolean;
+}
+
 export interface ExtensionProfile {
   version: number;
   firstName: string;

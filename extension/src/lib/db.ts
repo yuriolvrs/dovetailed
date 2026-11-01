@@ -2,7 +2,7 @@
 // In plain terms: the small database inside the extension. It holds your profile and your resume file.
 import Dexie, { type EntityTable } from 'dexie';
 import { EXTENSION_PROFILE_VERSION } from '../types/profile';
-import type { ExtensionProfile, ResumeFileRef } from '../types/profile';
+import type { ExtensionProfile, ExtensionSettings, ResumeFileRef } from '../types/profile';
 
 /** One stored profile row. The single row uses the key "main". */
 interface ProfileRow {
@@ -18,6 +18,11 @@ interface ResumeFileRow {
   blob: Blob;
 }
 
+/** The single settings row. The key is "main". */
+interface SettingsRow extends ExtensionSettings {
+  id: string;
+}
+
 const PROFILE_KEY = 'main';
 export const MAX_RESUME_BYTES = 15 * 1024 * 1024;
 export const PDF_MIME = 'application/pdf';
@@ -26,10 +31,12 @@ export const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordproc
 class ExtensionDatabase extends Dexie {
   profile!: EntityTable<ProfileRow, 'id'>;
   resumeFiles!: EntityTable<ResumeFileRow, 'id'>;
+  settings!: EntityTable<SettingsRow, 'id'>;
 
   constructor() {
     super('dovetailed-extension');
     this.version(1).stores({ profile: 'id', resumeFiles: 'id' });
+    this.version(2).stores({ profile: 'id', resumeFiles: 'id', settings: 'id' });
   }
 }
 
@@ -70,6 +77,17 @@ export async function dbSaveProfile(profile: ExtensionProfile): Promise<void> {
     else delete next.resume;
     await db.profile.put({ id: PROFILE_KEY, profile: next });
   });
+}
+
+/** Reads the settings. Every switch is off until the user turns it on. */
+export async function dbGetSettings(): Promise<ExtensionSettings> {
+  const row = await db.settings.get(PROFILE_KEY);
+  return { showFillButton: row?.showFillButton === true };
+}
+
+/** Saves the settings. */
+export async function dbSaveSettings(settings: ExtensionSettings): Promise<void> {
+  await db.settings.put({ id: PROFILE_KEY, showFillButton: settings.showFillButton === true });
 }
 
 /** Returns the stored resume with its bytes, or null. */

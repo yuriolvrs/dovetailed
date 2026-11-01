@@ -17,7 +17,7 @@ vi.mock('wxt/browser', () => ({
 }));
 
 import { db, DOCX_MIME, PDF_MIME } from './db';
-import { deleteResume, getProfile, getResume, saveProfile, saveResume } from './data';
+import { deleteResume, getProfile, getResume, getSettings, saveProfile, saveResume, saveSettings } from './data';
 import { base64ToBytes, bytesToBase64 } from './messages';
 
 function makeFile(name: string, type: string, bytes: Uint8Array): File {
@@ -33,6 +33,7 @@ function randomBytes(n: number): Uint8Array {
 beforeEach(async () => {
   await db.profile.clear();
   await db.resumeFiles.clear();
+  await db.settings.clear();
 });
 
 describe('base64 helpers', () => {
@@ -130,5 +131,20 @@ describe('resume', () => {
     const big = new Uint8Array(15 * 1024 * 1024 + 1);
     await expect(saveResume(makeFile('big.pdf', PDF_MIME, big))).rejects.toThrow(/15 MB/);
     expect(await getResume()).toBeNull();
+  });
+});
+
+describe('settings', () => {
+  it('is off by default', async () => {
+    expect(await getSettings()).toEqual({ showFillButton: false });
+  });
+
+  it('saves and reads the in-page button setting without touching the profile', async () => {
+    await saveProfile({ ...(await getProfile()), firstName: 'Ana' });
+    await saveSettings({ showFillButton: true });
+    expect(await getSettings()).toEqual({ showFillButton: true });
+    expect((await getProfile()).firstName).toBe('Ana');
+    await saveSettings({ showFillButton: false });
+    expect(await getSettings()).toEqual({ showFillButton: false });
   });
 });

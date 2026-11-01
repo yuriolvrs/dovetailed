@@ -1,8 +1,16 @@
 // What this file is: the typed messages between extension pages and the background, the base64 helpers for file bytes, and the handler that runs a message against the database.
 // In plain terms: how the popup and options page ask the background for data, and how files travel in those messages.
-import { dbDeleteResume, dbGetProfile, dbGetResume, dbSaveProfile, dbSaveResume } from './db';
+import {
+  dbDeleteResume,
+  dbGetProfile,
+  dbGetResume,
+  dbGetSettings,
+  dbSaveProfile,
+  dbSaveResume,
+  dbSaveSettings,
+} from './db';
 import { base64ToBytes, bytesToBase64 } from './base64';
-import type { ExtensionProfile, ResumeFileRef } from '../types/profile';
+import type { ExtensionProfile, ExtensionSettings, ResumeFileRef } from '../types/profile';
 
 export { base64ToBytes, bytesToBase64 };
 
@@ -12,7 +20,9 @@ export type DataRequest =
   | { type: 'data/saveProfile'; profile: ExtensionProfile }
   | { type: 'data/getResume' }
   | { type: 'data/saveResume'; fileName: string; mimeType: string; base64: string }
-  | { type: 'data/deleteResume' };
+  | { type: 'data/deleteResume' }
+  | { type: 'data/getSettings' }
+  | { type: 'data/saveSettings'; settings: ExtensionSettings };
 
 /** The resume as it crosses a message: metadata plus base64 bytes. */
 export interface ResumePayload {
@@ -49,6 +59,11 @@ export async function handleDataRequest(req: DataRequest): Promise<DataResponse>
       }
       case 'data/deleteResume':
         await dbDeleteResume();
+        return { ok: true, value: null };
+      case 'data/getSettings':
+        return { ok: true, value: await dbGetSettings() };
+      case 'data/saveSettings':
+        await dbSaveSettings(req.settings);
         return { ok: true, value: null };
     }
   } catch (e) {

@@ -21,7 +21,8 @@ export default defineConfig({
       default_icon: { 16: 'icon/16.png', 32: 'icon/32.png', 48: 'icon/48.png', 128: 'icon/128.png' },
     },
     permissions: ['activeTab', 'scripting', 'unlimitedStorage'],
-    optional_host_permissions: ATS_ORIGINS,
+    // The job boards are asked one by one. All sites is asked only when the user turns on the in-page button.
+    optional_host_permissions: [...ATS_ORIGINS, '*://*/*'],
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {
