@@ -3,7 +3,8 @@
 import { detectFields, isHidden, linkRowFor, normalizeText } from './detect';
 import type { DetectedField, FieldElement, LinkRow } from './detect';
 import { formatPhone } from './phone';
-import type { FrameResult } from './report';
+import { attachResume, findResumeInput, waitForStable } from './resume';
+import type { FrameResult, ResumeOutcome } from './report';
 import { pickCallingCodeOption, pickClosest, pickCountryOption, pickOption } from './select';
 import type { ExtensionProfile } from '../types/profile';
 import type { ContactLink } from '../../../src/types';
@@ -273,10 +274,44 @@ function isEmpty(f: DetectedField): boolean {
 export async function fillPage(
   profile: ExtensionProfile,
   root: Document | ShadowRoot | Element = document,
-  opts: { listboxTimeoutMs?: number } = {},
-): Promise<Omit<FrameResult, 'url' | 'blocked' | 'atsIframes'>> {
+  opts: {
+    listboxTimeoutMs?: number;
+    /** Supplies the stored resume. Called only when this frame has the chosen file input. */
+    resume?: { getFile: () => Promise<File | null> };
+    stableMs?: number;
+    maxStableMs?: number;
+  } = {},
+): Promise<Omit<FrameResult, 'url' | 'blocked' | 'atsIframes' | 'resume'> & { resume: ResumeOutcome }> {
   const timeout = opts.listboxTimeoutMs ?? 2000;
-  const { scope, fields } = detectFields(root);
+  let { scope, fields } = detectFields(root);
+  let resume: ResumeOutcome = { status: 'not-found' };
+  // Fields the site's parser changed while we waited. We may overwrite these.
+  const changed = new Set<FieldElement>();
+  if (opts.resume && scope) {
+    const choice = findResumeInput(root, scope);
+    if (choice.status === 'ambiguous') {
+      resume = { status: 'ambiguous', labels: choice.labels };
+    } else if (choice.status === 'chosen') {
+      if (choice.input.files && choice.input.files.length > 0) {
+        resume = { status: 'already' };
+      } else {
+        const file = await opts.resume.getFile();
+        if (!file) {
+          resume = { status: 'not-stored' };
+        } else {
+          const before = new Map(fields.map((f) => [f.el, (f.el as HTMLInputElement).value]));
+          attachResume(choice.input, file);
+          await waitForStable(root, () => detectFields(root).fields.map((f) => f.el), {
+            stableMs: opts.stableMs,
+            maxMs: opts.maxStableMs,
+          });
+          ({ scope, fields } = detectFields(root));
+          for (const f of fields) if ((f.el as HTMLInputElement).value !== (before.get(f.el) ?? '')) changed.add(f.el);
+          resume = { status: 'attached', fileName: file.name };
+        }
+      }
+    }
+  }
   const done = new Set<DetectedField>();
   const incomplete: FrameResult['incomplete'] = [];
   let filled = 0;
@@ -288,7 +323,7 @@ export async function fillPage(
     const el = f.el;
 
     if (f.control === 'radio') {
-      if (f.kind !== 'noticePeriod' || !profile.noticePeriod || !isEmpty(f)) continue;
+      if (f.kind !== 'noticePeriod' || !profile.noticePeriod || (!isEmpty(f) && !changed.has(f.el))) continue;
       const labels = (f.radios ?? []).map((r) => (r.labels?.[0]?.textContent ?? r.value).trim());
       const i = pickClosest(labels, profile.noticePeriod);
       if (i < 0) {
@@ -318,7 +353,7 @@ export async function fillPage(
         idx = pickOption(options, target);
       }
       // A phone country must match the number we write, so it may replace the site default. Other selects keep a chosen value.
-      if (el.value !== '' && f.kind !== 'phoneCountry') {
+      if (el.value !== '' && !changed.has(el) && f.kind !== 'phoneCountry') {
         done.add(f);
         continue;
       }
@@ -333,7 +368,7 @@ export async function fillPage(
     }
 
     // Text, textarea and combobox inputs.
-    if (!isEmpty(f)) {
+    if (!isEmpty(f) && !changed.has(el)) {
       done.add(f);
       continue;
     }
@@ -376,5 +411,6 @@ export async function fillPage(
     requiredBlank,
     incomplete,
     fields: fields.map((f) => ({ control: f.control, kind: f.kind, label: f.label })),
+    resume,
   };
 }

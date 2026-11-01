@@ -8,6 +8,14 @@ export interface ReportedField {
   label: string;
 }
 
+/** What happened to the resume in one frame. */
+export type ResumeOutcome =
+  | { status: 'attached'; fileName: string }
+  | { status: 'already' }
+  | { status: 'ambiguous'; labels: string[] }
+  | { status: 'not-stored' }
+  | { status: 'not-found' };
+
 export interface FrameResult {
   /** Address of the frame. Used for the host only. */
   url: string;
@@ -19,6 +27,7 @@ export interface FrameResult {
   /** Fields we tried and could not finish. */
   incomplete: { label: string; reason: string }[];
   fields: ReportedField[];
+  resume?: ResumeOutcome;
   /** Top frame only: addresses of known job-board iframes on the page. */
   atsIframes?: string[];
 }
@@ -30,6 +39,16 @@ export interface MergedResult {
   incomplete: { label: string; reason: string }[];
   /** Match patterns for known job-board iframes that returned no result. */
   unreachable: string[];
+  resume: ResumeOutcome;
+}
+
+const RESUME_PRIORITY: ResumeOutcome['status'][] = ['attached', 'already', 'ambiguous', 'not-stored', 'not-found'];
+
+/** The most informative resume outcome among the frames. */
+function bestResume(frames: FrameResult[]): ResumeOutcome {
+  const outcomes = frames.map((f) => f.resume ?? { status: 'not-found' as const });
+  outcomes.sort((a, b) => RESUME_PRIORITY.indexOf(a.status) - RESUME_PRIORITY.indexOf(b.status));
+  return outcomes[0] ?? { status: 'not-found' };
 }
 
 /** Merges the results of all frames. */
@@ -44,6 +63,7 @@ export function mergeResults(frames: FrameResult[]): MergedResult {
     requiredBlank: [...new Set(live.flatMap((f) => f.requiredBlank))],
     incomplete: live.flatMap((f) => f.incomplete),
     unreachable,
+    resume: bestResume(live),
   };
 }
 

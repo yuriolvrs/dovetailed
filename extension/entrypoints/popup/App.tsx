@@ -6,11 +6,27 @@ import { Btn } from '../../../src/components/ui/primitives';
 import { BrandHeader } from '../../src/components/BrandHeader';
 import { getProfile } from '../../src/lib/data';
 import { formatFieldReport, mergeResults } from '../../src/autofill/report';
-import type { FrameResult, MergedResult } from '../../src/autofill/report';
+import type { FrameResult, MergedResult, ResumeOutcome } from '../../src/autofill/report';
 import { isBlockedSite } from '../../src/lib/blockedSites';
 import type { ExtensionProfile } from '../../src/types/profile';
 
 type TabInfo = { id?: number; url?: string };
+
+// The one-line resume message. Says plainly that an attached file goes to the site at once.
+function resumeMessage(r: ResumeOutcome): string | null {
+  switch (r.status) {
+    case 'attached':
+      return `Resume attached: ${r.fileName}. The file goes to the site as soon as it attaches.`;
+    case 'already':
+      return 'Resume skipped: the form already holds a file.';
+    case 'ambiguous':
+      return `Resume not attached: more than one upload box looked like the resume field (${r.labels.join(', ')}).`;
+    case 'not-stored':
+      return 'Resume not attached: no resume is stored. Add one on the options page.';
+    default:
+      return null;
+  }
+}
 
 export default function App() {
   const [profile, setProfile] = useState<ExtensionProfile | null>(null);
@@ -108,6 +124,7 @@ export default function App() {
       {result && result.formFound && (
         <div role="status" className="space-y-3 text-sm text-slate-700 dark:text-slate-300">
           <p>Filled {result.filled} fields. Check the form, then submit it yourself.</p>
+          {resumeMessage(result.resume) && <p>{resumeMessage(result.resume)}</p>}
           {result.requiredBlank.length > 0 && (
             <div className="space-y-1">
               <p className="font-medium text-slate-900 dark:text-slate-100">Not filled (required)</p>
