@@ -136,7 +136,7 @@ Rules:
 - Comboboxes: set the text, wait for the listbox, then click the closest option. If none is close, leave it and report it. Test whether synthetic events work on react-select.
 - Leave questions with no profile value blank. List required ones in the popup as "not filled".
 - If no form is found, the popup says to open the application form first.
-- Fill only the first link row on trellis.ph. Do not click Add Link.
+- Link rows: see Task 4.8. This replaces the earlier first-row-only rule, at the user's request after the live trellis.ph test.
 
 Iframes: `activeTab` appears to cover the top-level origin only. When a frame on a known ATS host cannot be reached, the popup offers a one-click grant through `optional_host_permissions`. Neither target uses an iframe, so test on a local fixture (`localhost` embedding `127.0.0.1`) and on the embedded Greenhouse form at careers.airbnb.com.
 
@@ -250,7 +250,7 @@ Tests (Vitest with jsdom, HTML fixtures of both forms): field matching, closest 
 
 **Goal:** A user uploads a resume and the options page offers to fill the profile from it, for review before saving.
 
-**Not started.** The web app already has this in `src/prompts/extractProfile.ts`, through the LLM proxy. The extension has no LLM path, so this needs a CORS and Worker decision first, because extension-to-proxy calls would be new network calls. A smaller first step is importing a Dovetailed JSON backup, which needs no network. Both need user approval before they start.
+Approved by the user on 2026-11-01. See Task 4.11. Importing a Dovetailed JSON backup stays a possible later addition.
 
 ## Task 4.5: Field detection
 
@@ -295,3 +295,96 @@ Tests (Vitest with jsdom, HTML fixtures of both forms): field matching, closest 
 **Done when:** Unit tests in jsdom cover the native setter with a React-style value tracker, closest option, each phone format, the keep-non-empty rule, and a test that no submit happens. Build and typecheck pass. A Playwright run on the local fixtures fills them, using a build with a test-only host permission kept in the scratchpad.
 
 **Out of scope:** Resume upload (Phase 4), per-site code.
+
+## Task 4.8: All links on repeating link rows
+
+**Goal:** Every saved link fills on forms with type-plus-URL rows, such as trellis.ph.
+
+**Files to touch:** `extension/src/autofill/detect.ts`, `fill.ts`, tests, trellis fixture.
+
+**Steps:**
+1. Bug: `kindFromLinkTypeSelect` counts hidden controls. The live trellis.ph row (`.ja-link-row`) has a select, a hidden text input "Ex. Twitter" and a URL input. Ignore hidden controls. Add that hidden input to the fixture.
+2. Fill one row per saved link. For each link, set the row's select to the matching type (LinkedIn, Github, Portfolio), else "Other". If "Other" reveals a name input, fill it with the link's label. Then fill the URL.
+3. For more links, click an Add button next to the rows and wait up to 1 s for a new row. Click it only if it is a `button` with `type="button"` and its text matches "add link" or "add another". Never click any other button. Stop at 6 links.
+4. Leave rows that already hold a URL. Selects may change here only, because the row's type must match its URL.
+
+**Done when:** Tests cover the hidden input, three links filling three rows, "Other" with a label, and a refused `type="submit"` Add button. A live run on trellis.ph fills them.
+
+## Task 4.9: Branding and popup layout
+
+**Goal:** The Dovetailed mark appears on the toolbar, popup and options page, and the popup no longer feels cramped.
+
+**Files to touch:** `extension/public/icon/`, `extension/entrypoints/popup/`, `extension/entrypoints/options/App.tsx`, a small shared logo component.
+
+**Steps:**
+1. Build 16, 32, 48 and 128 PNG icons from `public/favicon.svg` in the repo root, and have WXT use them. Keep the committed mark. Do not draw a new one.
+2. Show the mark beside the heading in the popup and options page.
+3. Popup: about 320px wide, 16px padding, generous gaps. "Fill this page" is the full-width primary action. Options moves to a quiet icon button in the header, with an accessible name. Status lines read as a short list. Result text gets space, and "Copy field report" is a quiet secondary action.
+
+**Done when:** Screenshots of the popup, in light and dark, idle and after a fill with blanks, show no crowding, and contrast is at least 4.5:1.
+
+## Task 4.10: Resume upload (Phase 4)
+
+**Goal:** Fill attaches the stored resume to the right input first, waits for the site, then fills fields, and the popup says what happened.
+
+**Files to touch:** `extension/src/autofill/resume.ts` plus test, `detect.ts`, `fill.ts`, `report.ts`, `entrypoints/fill.ts`, the popup, fixtures.
+
+**Doc sections to read:** This plan: Phase 4.
+
+**Steps:**
+1. Add `findResumeInput`. Score by id or name, label, then nearest section heading. Use `accept` only to exclude. Reject cover letter, portfolio, photo, additional files, transcript and references.
+2. Prefer a real resume field over a parser-only dropzone. If two candidates tie, attach nothing and report it as ambiguous. Hidden inputs are allowed.
+3. Skip the input if it already holds a file.
+4. Attach with `DataTransfer` and `input.files`, then dispatch `input` and `change` with `bubbles: true`.
+5. Snapshot form values, attach, then poll until values stay stable for 1.5 s, up to 15 s. Fields that hold a value at the snapshot are kept. Fields the parser changed during the wait are replaced with our values. Fields it filled while empty are also replaced.
+6. The popup shows: attached with the file name, skipped and why, ambiguous, or no resume stored. Say the file goes to the site as soon as it attaches.
+7. Only the frame with the chosen input fetches the resume through `getResume()`.
+
+**Done when:** Tests cover each fixture's choice (Teamtailor CV versus Additional files, Ashby Resume versus Cover Letter versus parser box, trellis hidden input, SmartRecruiters tie goes to ambiguous), and a simulated parser that overwrites fields and then settles. Playwright shows a `File` arrives on a local page with identical bytes.
+
+## Task 4.11: Fill the profile from the resume
+
+**Goal:** On request, the options page reads the stored resume and fills empty profile fields for the user to check before saving. The user asked for this on 2026-11-01, which approves this one network path.
+
+**Files to touch:** `extension/src/lib/resumeImport.ts` plus test, `extension/src/components/ResumeSection.tsx`, `extension/entrypoints/options/App.tsx`, `extension/wxt.config.ts`, `extension/package.json`, `worker/src/lib.ts`, `worker/src/lib.test.ts`, `worker/wrangler.toml`.
+
+**Doc sections to read:** `src/components/profile/ImportResumeSection.tsx` (lines around 100-120 for the read flow), `src/lib/llm.ts`, `src/lib/files/localText.ts`, `src/lib/files/verifyExtraction.ts`, `src/prompts/extractProfile.ts`.
+
+**Steps:**
+1. Reuse these from `../src` by relative import: `readTextLocally`, `extractText`, `generateStructured`, `llmErrorMessage`, `buildExtractProfilePrompt`, `isExtractedProfile`, `verifyExtraction`. No provider code in `extension/`. Add `pdfjs-dist` at the root's exact version, and dedupe it.
+2. Set the proxy with `vite.define` for `import.meta.env.VITE_PROXY_URL`: `https://dovetailed-proxy.pimp-my-resume.workers.dev` for production builds, `http://localhost:8787` in dev. Do not commit a `.env` file.
+3. `mapExtracted(extracted, profile)` is pure, and fills only empty fields:
+   - First and last name: the last word is the last name, the rest is the first name. The user checks this.
+   - Phone: read `+CC` if present, else strip a leading 0 and leave the calling code empty.
+   - Location: split on commas into city and state or province. Match the last part against the country list. Unknown text goes to city.
+   - Links through the web app's `toContactLink`. Experience and education appended only when the profile has none.
+   - Returns the new profile and the count of fields filled.
+4. UI: a secondary action "Fill profile from resume" in the Resume section, shown when a resume is stored. First click shows an inline note with Continue and Cancel: "Your resume's text is sent through the Dovetailed proxy to the AI provider that reads it." Nothing is sent before Continue. Then show progress, then "Filled N fields. Check them, then Save." The result is not saved until the user clicks Save.
+5. Keep the anti-fabrication check: drop any value `verifyExtraction` cannot find in the document.
+6. Stable Chrome ID: generate an RSA key locally with Node and put the public key in the manifest `key` for Chrome builds only. Do not use the Chrome dashboard, which costs money. Do not keep the private key. Report the resulting ID.
+7. Worker: add that exact `chrome-extension://<id>` origin to `ALLOWED_ORIGINS`. Firefox gives each install a random origin, so add one literal entry `moz-extension://*`, matched as a prefix, and no other wildcards. Add tests. All other origins stay refused.
+8. Firefox manifest: `data_collection_permissions: { required: ['none'], optional: ['personallyIdentifyingInfo'] }`. Request it at Continue on Firefox. Verify the API against MDN before writing it.
+
+**Done when:** Tests cover `mapExtracted` (keeps existing values, multi-word names, each phone form), worker origins (allowed, refused, wildcard limited to moz-extension), and that no request happens before Continue. Worker `npm run test` and `npm run typecheck` pass. Playwright with an intercepted proxy route fills the form and leaves stored data unchanged until Save. Chrome's real ID equals the computed one.
+
+**Out of scope:** Deploying the Worker. Only the main session does that, after the user confirms in this session. Do not run `wrangler deploy`. Do not edit the About page or README privacy text.
+
+## Task 4.12: Optional in-page Fill button
+
+**Goal:** With an off-by-default setting on, a small Dovetailed button appears when the user clicks into a field on a detected application form.
+
+**Files to touch:** `extension/entrypoints/hint.ts`, `extension/src/autofill/hint.ts` plus test, `extension/entrypoints/background.ts`, `extension/src/components/` (the setting), `extension/entrypoints/options/App.tsx`, `extension/wxt.config.ts`, and a shared `runFill` used by this and `entrypoints/fill.ts`.
+
+**Steps:**
+1. Add `*://*/*` to `optional_host_permissions`. Do not add `host_permissions`, so nothing changes at install.
+2. Add a setting section "Show Fill button on application forms", off by default, with the note that Chrome will ask for access to all sites. It is stored through the data layer.
+3. Turning it on calls `permissions.request` from the click. If refused, it stays off. On success, register `hint.js` with `scripting.registerContentScripts`: `document_idle`, all frames, with `excludeMatches` for Indeed and LinkedIn. Turning it off unregisters the script and removes the permission. The background re-checks this on startup.
+4. `hint.ts` checks `isBlockedSite` first. On `focusin` on a text-like field, debounced, it runs detection. Never on password fields. It does not call `getProfile()` or read values until the button is pressed.
+5. The button sits inside the focused field's right edge, in an open shadow root with the mark, an accessible name "Fill with Dovetailed", and a dismiss control. Dismissal lasts for that page.
+6. A click runs `runFill` only if `event.isTrusted`. A page must not be able to trigger a fill by script and read the values.
+7. After a fill, show a short result by the button: filled count and required blanks.
+8. No network calls. It follows every Phase 3 and 4 rule, including resume upload.
+
+**Done when:** Tests cover: no button on a non-form, password focus or blocked site; a synthetic click does nothing; no profile read before a trusted click. Playwright shows a real click fills a fixture, and that toggling off removes the script. Screenshots in light and dark on a white and a dark page.
+
+**Out of scope:** Auto-filling on page load, and any banner that interrupts the page.

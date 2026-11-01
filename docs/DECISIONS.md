@@ -2,6 +2,20 @@
 
 Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reason** (why), **Status** (Accepted / Proposed).
 
+## 2026-11-01 — Extension calls the proxy for resume import (plan 04, task 4.11)
+
+**Context:** The user asked to fill the profile from the stored resume. The extension had no network path, and the proxy allowlist refused extension origins.
+**Decision:** The extension reuses , the extraction prompt and the extraction check. It reads text locally and sends text only, after an inline notice and a Continue click. Scanned files fail with a message and are not sent to OCR. Values the check cannot find in the resume are dropped. The Chrome ID is fixed by a locally generated public key. The proxy allows that exact origin plus one Firefox prefix, .
+**Reason:** Firefox origins are random per install, so an exact entry cannot exist. The Chrome dashboard route to a key costs money, and a local key costs nothing. The user approved this network path and the deploy.
+**Status:** Accepted
+
+## 2026-11-01 — In-page Fill button is opt-in (plan 04, task 4.12)
+
+**Context:** The user wanted a Fill prompt on the page. That needs a script on every site, while the extension otherwise runs only on click.
+**Decision:** An off-by-default setting requests all-sites access when turned on and removes it when turned off. The button fills only on a trusted click. No profile data is read before that click. Indeed and LinkedIn are excluded.
+**Reason:** Install stays free of the all-sites warning. A trusted-click check stops a page from triggering a fill by script and reading the values.
+**Status:** Accepted
+
 ## 2026-11-01 — Extension profile schema and blocked sites (plan 04, Phase 1)
 
 **Context:** The extension needs split names, a structured phone and address, and a stored resume file. Dovetailed stores one `name`, free-text `phone` and `location`, and no resume file. LinkedIn's help page bans automating extensions, and a third-party tracker quotes a similar Indeed clause.
