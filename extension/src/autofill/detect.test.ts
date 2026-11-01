@@ -69,10 +69,25 @@ describe('link-type rows', () => {
     document.querySelector<HTMLSelectElement>('[name=linkType]')!.value = type;
     return kinds(detectFields(document)).linkUrl;
   };
+  it('ignores the hidden name input in the row', () => {
+    const r = load('trellis');
+    expect(r.fields.find((f) => f.key === 'linkName')).toBeUndefined();
+    expect(r.fields.find((f) => f.key === 'linkUrl')?.linkRow?.nameInput?.name).toBe('linkName');
+  });
+
+  it('reads a revealed name input as part of the row, not as a Twitter field', () => {
+    load('trellis');
+    const name = document.querySelector<HTMLInputElement>('[name=linkName]')!;
+    name.style.display = '';
+    const r = detectFields(document);
+    expect(kinds(r).linkName).toBe('unknown');
+    expect(kinds(r).linkUrl).toBe('linkedin');
+  });
+
   it('follows the select current value and leaves the select alone', () => {
     expect(kindWith('LinkedIn')).toBe('linkedin');
     expect(kindWith('Portfolio')).toBe('portfolio');
-    expect(kindWith('GitHub')).toBe('github');
+    expect(kindWith('Github')).toBe('github');
     expect(kindWith('Google Drive')).toBe('unknown');
     expect(kindWith('Other')).toBe('unknown');
     expect(document.querySelector<HTMLSelectElement>('[name=linkType]')!.value).toBe('Other');

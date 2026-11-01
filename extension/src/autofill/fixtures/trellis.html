@@ -8,9 +8,12 @@
       <select name="phoneCode"><option value="63">+63</option><option value="1">+1</option></select>
       <input name="phoneNumber" placeholder="Mobile number" required />
     </div>
-    <div class="links">
-      <select name="linkType"><option>LinkedIn</option><option>GitHub</option><option>Portfolio</option><option>Google Drive</option><option>Other</option></select>
-      <input name="linkUrl" placeholder="Link URL" />
+    <div class="ja-links">
+      <div class="ja-link-row">
+        <select name="linkType"><option>LinkedIn</option><option>Github</option><option>Portfolio</option><option>Google Drive</option><option>Other</option></select>
+        <input name="linkName" type="text" placeholder="Ex. Twitter" style="display:none" />
+        <input name="linkUrl" type="url" placeholder="https://" />
+      </div>
       <button type="button">Add Link</button>
     </div>
     <button type="submit">Submit application</button>

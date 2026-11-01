@@ -1,11 +1,12 @@
 // What this file is: writes profile values into the detected form fields of a page frame and reports what happened. It never submits a form, clicks Next, or touches checkboxes.
 // In plain terms: types your details into the matching boxes, leaves boxes that already have content, and tells you what it could not do.
-import { detectFields, isHidden } from './detect';
-import type { DetectedField, FieldElement } from './detect';
+import { detectFields, isHidden, linkRowFor, normalizeText } from './detect';
+import type { DetectedField, FieldElement, LinkRow } from './detect';
 import { formatPhone } from './phone';
 import type { FrameResult } from './report';
 import { pickCallingCodeOption, pickClosest, pickCountryOption, pickOption } from './select';
 import type { ExtensionProfile } from '../types/profile';
+import type { ContactLink } from '../../../src/types';
 
 const SOCIAL_HOSTS: Record<string, string[]> = {
   linkedin: ['linkedin.com'],
@@ -145,6 +146,119 @@ async function fillCombobox(el: HTMLInputElement, text: string, timeoutMs: numbe
   return 'ok';
 }
 
+const MAX_LINKS = 6;
+
+/** Select option text without spaces, so "GitHub" and "Github" compare equal. */
+const squash = (s: string) => normalizeText(s).replace(/ /g, '');
+
+/** Which link-row type fits a saved link: linkedin, github, portfolio, or other. */
+function linkTarget(link: ContactLink): 'linkedin' | 'github' | 'portfolio' | 'other' {
+  if (hostMatches(link.url, SOCIAL_HOSTS.linkedin)) return 'linkedin';
+  if (hostMatches(link.url, SOCIAL_HOSTS.github)) return 'github';
+  if (/portfolio/i.test(link.label)) return 'portfolio';
+  return 'other';
+}
+
+/** All link rows now on the page, in page order. */
+function currentLinkRows(root: Document | ShadowRoot | Element): LinkRow[] {
+  return detectFields(root)
+    .fields.filter((f) => f.linkRow && f.linkRow.urlInput === f.el)
+    .map((f) => f.linkRow!);
+}
+
+/**
+ * Clicks the Add button next to the rows, but only a real button with type="button" whose text
+ * says "add link" or "add another". Returns false when no such button exists.
+ */
+function clickAddLink(row: LinkRow): boolean {
+  let p = row.select.parentElement;
+  for (let depth = 0; p && depth < 3; depth++, p = p.parentElement) {
+    for (const b of Array.from(p.querySelectorAll('button'))) {
+      if (b.getAttribute('type') !== 'button') continue;
+      if (!/add (another )?link|add another/.test(normalizeText(b.textContent ?? ''))) continue;
+      b.click();
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Polls until the condition holds or the time runs out. */
+async function waitUntil(test: () => boolean, ms: number): Promise<boolean> {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (test()) return true;
+    await sleep(40);
+  }
+  return test();
+}
+
+/**
+ * Fills one saved link per row. Each row's select is set to the link's type (else Other),
+ * "Other" gets the link label in the name input, and the URL is written. Rows that already hold a URL are kept.
+ * More links than rows click the Add button, then wait up to 1 s for a new row. At most six links.
+ * In plain terms: puts each of your links in its own row on forms that have "type + URL" rows.
+ */
+async function fillLinkRows(
+  profile: ExtensionProfile,
+  root: Document | ShadowRoot | Element,
+  incomplete: FrameResult['incomplete'],
+): Promise<number> {
+  const links = profile.links.filter((l) => l.url).slice(0, MAX_LINKS);
+  let rows = currentLinkRows(root);
+  if (!links.length || !rows.length) return 0;
+  const present = new Set(rows.map((r) => r.urlInput.value.trim()).filter(Boolean));
+  const used = new Set<HTMLInputElement>();
+  let filled = 0;
+  const freeRow = () => rows.find((r) => !used.has(r.urlInput) && r.urlInput.value.trim() === '');
+
+  for (const link of links) {
+    if (present.has(link.url)) continue;
+    let row = freeRow();
+    if (!row) {
+      const before = rows.length;
+      if (!clickAddLink(rows[rows.length - 1])) {
+        incomplete.push({ label: link.label || 'Link', reason: 'no row for this link' });
+        break;
+      }
+      await waitUntil(() => currentLinkRows(root).length > before, 1000);
+      rows = currentLinkRows(root);
+      row = freeRow();
+      if (!row) {
+        incomplete.push({ label: link.label || 'Link', reason: 'no row for this link' });
+        break;
+      }
+    }
+    used.add(row.urlInput);
+    const target = linkTarget(link);
+    const options = Array.from(row.select.options);
+    let idx = options.findIndex((o) => squash(o.text || o.value) === target);
+    let useTarget: string = target;
+    if (idx < 0) {
+      useTarget = 'other';
+      idx = options.findIndex((o) => squash(o.text || o.value) === 'other');
+    }
+    if (idx < 0) {
+      incomplete.push({ label: link.label || 'Link', reason: 'no matching link type' });
+      continue;
+    }
+    if (row.select.selectedIndex !== idx) setNativeValue(row.select, options[idx].value);
+    if (useTarget === 'other' && link.label) {
+      const revealed = () => {
+        const fresh = linkRowFor(row!.urlInput);
+        return fresh?.nameInput && !isHidden(fresh.nameInput) ? fresh.nameInput : null;
+      };
+      if (await waitUntil(() => !!revealed(), 400)) {
+        const name = revealed()!;
+        if (name.value.trim() === '') setNativeValue(name, link.label);
+      }
+    }
+    setNativeValue(row.urlInput, link.url);
+    filled++;
+  }
+  return filled;
+}
+
 function isEmpty(f: DetectedField): boolean {
   if (f.control === 'radio') return !f.radios?.some((r) => r.checked);
   if (f.control === 'checkbox') return !(f.el as HTMLInputElement).checked;
@@ -169,6 +283,7 @@ export async function fillPage(
   const hasPhoneCountry = fields.some((f) => f.kind === 'phoneCountry');
 
   for (const f of fields) {
+    if (f.linkRow) continue; // link rows are filled below, one saved link per row
     if (f.kind === 'unknown') continue;
     const el = f.el;
 
@@ -247,6 +362,8 @@ export async function fillPage(
       filled++;
     }
   }
+
+  filled += await fillLinkRows(profile, root, incomplete);
 
   const requiredBlank = fields
     .filter((f) => f.required && !done.has(f) && isEmpty(f))

@@ -111,20 +111,80 @@ describe('fillPage', () => {
     expect(named('linkType').value).toBe('LinkedIn');
   });
 
-  it('fills the link URL by the type chosen in the select, and never changes the select', async () => {
-    const run = async (type: string, p = profile) => {
-      document.body.innerHTML = fixture('trellis');
-      named('linkType').value = type;
-      await fillPage(p);
-      expect(named('linkType').value).toBe(type);
-      return named('linkUrl').value;
+
+  // Test page helper: the trellis fixture with an Add Link button that clones the row, as the real form does.
+  function trellisWithAdd(extraRows = 0) {
+    document.body.innerHTML = fixture('trellis');
+    const container = document.querySelector('.ja-links')!;
+    const first = container.querySelector('.ja-link-row') as HTMLElement;
+    const addRow = () => {
+      const row = first.cloneNode(true) as HTMLElement;
+      row.querySelectorAll('input').forEach((i) => (i.value = ''));
+      container.insertBefore(row, container.querySelector('button'));
+      wire(row);
     };
-    expect(await run('Portfolio')).toBe('https://testa.example.invalid');
-    expect(await run('GitHub')).toBe('https://github.com/testa-example');
-    expect(await run('Other')).toBe('');
-    expect(await run('Google Drive')).toBe('');
-    // No link of that kind in the profile: leave blank.
-    expect(await run('LinkedIn', { ...profile, links: [{ label: 'GitHub', url: 'https://github.com/testa-example' }] })).toBe('');
+    const wire = (row: HTMLElement) => {
+      const sel = row.querySelector('select')!;
+      const name = row.querySelector<HTMLInputElement>('[name=linkName]')!;
+      sel.addEventListener('change', () => (name.style.display = sel.value === 'Other' ? '' : 'none'));
+    };
+    wire(first);
+    for (let i = 0; i < extraRows; i++) addRow();
+    container.querySelector('button')!.addEventListener('click', addRow);
+    const rows = () => Array.from(container.querySelectorAll<HTMLElement>('.ja-link-row'));
+    return { rows, container };
+  }
+  const rowState = (row: HTMLElement) => [
+    row.querySelector('select')!.value,
+    row.querySelector<HTMLInputElement>('[name=linkUrl]')!.value,
+    row.querySelector<HTMLInputElement>('[name=linkName]')!.value,
+  ];
+
+  it('fills three links into three rows by clicking Add Link', async () => {
+    const { rows } = trellisWithAdd();
+    await fillPage(profile);
+    expect(rows().map(rowState)).toEqual([
+      ['LinkedIn', 'https://www.linkedin.com/in/testa-example', ''],
+      ['Github', 'https://github.com/testa-example', ''],
+      ['Portfolio', 'https://testa.example.invalid', ''],
+    ]);
+  });
+
+  it('uses Other with the link label for a link of no known type', async () => {
+    const { rows } = trellisWithAdd();
+    await fillPage({ ...profile, links: [{ label: 'Twitter', url: 'https://x.com/testa_example' }] });
+    expect(rows().map(rowState)).toEqual([['Other', 'https://x.com/testa_example', 'Twitter']]);
+  });
+
+  it('keeps a row that already has a URL, and does not repeat a link that is already there', async () => {
+    const { rows } = trellisWithAdd(1);
+    const [r1] = rows();
+    r1.querySelector<HTMLInputElement>('[name=linkUrl]')!.value = 'https://www.linkedin.com/in/testa-example';
+    r1.querySelector('select')!.value = 'Other';
+    await fillPage({ ...profile, links: profile.links.slice(0, 2) });
+    expect(rows()).toHaveLength(2);
+    expect(rowState(rows()[0])).toEqual(['Other', 'https://www.linkedin.com/in/testa-example', '']);
+    expect(rowState(rows()[1])).toEqual(['Github', 'https://github.com/testa-example', '']);
+  });
+
+  it('stops at six links', async () => {
+    const { rows } = trellisWithAdd();
+    const many = Array.from({ length: 9 }, (_, i) => ({ label: `L${i}`, url: `https://example.invalid/${i}` }));
+    await fillPage({ ...profile, links: many });
+    expect(rows()).toHaveLength(6);
+  });
+
+  it('refuses an Add button of type submit, or with no type', async () => {
+    for (const html of ['<button type="submit">Add Link</button>', '<button>Add Link</button>', '<button type="button">Save draft</button>']) {
+      document.body.innerHTML = fixture('trellis').replace('<button type="button">Add Link</button>', html);
+      const clicks = vi.fn();
+      document.querySelectorAll('.ja-links button').forEach((b) => b.addEventListener('click', clicks));
+      const r = await fillPage(profile);
+      expect(clicks).not.toHaveBeenCalled();
+      expect(document.querySelectorAll('.ja-link-row')).toHaveLength(1);
+      expect(named('linkUrl').value).toBe('https://www.linkedin.com/in/testa-example');
+      expect(r.incomplete.length).toBeGreaterThan(0);
+    }
   });
 
   it('fills nothing on a page with only a lone email box or a sign-in form', async () => {

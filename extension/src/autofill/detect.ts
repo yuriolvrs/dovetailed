@@ -42,6 +42,8 @@ export interface DetectedField {
   required: boolean;
   /** For radios: every radio of the group. The first one is `el`. */
   radios?: HTMLInputElement[];
+  /** Set for a URL or name input that sits in a link row. */
+  linkRow?: LinkRow;
 }
 
 export interface DetectResult {
@@ -271,29 +273,46 @@ function classify(el: FieldElement, control: FieldControl, group?: string): { ki
 
 const LINK_TYPE_WORDS = /\blinked ?in\b|\bgit ?hub\b|\bportfolio\b|\btwitter\b|\bfacebook\b|\bwebsite\b/;
 
+/** One repeating link row: a type select, a URL input, and maybe a name input that "Other" reveals. */
+export interface LinkRow {
+  select: HTMLSelectElement;
+  urlInput: HTMLInputElement;
+  /** The extra text input, visible or hidden. */
+  nameInput?: HTMLInputElement;
+}
+
 /**
- * For a URL input in the same row as a link-type select (LinkedIn, GitHub, Portfolio...),
- * returns the kind named by the select's current value. Returns null when there is no such select.
- * Types such as "Google Drive" or "Other" give 'unknown', so the input stays blank.
- * In plain terms: the URL box follows the "type of link" dropdown beside it.
+ * Finds the link row that holds this input: a select with link-type options (LinkedIn, GitHub, Portfolio...)
+ * plus a URL input and, optionally, one more text input. Hidden controls count, because "Other" reveals one.
+ * Returns null when the input is not in such a row.
+ * In plain terms: spots the "type of link" dropdown and the boxes beside it.
  */
-function kindFromLinkTypeSelect(el: FieldElement): FieldKind | null {
+export function linkRowFor(el: Element): LinkRow | null {
   if (!(el instanceof HTMLInputElement) || (el.type !== 'text' && el.type !== 'url')) return null;
   let p = el.parentElement;
   for (let depth = 0; p && depth < 3; depth++, p = p.parentElement) {
     const controls = Array.from(p.querySelectorAll<FieldElement>('input, select, textarea')).filter(
       (c) => !(c instanceof HTMLInputElement && c.type === 'hidden'),
     );
-    if (controls.length > 2) return null;
-    const select = controls.find((c): c is HTMLSelectElement => c instanceof HTMLSelectElement);
-    if (!select || controls.length !== 2) continue;
-    const texts = Array.from(select.options).map((o) => normalizeText(o.text || o.value));
+    const selects = controls.filter((c): c is HTMLSelectElement => c instanceof HTMLSelectElement);
+    const others = controls.filter((c): c is HTMLInputElement => c instanceof HTMLInputElement);
+    if (selects.length > 1 || others.length > 2 || controls.length !== selects.length + others.length) return null;
+    if (selects.length === 0) continue;
+    const texts = Array.from(selects[0].options).map((o) => normalizeText(o.text || o.value));
     if (!texts.some((t) => LINK_TYPE_WORDS.test(t))) return null;
-    const chosen = select.options[select.selectedIndex];
-    const k = matchText(chosen ? chosen.text || chosen.value : '');
-    return k && ['linkedin', 'github', 'portfolio', 'twitter', 'facebook', 'website'].includes(k) ? k : 'unknown';
+    const urlInput = others.find((c) => c.type === 'url') ?? (others.length === 1 ? others[0] : undefined);
+    if (!urlInput) return null;
+    const nameInput = others.find((c) => c !== urlInput);
+    return { select: selects[0], urlInput, nameInput };
   }
   return null;
+}
+
+/** The kind a link row's URL input takes from the select's current value. Other types give 'unknown'. */
+function kindFromLinkRow(row: LinkRow): FieldKind {
+  const chosen = row.select.options[row.select.selectedIndex];
+  const k = matchText(chosen ? chosen.text || chosen.value : '');
+  return k && ['linkedin', 'github', 'portfolio', 'twitter', 'facebook', 'website'].includes(k) ? k : 'unknown';
 }
 
 function isRequired(el: FieldElement, label: string): boolean {
@@ -362,7 +381,11 @@ export function detectFields(root: Document | ShadowRoot | Element = document): 
     const classified = classify(el, control, group);
     const { label } = classified;
     let kind = classified.kind;
-    if (kind === 'website' || kind === 'unknown') kind = kindFromLinkTypeSelect(el) ?? kind;
+    const row = linkRowFor(el);
+    if (row) {
+      if (el === row.nameInput) kind = 'unknown';
+      else if (kind === 'website' || kind === 'unknown') kind = kindFromLinkRow(row);
+    }
     all.push({
       el,
       kind,
@@ -371,6 +394,7 @@ export function detectFields(root: Document | ShadowRoot | Element = document): 
       key: el.id || el.getAttribute('name') || '',
       required: isRequired(el, label) || (radios?.some((r) => r.required) ?? false),
       radios,
+      linkRow: row ?? undefined,
     });
   }
 
