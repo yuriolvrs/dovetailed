@@ -133,6 +133,16 @@ describe('CountryCombobox', () => {
     expect(input().value).toBe('');
   });
 
+  it('opens as an empty search and restores the name when nothing is picked', () => {
+    mount('US');
+    act(() => input().click());
+    expect(input().value).toBe('');
+    expect(input().placeholder).toBe('United States');
+    blur();
+    expect(input().value).toBe('United States');
+    expect(current).toBe('US');
+  });
+
   it('selects an option on click', () => {
     mount();
     type('pol');

@@ -116,21 +116,18 @@ export function ProfileEditor({
           <div className="sm:col-span-2">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <CountryCombobox
-                label="Phone country"
+                label="Country code"
                 value={phoneCountry(value.phone, address.countryCode)}
                 countries={phoneCountries}
                 onChange={setPhoneCountry}
               />
               <FieldInput
-                label="National number"
+                label="Phone number"
                 placeholder="9171234567"
                 value={phone.nationalNumber}
                 onChange={(nationalNumber) => set({ phone: { ...phone, nationalNumber } })}
               />
             </div>
-            <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-              Digits only. A leading 0 is removed when you save.
-            </p>
           </div>
         </div>
       </SettingsSection>

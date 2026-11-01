@@ -42,12 +42,18 @@ export function CountryCombobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Follow the stored value when it changes from outside.
   useEffect(() => {
     setText(selectedName);
     setTyped(false);
   }, [selectedName]);
+
+  // After the list closes in a focused box, select the name so the next key replaces it.
+  useEffect(() => {
+    if (!open && document.activeElement === inputRef.current) inputRef.current?.select();
+  }, [open, selectedName]);
 
   const matches = useMemo(() => filterCountries(countries, typed ? text : ''), [countries, typed, text]);
   const activeCountry = open ? matches[active] : undefined;
@@ -121,6 +127,7 @@ export function CountryCombobox({
         </span>
         <input
           id={id}
+          ref={inputRef}
           type="text"
           role="combobox"
           aria-expanded={open}
@@ -129,7 +136,9 @@ export function CountryCombobox({
           aria-autocomplete="list"
           autoComplete="off"
           spellCheck={false}
-          value={text}
+          // An open list is a search: the box is empty and the current country is the placeholder.
+          value={open && !typed ? '' : text}
+          placeholder={selectedName}
           onChange={(e) => {
             setText(e.target.value);
             setTyped(true);
