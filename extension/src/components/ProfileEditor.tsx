@@ -17,8 +17,12 @@ const grid = 'grid grid-cols-1 gap-4 sm:grid-cols-2';
 // Rows of a flat list are inset by their border and padding (7px). Pulling the list
 // left by that much lines the fields up with the other sections. The shared empty
 // state is restyled here from a dashed box to plain muted text.
+// From md up the list is also pulled right by the remove button's width (17px button,
+// 8px gap, 7px row inset), so field edges match the other sections.
+// Prose rows get a wide gap (!mt-8) so each entry reads as a group.
 const listClass =
-  '-ml-[7px] [&>.border-2]:border-0 [&>.border-2]:py-0 [&>.border-2]:pl-[7px] [&>.border-2]:text-left [&>.border-2]:text-sm';
+  '-ml-[7px] md:-mr-[32px] [&>.border-2]:border-0 [&>.border-2]:py-0 [&>.border-2]:pl-[7px] [&>.border-2]:text-left [&>.border-2]:text-sm';
+const proseGap = '[&>[data-index]:not(:first-child)]:!mt-8';
 
 /**
  * A list of rows with no boxes and its own Add button, aligned to the fields.
@@ -43,7 +47,7 @@ function FlatList<T>({
 }) {
   return (
     <div>
-      <div className={listClass}>
+      <div className={`${listClass} ${variant === 'prose' ? proseGap : ''}`}>
         <EditableList<T>
           variant={variant}
           items={items}
@@ -97,7 +101,7 @@ export function ProfileEditor({
             <FieldInput label="Email" type="email" value={value.email} onChange={(email) => set({ email })} />
           </div>
           <div className="sm:col-span-2">
-            <div className="grid max-w-md grid-cols-[6rem_1fr] gap-4">
+            <div className="grid grid-cols-[6rem_1fr] gap-4">
               <FieldInput
                 label="Calling code"
                 placeholder="63"

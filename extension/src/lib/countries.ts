@@ -21,7 +21,7 @@ for (const [path, url] of Object.entries(flagFiles)) {
 }
 
 /** Region codes that Intl knows but that are not countries. */
-const NOT_COUNTRIES = new Set(['EU', 'EZ', 'UN', 'QO', 'XA', 'XB', 'ZZ']);
+const NOT_COUNTRIES = new Set(['EU', 'EZ', 'UN', 'QO', 'XA', 'XB', 'ZZ', 'CP', 'DG', 'IC', 'AC', 'TA']);
 
 /**
  * The URL of the flag image for a two-letter code, or undefined if there is none.

@@ -63,7 +63,7 @@ describe('listCountries', () => {
   });
 
   it('excludes regions that are not countries', () => {
-    for (const code of ['EU', 'EZ', 'UN', 'QO', 'XA', 'XB', 'ZZ']) expect(codes.has(code)).toBe(false);
+    for (const code of ['EU', 'EZ', 'UN', 'QO', 'XA', 'XB', 'ZZ', 'CP', 'DG', 'IC', 'AC', 'TA']) expect(codes.has(code)).toBe(false);
   });
 
   it('gives every listed country a flag file', () => {
