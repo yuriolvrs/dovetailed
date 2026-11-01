@@ -67,3 +67,26 @@ export async function reconcileHint(enabled: boolean): Promise<boolean> {
   }
   return active;
 }
+
+/**
+ * Builds the function that matches the script to the saved setting. Runs wait for each other, and
+ * each reads the setting when its turn comes, so the last run always sees the newest value.
+ * A failed run is ignored and does not stop later runs.
+ * In plain terms: stops an old "off" read from removing the button just after you turned it on.
+ */
+export function createHintSync(
+  read: () => Promise<{ showFillButton: boolean }>,
+  write: (settings: { showFillButton: boolean }) => Promise<unknown>,
+): () => Promise<void> {
+  let queue = Promise.resolve();
+  return () => {
+    queue = queue
+      .then(async () => {
+        const { showFillButton } = await read();
+        const active = await reconcileHint(showFillButton);
+        if (showFillButton && !active) await write({ showFillButton: false });
+      })
+      .catch(() => {});
+    return queue;
+  };
+}

@@ -30,7 +30,7 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-import { ALL_SITES, disableHint, enableHint, HINT_SCRIPT_ID, reconcileHint } from './hintScript';
+import { ALL_SITES, createHintSync, disableHint, enableHint, HINT_SCRIPT_ID, reconcileHint } from './hintScript';
 
 beforeEach(() => {
   registered.clear();
@@ -96,5 +96,46 @@ describe('reconcileHint', () => {
     await enableHint();
     expect(await reconcileHint(false)).toBe(false);
     expect(registered.size).toBe(0);
+  });
+});
+
+describe('createHintSync', () => {
+  it('ends registered when a save lands after a start-up run read the old value', async () => {
+    hasAccess = true;
+    let saved = false;
+    let releaseRead = () => {};
+    const firstRead = new Promise<void>((resolve) => (releaseRead = resolve));
+    let reads = 0;
+    const read = async () => {
+      const value = saved;
+      if (reads++ === 0) await firstRead;
+      return { showFillButton: value };
+    };
+    const sync = createHintSync(read, async () => {});
+
+    await enableHint();
+    const startup = sync();
+    await Promise.resolve();
+    saved = true;
+    const afterSave = sync();
+    releaseRead();
+    await Promise.all([startup, afterSave]);
+
+    expect(registered.has(HINT_SCRIPT_ID)).toBe(true);
+  });
+
+  it('turns the setting off when access is gone', async () => {
+    const write = vi.fn(async () => {});
+    await createHintSync(async () => ({ showFillButton: true }), write)();
+    expect(write).toHaveBeenCalledWith({ showFillButton: false });
+  });
+
+  it('keeps working after a failed run', async () => {
+    hasAccess = true;
+    const read = vi.fn().mockRejectedValueOnce(new Error('no')).mockResolvedValue({ showFillButton: true });
+    const sync = createHintSync(read, async () => {});
+    await sync();
+    await sync();
+    expect(registered.has(HINT_SCRIPT_ID)).toBe(true);
   });
 });
