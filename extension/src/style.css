@@ -1,0 +1,17 @@
+/* What this file is: Tailwind entry CSS for the extension pages.
+   In plain terms: pulls in the styling tool's base rules. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+}

@@ -2,6 +2,13 @@
 
 Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reason** (why), **Status** (Accepted / Proposed).
 
+## 2026-11-01 — Extension profile schema and blocked sites (plan 04, Phase 1)
+
+**Context:** The extension needs split names, a structured phone and address, and a stored resume file. Dovetailed stores one `name`, free-text `phone` and `location`, and no resume file. LinkedIn's help page bans automating extensions, and a third-party tracker quotes a similar Indeed clause.
+**Decision:** The extension owns `ExtensionProfile`, with `expectedSalary` and `noticePeriod` as optional stored answers. It reuses Dovetailed's link, experience and education types with `import type`. Dovetailed's `Contact` does not change. The extension refuses to fill on `indeed.com` and `linkedin.com`. The sync design stays undecided.
+**Reason:** Changing `Contact` touches the resume views, LaTeX, DOCX export, extraction and saved data, and nothing needs it until sync exists. The user does not want to risk their Indeed account.
+**Status:** Accepted
+
 ## 2026-10-17 — Posting analysis reads duties and degrees (plan 03, task 3.1)
 
 **Context:** The outcome evaluation (`eval-runs/2026-10-17/REPORT.md`) found that analysis kept at most 8 qualifications and no duties. The best fits sat in the duties ("monitor progress against approved estimates"). The matcher also gave false gaps for compound requirements and for a degree.

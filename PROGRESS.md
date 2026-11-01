@@ -14,6 +14,7 @@ Phase 8 — File attachments (deployed; `/extract` proven live on the deployed W
 - [x] Phase 6 — LaTeX pipeline (one-time template conversion, deterministic fill/escape, .tex export; verified live against Groq)
 - [x] Phase 7 — Polish (empty states, LLM error/rate-limit handling, and generation history were already built incrementally in earlier sessions per user-driven `IMPROVEMENTS_PLAN.md` work; this pass audited each PRD §12 item against the live code and brought README.md up to date)
 - [x] Phase 8 — File attachments (import an existing resume into the profile; attach writing samples, `.tex` templates, and documents as accomplishments; OCR via a second provider through a new stateless `/extract` proxy route; verified live against real Mistral + Groq). See `PHASE8_PLAN.md`. Deployed 2026-08-26. **Not yet exercised by the user against their own documents.**
+- [ ] Browser extension (`/extension`, plan 04, tracked separately from the web app phases). Phase 1 schema approved. Phase 2 scaffold built: tasks 4.1-4.4 pass build, typecheck, 35 Vitest tests and a Playwright Chromium check of options, storage and resume bytes. **Not proven:** the real toolbar-click `activeTab` flow, and anything in a running Firefox (only `web-ext lint` ran). Filling and resume upload (Phases 3-5) are not built.
 
 ## Done
 - Phase 1 Pass A — Foundation scaffold (verified: `npm run build`, `npm run test`, `npm run dev` all green):

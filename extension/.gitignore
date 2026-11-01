@@ -1,0 +1,7 @@
+# What this file is: tells Git which extension files to never track.
+# In plain terms: a list of build output and install folders Git should ignore.
+node_modules/
+.output/
+.wxt/
+*.tsbuildinfo
+web-ext-artifacts/
