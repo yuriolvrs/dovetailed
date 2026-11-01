@@ -5,8 +5,16 @@
 // In plain terms: the building blocks the proxy uses to decide who's
 // allowed to call it, how big a request it'll accept, and how often.
 
+// The one wildcard the allowlist knows. Firefox gives every install a random
+// moz-extension:// origin, so no exact entry can exist for it. Only this
+// literal entry acts as a prefix match. Any other entry must match exactly.
+// In plain terms: lets the Firefox add-on call the proxy without allowing other sites.
+const FIREFOX_EXTENSION_WILDCARD = 'moz-extension://*';
+
 export function isAllowedOrigin(origin: string | null, allowlist: string[]): boolean {
-  return origin !== null && allowlist.includes(origin);
+  if (origin === null) return false;
+  if (allowlist.includes(origin)) return true;
+  return allowlist.includes(FIREFOX_EXTENSION_WILDCARD) && origin.startsWith('moz-extension://');
 }
 
 export interface CorsResult {

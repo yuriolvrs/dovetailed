@@ -27,6 +27,37 @@ describe('isAllowedOrigin', () => {
   it('rejects a null origin', () => {
     expect(isAllowedOrigin(null, ['http://localhost:5173'])).toBe(false);
   });
+
+  describe('extension origins', () => {
+    const chromeId = 'chrome-extension://kfcoedkklklmcjkiiocpdcacamiaddjj';
+    const list = ['http://localhost:5173', chromeId, 'moz-extension://*'];
+
+    it('allows the exact Chrome extension origin', () => {
+      expect(isAllowedOrigin(chromeId, list)).toBe(true);
+    });
+
+    it('refuses another Chrome extension origin', () => {
+      expect(isAllowedOrigin('chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', list)).toBe(false);
+    });
+
+    it('allows any moz-extension origin when the wildcard entry is listed', () => {
+      expect(isAllowedOrigin('moz-extension://3f2a-1b', list)).toBe(true);
+    });
+
+    it('refuses moz-extension origins when the wildcard entry is not listed', () => {
+      expect(isAllowedOrigin('moz-extension://3f2a-1b', ['http://localhost:5173'])).toBe(false);
+    });
+
+    it('limits the wildcard to moz-extension', () => {
+      expect(isAllowedOrigin('https://evil.example', list)).toBe(false);
+      expect(isAllowedOrigin('chrome-extension://other', ['moz-extension://*'])).toBe(false);
+      expect(isAllowedOrigin('http://moz-extension://x', list)).toBe(false);
+    });
+
+    it('does not treat other entries with * as wildcards', () => {
+      expect(isAllowedOrigin('https://a.example.com', ['https://*.example.com'])).toBe(false);
+    });
+  });
 });
 
 describe('buildCorsHeaders', () => {

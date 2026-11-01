@@ -47,7 +47,7 @@ export default function App() {
         <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Loading...'}</p>
       ) : (
         <>
-          <ResumeSection resume={profile.resume} onChange={setResume} />
+          <ResumeSection resume={profile.resume} onChange={setResume} profile={profile} onProfile={setProfile} />
           <ProfileEditor value={profile} onChange={setProfile} />
           <div className="sticky bottom-0 z-10 -mx-6 flex items-center gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-950 sm:-mx-10 sm:px-10">
             <Btn onClick={() => void save()}>Save</Btn>
