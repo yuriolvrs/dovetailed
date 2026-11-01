@@ -150,7 +150,6 @@ export function CountryCombobox({
           id={listId}
           ref={listRef}
           role="listbox"
-          aria-label={label}
           hidden={!open}
           // Keeps focus in the input when the user clicks or drags the list's scroll bar.
           onMouseDown={(e) => e.preventDefault()}
