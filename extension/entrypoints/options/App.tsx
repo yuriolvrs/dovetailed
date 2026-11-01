@@ -2,6 +2,7 @@
 // In plain terms: the settings screen where you enter your details and resume.
 import { useEffect, useState } from 'react';
 import { Btn, SavedIndicator } from '../../../src/components/ui/primitives';
+import { BrandHeader } from '../../src/components/BrandHeader';
 import { ProfileEditor } from '../../src/components/ProfileEditor';
 import { ResumeSection } from '../../src/components/ResumeSection';
 import { getProfile, saveProfile } from '../../src/lib/data';
@@ -39,7 +40,9 @@ export default function App() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 pt-10 text-slate-900 dark:text-slate-100 sm:px-10">
-      <h1 className="pb-8 text-xl font-semibold">Dovetailed Autofill</h1>
+      <div className="pb-8">
+        <BrandHeader />
+      </div>
       {!profile ? (
         <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Loading...'}</p>
       ) : (

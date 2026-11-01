@@ -8,6 +8,9 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Dovetailed Autofill',
     description: 'Fills job application forms from your stored profile. It never submits a form.',
+    action: {
+      default_icon: { 16: 'icon/16.png', 32: 'icon/32.png', 48: 'icon/48.png', 128: 'icon/128.png' },
+    },
     permissions: ['activeTab', 'scripting', 'unlimitedStorage'],
     optional_host_permissions: ATS_ORIGINS,
     ...(browser === 'firefox'

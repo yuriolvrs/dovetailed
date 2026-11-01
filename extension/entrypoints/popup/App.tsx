@@ -1,7 +1,9 @@
 // What this file is: the popup. It shows what is stored, refuses blocked sites, injects the fill script into all frames on click, and shows the merged result.
 // In plain terms: the small window that opens from the toolbar. It fills the form on the page and tells you what it did.
 import { useEffect, useState } from 'react';
+import { Settings } from 'lucide-react';
 import { Btn } from '../../../src/components/ui/primitives';
+import { BrandHeader } from '../../src/components/BrandHeader';
 import { getProfile } from '../../src/lib/data';
 import { formatFieldReport, mergeResults } from '../../src/autofill/report';
 import type { FrameResult, MergedResult } from '../../src/autofill/report';
@@ -67,36 +69,49 @@ export default function App() {
     setMessage('Field report copied.');
   }
 
+  const note = 'text-sm leading-relaxed text-amber-800 dark:text-amber-300';
   return (
-    <main className="w-72 space-y-3 bg-white p-4 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <h1 className="text-sm font-semibold">Dovetailed Autofill</h1>
-      <ul className="text-xs text-slate-600 dark:text-slate-400">
-        <li>Profile: {profile ? (hasProfile ? 'stored' : 'not set up') : '...'}</li>
-        <li>Resume: {profile ? (profile.resume ? profile.resume.fileName : 'none') : '...'}</li>
+    <main className="w-80 space-y-5 bg-white p-4 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="flex items-center justify-between gap-3">
+        <BrandHeader />
+        <Btn variant="ghost" size="sm" ariaLabel="Open options" onClick={() => browser.runtime.openOptionsPage()}>
+          <Settings size={16} />
+        </Btn>
+      </header>
+      <ul className="space-y-1.5 text-sm">
+        <li className="flex justify-between gap-3">
+          <span className="text-slate-600 dark:text-slate-400">Profile</span>
+          <span>{profile ? (hasProfile ? 'Stored' : 'Not set up') : '...'}</span>
+        </li>
+        <li className="flex justify-between gap-3">
+          <span className="text-slate-600 dark:text-slate-400">Resume</span>
+          <span className="truncate">{profile ? (profile.resume ? profile.resume.fileName : 'None') : '...'}</span>
+        </li>
       </ul>
-      <Btn variant="secondary" size="sm" onClick={() => browser.runtime.openOptionsPage()}>
-        Open options
-      </Btn>
-      {blocked ? (
-        <p role="status" className="text-xs text-amber-700 dark:text-amber-400">
+      {blocked && (
+        <p role="status" className={note}>
           Autofill is off on Indeed and LinkedIn. Their terms may ban tools like this, and your account could be at risk.
         </p>
-      ) : null}
-      {unknownSite ? (
-        <p role="status" className="text-xs text-amber-700 dark:text-amber-400">
+      )}
+      {unknownSite && (
+        <p role="status" className={note}>
           Autofill cannot run here because this page's address is not available.
         </p>
-      ) : null}
-      <Btn onClick={fill} disabled={blocked || unknownSite || busy || tab?.id === undefined}>
-        Fill this page
+      )}
+      <Btn
+        className="w-full justify-center"
+        onClick={fill}
+        disabled={blocked || unknownSite || busy || tab?.id === undefined}
+      >
+        {busy ? 'Filling...' : 'Fill this page'}
       </Btn>
       {result && result.formFound && (
-        <div role="status" className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+        <div role="status" className="space-y-3 text-sm text-slate-700 dark:text-slate-300">
           <p>Filled {result.filled} fields. Check the form, then submit it yourself.</p>
           {result.requiredBlank.length > 0 && (
-            <div>
-              <p className="font-medium">Not filled (required):</p>
-              <ul className="list-disc pl-4">
+            <div className="space-y-1">
+              <p className="font-medium text-slate-900 dark:text-slate-100">Not filled (required)</p>
+              <ul className="list-disc space-y-0.5 pl-5">
                 {result.requiredBlank.map((l) => (
                   <li key={l}>{l}</li>
                 ))}
@@ -104,9 +119,9 @@ export default function App() {
             </div>
           )}
           {result.incomplete.length > 0 && (
-            <div>
-              <p className="font-medium">Could not complete:</p>
-              <ul className="list-disc pl-4">
+            <div className="space-y-1">
+              <p className="font-medium text-slate-900 dark:text-slate-100">Could not complete</p>
+              <ul className="list-disc space-y-0.5 pl-5">
                 {result.incomplete.map((i, n) => (
                   <li key={n}>
                     {i.label} ({i.reason})
@@ -118,8 +133,8 @@ export default function App() {
         </div>
       )}
       {result?.unreachable.map((origin) => (
-        <div key={origin} className="space-y-1">
-          <p role="status" className="text-xs text-slate-700 dark:text-slate-300">
+        <div key={origin} className="space-y-2">
+          <p role="status" className="text-sm text-slate-700 dark:text-slate-300">
             A form from {origin.replace('*://*.', '').replace('/*', '')} is embedded here and could not be reached.
           </p>
           <Btn size="sm" variant="secondary" onClick={() => void grant(origin)}>
@@ -127,15 +142,15 @@ export default function App() {
           </Btn>
         </div>
       ))}
-      {frames.some((f) => f.fields.length > 0) && (
-        <Btn size="sm" variant="secondary" onClick={() => void copyReport()}>
-          Copy field report
-        </Btn>
-      )}
       {message && (
-        <p role="status" className="text-xs text-slate-700 dark:text-slate-300">
+        <p role="status" className="text-sm text-slate-700 dark:text-slate-300">
           {message}
         </p>
+      )}
+      {frames.some((f) => f.fields.length > 0) && (
+        <Btn size="sm" variant="ghost" className="-ml-3" onClick={() => void copyReport()}>
+          Copy field report
+        </Btn>
       )}
     </main>
   );
