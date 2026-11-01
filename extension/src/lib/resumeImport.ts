@@ -32,7 +32,7 @@ const TWO_DIGIT_CODES = new Set(
  * sign the calling code stays empty and a leading 0 is removed.
  * In plain terms: reads a phone number as it is printed on a resume.
  */
-function parsePhone(raw: string): PhoneNumber | undefined {
+export function parsePhone(raw: string): PhoneNumber | undefined {
   const text = raw.trim();
   const digits = text.replace(/\D/g, '');
   if (!digits) return undefined;
@@ -50,7 +50,7 @@ const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCas
  * Text that is not a known country goes to city (and state).
  * In plain terms: sorts a one-line location into city, state and country.
  */
-function parseLocation(raw: string): PostalAddress {
+export function parseLocation(raw: string): PostalAddress {
   const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
   const out: PostalAddress = {};
   if (!parts.length) return out;
@@ -70,7 +70,7 @@ function parseLocation(raw: string): PostalAddress {
  * middle initials such as "G.". A leading initial stays, because it can be how the person goes by.
  * In plain terms: "Marc Yuri G. Olivares" becomes "Marc Yuri" and "Olivares".
  */
-function parseName(raw: string): { firstName?: string; lastName?: string } {
+export function parseName(raw: string): { firstName?: string; lastName?: string } {
   const words = raw.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return {};
   if (words.length === 1) return { firstName: words[0] };

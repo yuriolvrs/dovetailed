@@ -22,7 +22,8 @@ export default defineConfig({
     },
     permissions: ['activeTab', 'scripting', 'unlimitedStorage'],
     // The job boards are asked one by one. All sites is asked only when the user turns on the in-page button.
-    optional_host_permissions: [...ATS_ORIGINS, '*://*/*'],
+    // The Dovetailed site is asked only when the user clicks "Copy from Dovetailed".
+    optional_host_permissions: [...ATS_ORIGINS, '*://*/*', 'https://dovetailed.pages.dev/*'],
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

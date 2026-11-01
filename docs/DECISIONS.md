@@ -2,6 +2,13 @@
 
 Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reason** (why), **Status** (Accepted / Proposed).
 
+## 2026-11-02 — Dovetailed link is a same-browser copy, with no accounts (plan 04, task 4.14)
+
+**Context:** The user asked for sign-in and sync. Dovetailed has no accounts, and the PRD rules out accounts, sync and server-side storage.
+**Decision:** The user chose a one-way copy on click. The extension reads the app's `profiles` row through a tab on the Dovetailed origin, checks it, and updates the form after a notice about any values it would replace. It writes nothing to the app. The row reaches the extension without a server, and there is no sync between devices or browsers.
+**Reason:** It removes retyping for the common case and keeps every privacy rule. Google Drive sync and real accounts were offered and not chosen.
+**Status:** Accepted
+
 ## 2026-11-01 — Phone country picker uses libphonenumber-js (plan 04, task 4.13)
 
 **Context:** The user had to type a calling code. A picker needs a code for every country, and codes such as +1 are shared.

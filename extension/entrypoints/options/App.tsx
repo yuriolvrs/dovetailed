@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Btn, SavedIndicator } from '../../../src/components/ui/primitives';
 import { BrandHeader } from '../../src/components/BrandHeader';
+import { DovetailedSection } from '../../src/components/DovetailedSection';
 import { FillButtonSection } from '../../src/components/FillButtonSection';
 import { ProfileEditor } from '../../src/components/ProfileEditor';
 import { ResumeSection } from '../../src/components/ResumeSection';
@@ -49,6 +50,7 @@ export default function App() {
       ) : (
         <>
           <ResumeSection resume={profile.resume} onChange={setResume} profile={profile} onProfile={setProfile} />
+          <DovetailedSection profile={profile} onProfile={setProfile} />
           <ProfileEditor value={profile} onChange={setProfile} />
           <FillButtonSection />
           <div className="sticky bottom-0 z-10 -mx-6 flex items-center gap-3 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-950 sm:-mx-10 sm:px-10">

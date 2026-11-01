@@ -14,7 +14,7 @@
 
 **Rollout order:** Teamtailor and trellis.ph first, then Greenhouse, Lever, Ashby, SmartRecruiters and Workable.
 
-**Sync:** Undecided. Nothing is built for it beyond the `getProfile()` and `getResume()` seam.
+**Sync:** No accounts and no server, as the PRD requires. The user copies their Dovetailed profile into the extension in the same browser (task 4.14). There is no sync between devices.
 
 ## Phase 1: Profile schema (proposed)
 
@@ -408,3 +408,26 @@ Approved by the user on 2026-11-01. See Task 4.11. Importing a Dovetailed JSON b
 **Done when:** Vitest covers `callingCode`, `listPhoneCountries`, all three `phoneCountry` routes including a shared code, and `cleanPhone` keeping `countryCode`. `npm run test`, `npm run typecheck` and `npm run build` pass from `extension/`. `.output/chrome-mv3/fill.js` and `hint.js` do not contain the library.
 
 **Out of scope:** `parsePhone` in `resumeImport.ts`, `CountryCombobox.tsx`, `hint.ts`, `FillButtonSection.tsx`, the filling code and any other edits in progress in this checkout. Do not commit.
+
+## Task 4.14: Copy the profile from Dovetailed
+
+**Goal:** One click on the options page copies the user's Dovetailed profile from the same browser into the extension form. No account, server or new network call.
+
+**Files to touch:** `extension/wxt.config.ts`, `extension/src/lib/dovetailedLink.ts` (new) plus test, `extension/src/lib/resumeImport.ts` (export `parseName`, `parsePhone`, `parseLocation` only, no behaviour change), `extension/src/components/DovetailedSection.tsx` (new) plus test if it has branching beyond the lib, `extension/entrypoints/options/App.tsx`, `extension/README.md`.
+
+**Doc sections to read:** PRD.md privacy rules, `src/lib/db.ts`, `src/types/index.ts` (`Profile`, `Contact`), `extension/src/components/ResumeSection.tsx` (the existing permission request, inline notice and form update to match).
+
+**Steps:**
+1. Add `https://dovetailed.pages.dev/*` to `optional_host_permissions`. No new required permissions and no `tabs` permission.
+2. `readDovetailedProfile()`: request that origin from the click. Find a tab with `tabs.query`. If none exists, create an inactive tab, wait until it is complete (15 s limit), and close it in `finally`. Close only a tab we opened.
+3. Inject one function with `scripting.executeScript`. It calls `indexedDB.databases()` first and returns "none" if `anti-funemployment` is absent, because a plain `indexedDB.open` would create an empty database in the app's origin and could disturb Dexie. Otherwise it opens the database without a version, reads the `profiles` store read-only, closes the database and returns the first row. It writes nothing.
+4. Treat the row as unchecked input. A pure shape check accepts it only if `contact` is an object, the strings are strings, and links, experience and education are arrays. Otherwise show an error.
+5. Pure `toExtensionFields(row)` maps name, email, phone, location, links, experience and education, reusing the parsers from `resumeImport.ts`. Skills, projects, summary, writing samples and additional info are not copied.
+6. Pure `mergeDovetailed(current, incoming, mode)` returns the next profile. `fillEmpty` writes only empty fields, with the rules of `mapExtracted`. `replace` writes every non-empty incoming value and keeps a current value where the incoming one is empty. Neither mode touches `resume`, `expectedSalary`, `noticePeriod`, `version`, the street or the postal code. Keep the current calling code and `countryCode` when the incoming phone has no calling code.
+7. Pure `conflicts(current, incoming)` returns labels ("First name", "Experience", and so on) where both sides are non-empty and differ.
+8. Add a `SettingsSection` titled "Copy from Dovetailed", below the resume section, with one button and the hint "Copies your Dovetailed profile from this browser. Nothing leaves your device." With no conflicts, apply `replace` to the form. With conflicts, show the inline notice "This would replace: ..." with **Replace** and **Fill empty only** buttons. Messages: no profile found ("No Dovetailed profile in this browser."), access refused, and read failed. The user still clicks Save, as with resume import. Report how many fields changed.
+9. Add a short README section. It says this is a manual copy, works one way, and does not sync between devices or browsers.
+
+**Done when:** Vitest covers the shape check, mapping, both merge modes including the fields that must not change, conflicts, and tab handling with mocks (an existing tab is reused and left open; a tab we open is closed, also on failure). `npm run test`, `npm run typecheck` and `npm run build` pass from `extension/`. If possible, a Playwright Chromium run from the session scratch directory, not the repo, against a test copy with pre-granted access reads a row seeded on the real origin. Report plainly if this could not be done.
+
+**Out of scope:** The web app (`src/`), the Worker, any writing to Dovetailed, automatic sync, accounts, and copying a resume file. Do not commit or deploy.
