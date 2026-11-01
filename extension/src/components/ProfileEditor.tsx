@@ -22,7 +22,7 @@ const grid = 'grid grid-cols-1 gap-4 sm:grid-cols-2';
 // Prose rows get a wide gap (!mt-8) so each entry reads as a group.
 const listClass =
   '-ml-[7px] md:-mr-[32px] [&>.border-2]:border-0 [&>.border-2]:py-0 [&>.border-2]:pl-[7px] [&>.border-2]:text-left [&>.border-2]:text-sm';
-const proseGap = '[&>[data-index]:not(:first-child)]:!mt-8';
+const proseGap = '[&>div>[data-index]:not(:first-child)]:!mt-8';
 
 /**
  * A list of rows with no boxes and its own Add button, aligned to the fields.
