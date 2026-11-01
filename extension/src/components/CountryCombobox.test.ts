@@ -20,10 +20,10 @@ let host: HTMLDivElement;
 let root: Root;
 let current: string | undefined;
 
-function Harness({ initial }: { initial?: string }) {
+function Harness({ initial, searchOnOpen }: { initial?: string; searchOnOpen?: boolean }) {
   const [code, setCode] = useState(initial);
   current = code;
-  return createElement(CountryCombobox, { label: 'Country', value: code, countries, onChange: setCode });
+  return createElement(CountryCombobox, { label: 'Country', value: code, countries, onChange: setCode, searchOnOpen });
 }
 
 const input = () => host.querySelector('input') as HTMLInputElement;
@@ -62,8 +62,8 @@ afterEach(() => {
   host.remove();
 });
 
-function mount(initial?: string) {
-  act(() => root.render(createElement(Harness, { initial })));
+function mount(initial?: string, searchOnOpen?: boolean) {
+  act(() => root.render(createElement(Harness, { initial, searchOnOpen })));
 }
 
 describe('CountryCombobox', () => {
@@ -133,8 +133,14 @@ describe('CountryCombobox', () => {
     expect(input().value).toBe('');
   });
 
-  it('opens as an empty search and restores the name when nothing is picked', () => {
+  it('keeps the name in an opened box by default', () => {
     mount('US');
+    act(() => input().click());
+    expect(input().value).toBe('United States');
+  });
+
+  it('with searchOnOpen, opens as an empty search and restores the name when nothing is picked', () => {
+    mount('US', true);
     act(() => input().click());
     expect(input().value).toBe('');
     expect(input().placeholder).toBe('United States');

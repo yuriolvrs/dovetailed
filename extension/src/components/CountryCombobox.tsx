@@ -26,11 +26,14 @@ export function CountryCombobox({
   value,
   countries,
   onChange,
+  searchOnOpen = false,
 }: {
   label: string;
   value: string | undefined;
   countries: Country[];
   onChange: (code: string | undefined) => void;
+  /** The open box is empty, with the current country as the placeholder. */
+  searchOnOpen?: boolean;
 }) {
   const id = useId();
   const listId = `${id}-list`;
@@ -52,8 +55,8 @@ export function CountryCombobox({
 
   // After the list closes in a focused box, select the name so the next key replaces it.
   useEffect(() => {
-    if (!open && document.activeElement === inputRef.current) inputRef.current?.select();
-  }, [open, selectedName]);
+    if (searchOnOpen && !open && document.activeElement === inputRef.current) inputRef.current?.select();
+  }, [searchOnOpen, open, selectedName]);
 
   const matches = useMemo(() => filterCountries(countries, typed ? text : ''), [countries, typed, text]);
   const activeCountry = open ? matches[active] : undefined;
@@ -136,9 +139,8 @@ export function CountryCombobox({
           aria-autocomplete="list"
           autoComplete="off"
           spellCheck={false}
-          // An open list is a search: the box is empty and the current country is the placeholder.
-          value={open && !typed ? '' : text}
-          placeholder={selectedName}
+          value={searchOnOpen && open && !typed ? '' : text}
+          placeholder={searchOnOpen ? selectedName : undefined}
           onChange={(e) => {
             setText(e.target.value);
             setTyped(true);

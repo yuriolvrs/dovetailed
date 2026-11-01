@@ -120,6 +120,7 @@ export function ProfileEditor({
                 value={phoneCountry(value.phone, address.countryCode)}
                 countries={phoneCountries}
                 onChange={setPhoneCountry}
+                searchOnOpen
               />
               <FieldInput
                 label="Phone number"
