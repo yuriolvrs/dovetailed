@@ -117,17 +117,41 @@ function clickOption(option: HTMLElement): boolean {
   return true;
 }
 
+/**
+ * Sends the pointer events a user click makes to the box around the input, so a widget that opens
+ * on mouse down opens. The target is the parent, because such widgets ignore events aimed at the input itself.
+ * In plain terms: clicks the dropdown the way a person would, to make its list appear.
+ */
+function openByPointer(el: HTMLInputElement): boolean {
+  const target = el.parentElement;
+  if (!target || el.closest('button, [type="submit"], a[href]')) return false;
+  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+    const init = { bubbles: true, cancelable: true, button: 0, detail: 1 };
+    target.dispatchEvent(type.startsWith('pointer') && typeof PointerEvent === 'function'
+        ? new PointerEvent(type, { ...init, pointerType: 'mouse' })
+        : new MouseEvent(type, init));
+  }
+  return true;
+}
+
 type ComboResult = 'ok' | 'no-list' | 'no-match';
 
 /** Types into a combobox, waits for its listbox, and clicks the closest option. On failure it clears what it typed. */
 async function fillCombobox(el: HTMLInputElement, text: string, timeoutMs: number): Promise<ComboResult> {
   el.focus();
   setNativeValue(el, text);
-  const deadline = Date.now() + timeoutMs;
+  const start = Date.now();
+  const deadline = start + timeoutMs;
+  let opened = false;
   let options: HTMLElement[] = [];
   while (Date.now() < deadline) {
     options = findOptions(el);
     if (options.length) break;
+    // Some widgets (react-select) ignore typing and open only on a full pointer sequence. Try that once.
+    if (!opened && Date.now() - start >= timeoutMs / 3) {
+      opened = true;
+      if (openByPointer(el)) setNativeValue(el, text);
+    }
     await sleep(50);
   }
   if (options.length) {
@@ -263,7 +287,10 @@ async function fillLinkRows(
 function isEmpty(f: DetectedField): boolean {
   if (f.control === 'radio') return !f.radios?.some((r) => r.checked);
   if (f.control === 'checkbox') return !(f.el as HTMLInputElement).checked;
-  return (f.el as HTMLInputElement).value.trim() === '';
+  const value = (f.el as HTMLInputElement).value.trim();
+  // A phone box that holds only a calling code ("+49", set by a phone widget) is still empty.
+  if (f.kind === 'phone' && /^\+\s*\d{1,4}$/.test(value)) return true;
+  return value === '';
 }
 
 /**
@@ -279,6 +306,8 @@ export async function fillPage(
     /** Supplies the stored resume. Called only when this frame has the chosen file input. */
     resume?: { getFile: () => Promise<File | null> };
     stableMs?: number;
+    /** Wait after a combobox pick before the blank-field check. Default 400. */
+    settleMs?: number;
     maxStableMs?: number;
   } = {},
 ): Promise<Omit<FrameResult, 'url' | 'blocked' | 'atsIframes' | 'resume'> & { resume: ResumeOutcome }> {
@@ -315,6 +344,8 @@ export async function fillPage(
   const done = new Set<DetectedField>();
   const incomplete: FrameResult['incomplete'] = [];
   let filled = 0;
+  const typed: Array<[FieldElement, string]> = [];
+  let usedCombobox = false;
   const hasPhoneCountry = fields.some((f) => f.kind === 'phoneCountry');
 
   for (const f of fields) {
@@ -386,6 +417,7 @@ export async function fillPage(
     if (f.control === 'combobox') {
       const result = await fillCombobox(el as HTMLInputElement, text, timeout);
       if (result === 'ok') {
+        usedCombobox = true;
         done.add(f);
         filled++;
       } else {
@@ -393,6 +425,7 @@ export async function fillPage(
       }
     } else {
       setNativeValue(el, text);
+      typed.push([el, text]);
       done.add(f);
       filled++;
     }
@@ -400,8 +433,19 @@ export async function fillPage(
 
   filled += await fillLinkRows(profile, root, incomplete);
 
+  // Picking a combobox option can make a React form render again and drop text typed before. Type it once more if it went blank.
+  if (usedCombobox) {
+    await sleep(opts.settleMs ?? 400);
+    for (const [el, text] of typed) if (el.value === '') setNativeValue(el, text);
+  }
+
+  // A checkbox group with one name needs one box ticked, so its boxes are not listed one by one. Fields with no label are not listed.
+  const boxName = (f: DetectedField) => (f.control === 'checkbox' ? (f.el as HTMLInputElement).name : '');
+  const groupSize = new Map<string, number>();
+  for (const f of fields) if (boxName(f)) groupSize.set(boxName(f), (groupSize.get(boxName(f)) ?? 0) + 1);
   const requiredBlank = fields
-    .filter((f) => f.required && !done.has(f) && isEmpty(f))
+    .filter((f) => f.required && f.label && !done.has(f) && isEmpty(f))
+    .filter((f) => (groupSize.get(boxName(f)) ?? 1) < 2)
     .map((f) => f.label)
     .filter((label, i, all) => all.indexOf(label) === i);
 

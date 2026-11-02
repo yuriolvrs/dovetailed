@@ -68,8 +68,11 @@ export function normalizeText(s: string): string {
     .trim();
 }
 
-const NEGATIVE = /\b(referr\w*|reference\w*|emergency|manager|employee|spouse|guardian|password|without domain)\b|referr|password/;
+const NEGATIVE = /\b(referr\w*|reference\w*|emergency|manager|employee|spouse|guardian|password|without domain|search by)\b|referr|password/;
 const EEO = /\b(gender|sex|race|ethnic\w*|veteran|disabilit\w*|pronouns?|hispanic|latino|sexual orientation|transgender)\b/;
+
+// Work-authorization questions often name a country or location. They must stay blank.
+const WORK_AUTH = /\b(authori[sz]ed|authori[sz]ation|sponsor\w*|visas?|work permit|right to work|legally|eligible to work)\b/;
 
 const AUTOCOMPLETE: Record<string, FieldKind> = {
   'given-name': 'firstName',
@@ -120,6 +123,12 @@ const RULES: Array<[FieldKind, RegExp]> = [
 
 const IDENTITY: ReadonlySet<FieldKind> = new Set(['firstName', 'lastName', 'fullName', 'email', 'phone']);
 const SKIPPED_INPUT_TYPES = new Set(['hidden', 'password', 'submit', 'button', 'reset', 'image', 'file', 'search']);
+
+/** True when a label reads as a long question, e.g. "Are you subject to ... your current employer?". */
+function isQuestion(text: string): boolean {
+  const words = normalizeText(text).split(' ').length;
+  return (text.includes('?') && words >= 9) || words >= 15;
+}
 
 /** Matches the text of one signal against the rules. */
 function matchText(text: string): FieldKind | null {
@@ -245,7 +254,7 @@ function classify(el: FieldElement, control: FieldControl, group?: string): { ki
 
   const signals = [name, id, bound, nearby, placeholder, aria];
   if (signals.some((s) => NEGATIVE.test(normalizeText(s)))) return { kind: 'unknown', label };
-  if (signals.some((s) => EEO.test(normalizeText(s)))) return { kind: 'unknown', label };
+  if (signals.some((s) => EEO.test(normalizeText(s)) || WORK_AUTH.test(normalizeText(s)))) return { kind: 'unknown', label };
 
   // Radios and checkboxes: only a notice-period group may be classified.
   if (control === 'radio' || control === 'checkbox') {
@@ -258,7 +267,8 @@ function classify(el: FieldElement, control: FieldControl, group?: string): { ki
   if (AUTOCOMPLETE[ac]) return { kind: AUTOCOMPLETE[ac], label };
   if (el instanceof HTMLSelectElement && isCallingCodeSelect(el)) return { kind: 'phoneCountry', label };
   for (const s of [name, id, bound, nearby, placeholder, aria]) {
-    const k = matchText(s);
+    // A long question that names a place or an employer is a question, not an address or company box.
+    const k = (s === bound || s === nearby) && isQuestion(s) ? null : matchText(s);
     // A generic "location" id with a label that says "(City)" is a city field.
     if (k === 'location' && matchText(bound) === 'city') return { kind: 'city', label };
     if (k) return { kind: k, label };
@@ -359,6 +369,21 @@ function chooseScope(identity: FieldElement[]): Node | null {
 }
 
 /**
+ * Widens the scope to the form that holds it, unless another identity field (name, email, phone) sits
+ * in that form outside the scope. Real sites put the questions in later sections of the same form.
+ * In plain terms: a form split into sections is filled in every section, but a stray newsletter box stays out.
+ */
+function widenToForm(scope: Node, all: DetectedField[]): Node {
+  const form = chainOf(scope).reverse().find((n) => n instanceof Element && n.tagName === 'FORM');
+  if (!form || form === scope) return scope;
+  const stray = all.some((f) => {
+    const chain = chainOf(f.el);
+    return IDENTITY.has(f.kind) && chain.includes(form) && !chain.includes(scope);
+  });
+  return stray ? scope : form;
+}
+
+/**
  * Finds the form on the page and classifies its fields. It reads the page only.
  * In plain terms: tells which boxes are name, email, phone and so on, and ignores unrelated boxes such as a newsletter signup.
  */
@@ -399,8 +424,9 @@ export function detectFields(root: Document | ShadowRoot | Element = document): 
   }
 
   const identity = all.filter((f) => IDENTITY.has(f.kind)).map((f) => f.el);
-  const scope = chooseScope(identity);
-  if (!scope) return { scope: null, fields: [] };
+  const narrow = chooseScope(identity);
+  if (!narrow) return { scope: null, fields: [] };
+  const scope = widenToForm(narrow, all);
   const inScope = all.filter((f) => chainOf(f.el).includes(scope));
   // A lone email box (newsletter, chat widget, sign-in) is not an application form.
   const identityKinds = new Set(inScope.map((f) => f.kind).filter((k) => IDENTITY.has(k)));

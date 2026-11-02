@@ -234,3 +234,22 @@ describe('negative terms and hidden fields', () => {
     expect(detectFields(document)).toEqual({ scope: null, fields: [] });
   });
 });
+
+describe('Sectioned form fixture', () => {
+  it('reaches fields in later sections of the same form and still leaves out the other form', () => {
+    const r = load('sectioned');
+    expect(kinds(r)).toEqual({
+      first_name: 'firstName',
+      last_name: 'lastName',
+      email: 'email',
+      q_linkedin: 'linkedin',
+      q_github: 'github',
+      q_employer: 'unknown',
+      q_commute: 'unknown',
+      q_search: 'unknown',
+      q_auth: 'unknown',
+      q_visa: 'unknown',
+    });
+    expect((r.scope as Element).id).toBe('application-form');
+  });
+});

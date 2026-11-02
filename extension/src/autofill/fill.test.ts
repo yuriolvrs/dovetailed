@@ -250,12 +250,66 @@ describe('fillPage', () => {
     expect(r.incomplete.find((i) => i.label === 'Country')).toBeUndefined();
   });
 
+  it('opens a combobox that ignores typing and opens only on a pointer sequence', async () => {
+    document.body.innerHTML = fixture('greenhouse');
+    const country = byId<HTMLInputElement>('country');
+    country.setAttribute('aria-controls', 'lb');
+    document.body.insertAdjacentHTML('beforeend', '<ul id="lb" role="listbox"></ul>');
+    const lb = byId('lb');
+    let chosen = '';
+    // Like react-select: typing alone does nothing. A mouse down on the box around the input opens the list.
+    country.parentElement!.addEventListener('mousedown', (e) => {
+      if (e.target === country) return;
+      lb.innerHTML = ['Philippines +63', 'Philadelphia +1'].map((t) => '<li role="option">' + t + '</li>').join('');
+      lb.querySelectorAll('li').forEach((li) => li.addEventListener('click', () => (chosen = li.textContent!)));
+    });
+    const r = await fillPage(profile, document, { listboxTimeoutMs: 600 });
+    expect(chosen).toBe('Philippines +63');
+    expect(r.incomplete.find((i) => i.label === 'Country')).toBeUndefined();
+  });
+
+  it('types a field again when picking a combobox option wiped it', async () => {
+    document.body.innerHTML = fixture('greenhouse');
+    const country = byId<HTMLInputElement>('country');
+    country.setAttribute('aria-controls', 'lb');
+    document.body.insertAdjacentHTML('beforeend', '<ul id="lb" role="listbox"></ul>');
+    const lb = byId('lb');
+    country.addEventListener('input', () => {
+      lb.innerHTML = '<li role="option">Philippines</li>';
+      // Like a React form that renders again on a pick and drops the first name typed before.
+      lb.querySelector('li')!.addEventListener('click', () => (byId<HTMLInputElement>('first_name').value = ''));
+    });
+    await fillPage(profile, document, { listboxTimeoutMs: 500, settleMs: 20 });
+    expect(byId<HTMLInputElement>('first_name').value).toBe('Testa');
+  });
+
   it('clears the typed text and reports when no listbox appears', async () => {
     document.body.innerHTML = fixture('greenhouse');
     const r = await fillPage(profile, document, { listboxTimeoutMs: 120 });
     expect(byId<HTMLInputElement>('country').value).toBe('');
     expect(r.incomplete.map((i) => i.label)).toContain('Country');
     expect(r.requiredBlank).toContain('Country');
+  });
+});
+
+describe('phone box with only a calling code', () => {
+  it('fills a tel input that a phone widget set to "+49"', async () => {
+    document.body.innerHTML =
+      '<form><label>Full name <input name="n" /></label><label>Email <input name="e" type="email" /></label><label>Phone <input name="p" type="tel" value="+49" /></label></form>';
+    await fillPage(profile, document, { listboxTimeoutMs: 50 });
+    expect(named('p').value).toBe('+639171234567');
+  });
+});
+
+describe('required-blank list', () => {
+  it('lists a lone required checkbox once, not each box of a named group, and skips unlabelled fields', async () => {
+    document.body.innerHTML =
+      '<form><label>First name <input name="f" /></label><label>Email <input name="e" type="email" /></label>' +
+      '<label><input type="checkbox" name="lang" value="a" required /> English</label>' +
+      '<label><input type="checkbox" name="lang" value="b" required /> Spanish</label>' +
+      '<label><input type="checkbox" name="consent" required /> I agree to terms</label></form>';
+    const r = await fillPage(profile, document, { listboxTimeoutMs: 50 });
+    expect(r.requiredBlank).toEqual(['I agree to terms']);
   });
 });
 
