@@ -22,7 +22,7 @@ const row = {
   experience: [],
   education: [],
 };
-const base: ExtensionProfile = { version: 1, firstName: '', lastName: '', email: '', links: [], experience: [], education: [] };
+const base: ExtensionProfile = { version: 1, resumes: [], firstName: '', lastName: '', email: '', links: [], experience: [], education: [] };
 
 let host: HTMLDivElement;
 let root: Root;

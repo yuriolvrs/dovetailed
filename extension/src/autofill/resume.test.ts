@@ -35,6 +35,7 @@ const chosenId = (name: string) => {
 
 const profile: ExtensionProfile = {
   version: 1,
+  resumes: [],
   firstName: 'Testa',
   lastName: 'Examplo',
   email: 'testa@example.invalid',
@@ -135,6 +136,15 @@ describe('fillPage with a resume', () => {
     document.body.innerHTML = fixture('teamtailor');
     const r = await fillPage(profile, document, { resume: { getFile: async () => null }, ...fast });
     expect(r.resume).toEqual({ status: 'not-stored' });
+    expect(byId<HTMLInputElement>('cv').files).toHaveLength(0);
+  });
+
+  it('passes the chosen input to getFile and reports skipped for a no choice', async () => {
+    document.body.innerHTML = fixture('teamtailor');
+    const getFile = vi.fn(async (_input: HTMLInputElement) => 'skipped' as const);
+    const r = await fillPage(profile, document, { resume: { getFile }, ...fast });
+    expect(r.resume).toEqual({ status: 'skipped' });
+    expect(getFile).toHaveBeenCalledWith(byId('cv'));
     expect(byId<HTMLInputElement>('cv').files).toHaveLength(0);
   });
 

@@ -13,6 +13,7 @@ import { dropUnverified, extractFromResume, mapExtracted, NoReadableTextError } 
 
 const empty: ExtensionProfile = {
   version: 1,
+  resumes: [],
   firstName: '',
   lastName: '',
   email: '',

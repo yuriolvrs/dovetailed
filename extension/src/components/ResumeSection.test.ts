@@ -10,8 +10,10 @@ import type { ExtensionProfile } from '../types/profile';
 
 const extractFromResume = vi.fn();
 const saveProfile = vi.fn();
+const getResume = vi.fn(async (_id: string) => new File(['x'], 'r.pdf'));
 vi.mock('../lib/data', () => ({
-  getResume: async () => new File(['x'], 'r.pdf'),
+  getResume: (id: string) => getResume(id),
+  listResumes: async () => [],
   saveResume: vi.fn(),
   deleteResume: vi.fn(),
   saveProfile: (...a: unknown[]) => saveProfile(...a),
@@ -23,7 +25,7 @@ vi.mock('../lib/resumeImport', async (orig) => ({
 
 import { ResumeSection } from './ResumeSection';
 
-const profile: ExtensionProfile = { version: 1, firstName: '', lastName: '', email: '', links: [], experience: [], education: [] };
+const profile: ExtensionProfile = { version: 1, resumes: [], firstName: '', lastName: '', email: '', links: [], experience: [], education: [] };
 const resume = { id: 'r', fileName: 'r.pdf', mimeType: 'application/pdf', sizeBytes: 10, updatedAt: 0, storage: 'local' as const };
 
 let host: HTMLDivElement;
@@ -44,7 +46,7 @@ beforeEach(() => {
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
-  act(() => root.render(createElement(ResumeSection, { resume, onChange: vi.fn(), profile, onProfile })));
+  act(() => root.render(createElement(ResumeSection, { resumes: [resume], onChange: vi.fn(), profile, onProfile })));
 });
 afterEach(() => {
   act(() => root.unmount());
@@ -53,7 +55,7 @@ afterEach(() => {
 
 describe('Fill profile from resume', () => {
   it('is hidden when no resume is stored', () => {
-    act(() => root.render(createElement(ResumeSection, { resume: undefined, onChange: vi.fn(), profile, onProfile })));
+    act(() => root.render(createElement(ResumeSection, { resumes: [], onChange: vi.fn(), profile, onProfile })));
     expect(button('Fill profile from resume')).toBeUndefined();
   });
 
@@ -81,5 +83,42 @@ describe('Fill profile from resume', () => {
     expect(onProfile).toHaveBeenCalledWith(expect.objectContaining({ firstName: 'Testa', lastName: 'Examplo' }));
     expect(host.textContent).toContain('Filled 3 fields. Check them, then Save.');
     expect(saveProfile).not.toHaveBeenCalled();
+  });
+});
+
+describe('several resumes', () => {
+  const older = { ...resume, id: 'o', fileName: 'older.pdf', updatedAt: 1 };
+  const newer = { ...resume, id: 'n', fileName: 'newer.pdf', updatedAt: 9 };
+
+  it('lists every file with a Remove button and an Add button', () => {
+    act(() => root.render(createElement(ResumeSection, { resumes: [older, newer], onChange: vi.fn(), profile, onProfile })));
+    expect(host.querySelectorAll('[data-testid="resume-details"]')).toHaveLength(2);
+    expect(host.textContent).toContain('older.pdf');
+    expect(host.textContent).toContain('newer.pdf');
+    expect(Array.from(host.querySelectorAll('button')).filter((b) => b.textContent === 'Remove')).toHaveLength(2);
+    expect(button('Add')).toBeDefined();
+    expect(host.querySelector('input[type="file"]')?.hasAttribute('multiple')).toBe(true);
+  });
+
+  it('reads the newest resume by default, and the chosen one when selected', async () => {
+    extractFromResume.mockResolvedValue({ contact: { links: [] }, skills: [], experience: [], projects: [], education: [] });
+    act(() => root.render(createElement(ResumeSection, { resumes: [older, newer], onChange: vi.fn(), profile, onProfile })));
+    const select = host.querySelector('select') as HTMLSelectElement;
+    expect(select.value).toBe('n');
+    await click('Fill profile from resume');
+    await click('Continue');
+    expect(getResume).toHaveBeenLastCalledWith('n');
+
+    await act(async () => {
+      select.value = 'o';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await click('Fill profile from resume');
+    await click('Continue');
+    expect(getResume).toHaveBeenLastCalledWith('o');
+  });
+
+  it('shows no select for one resume', () => {
+    expect(host.querySelector('select')).toBeNull();
   });
 });

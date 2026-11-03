@@ -431,3 +431,23 @@ Approved by the user on 2026-11-01. See Task 4.11. Importing a Dovetailed JSON b
 **Done when:** Vitest covers the shape check, mapping, both merge modes including the fields that must not change, conflicts, and tab handling with mocks (an existing tab is reused and left open; a tab we open is closed, also on failure). `npm run test`, `npm run typecheck` and `npm run build` pass from `extension/`. If possible, a Playwright Chromium run from the session scratch directory, not the repo, against a test copy with pre-granted access reads a row seeded on the real origin. Report plainly if this could not be done.
 
 **Out of scope:** The web app (`src/`), the Worker, any writing to Dovetailed, automatic sync, accounts, and copying a resume file. Do not commit or deploy.
+
+## Task 4.15: Several resumes, chosen at fill time
+
+**Goal:** The user stores several resumes. When a form has a resume upload box and more than one resume is stored, the extension asks on the page which one to attach.
+
+**Files to touch:** `extension/src/types/profile.ts`, `extension/src/lib/db.ts`, `extension/src/lib/messages.ts`, `extension/src/lib/data.ts`, `extension/src/autofill/runFill.ts`, `extension/src/autofill/resumeChooser.ts` (new), `extension/src/components/ResumeSection.tsx`, `extension/entrypoints/popup/App.tsx`, `extension/README.md`, their tests, and `extension/src/lib/dovetailedLink.ts` only if the type change needs it.
+
+**Steps:**
+1. Data: replace `resume?: ResumeFileRef` with `resumes: ResumeFileRef[]` (upload order). Bump `EXTENSION_PROFILE_VERSION` to 2. Add Dexie version 3 with an upgrade that moves an existing `resume` into `resumes` and keeps its file row. `emptyProfile()` has `resumes: []`. `dbSaveProfile` keeps the stored `resumes`, as it kept `resume`. Allow up to 10 resumes, each with the existing type and 15 MB checks.
+2. Storage API: `dbSaveResume` adds a file and never clears others. `dbDeleteResume(id)` removes one ref and its file. `dbGetResume(id)` returns that file. Add `data/listResumes`, which returns refs only and no bytes. Update `messages.ts` and `data.ts`: `getResume(id)`, `saveResume(file)`, `deleteResume(id)`, `listResumes()`.
+3. Options: `ResumeSection` lists every resume (name, size, date, Remove) and has an Add button that accepts several files at once. Use the same layout for the list rows. Do not add rename. "Fill profile from resume" uses a select of stored resumes when there is more than one, defaulting to the newest. The consent notice is unchanged.
+4. Choosing at fill time: in `runFill`, `getFile` lists the refs. With none, it returns null. With one, it returns that file. With several, it calls `chooseResume(refs, anchor)` from `resumeChooser.ts`, where the anchor is the chosen file input. The resume picker module needs the input; pass it through `fillPage`'s `getFile(input)` as an optional argument.
+5. `resumeChooser.ts`: a small panel in a **closed** shadow root next to the input (fixed position, the same dark style and z-index as the hint button). Title "Attach which resume?", one button per file name, then "Don't attach". Only a trusted click counts, as in `hint.ts`, with an injectable check for tests. Escape or the close button means don't attach. It resolves the chosen id or null and removes itself. It never shows file contents, and the page script cannot read the closed root. It is keyboard reachable and focuses the first option.
+6. After a choice, fetch only that file with `getResume(id)`. "Don't attach" gives a new outcome `{ status: 'skipped' }`. The popup says "Resume not attached: you chose not to attach one." and the in-page result text treats it like any other outcome.
+7. Popup: the Resume row shows the file name for one resume, "N resumes" for several, and "None" otherwise. While a fill runs with several resumes, show "If asked, pick a resume on the page."
+8. Tests: migration (old `resume` becomes `resumes`, file kept), add, delete one, list without bytes, the 10-file limit, `getFile` routes for 0, 1 and several, and the chooser (lists names, a synthetic click is ignored, choosing resolves the id, Don't attach and Escape resolve null, the panel is removed afterwards).
+
+**Done when:** `npm run test`, `npm run typecheck` and `npm run build` pass from `extension/`. If possible, a Playwright Chromium run from the scratch directory fills a local fixture with a resume box while two resumes are stored, and the chooser appears and attaches the chosen file.
+
+**Out of scope:** Renaming resumes, a default resume setting, choosing a resume per site, the web app (`src/`) and the Worker. Do not commit.

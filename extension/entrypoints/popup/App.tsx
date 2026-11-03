@@ -21,11 +21,18 @@ function resumeMessage(r: ResumeOutcome): string | null {
       return 'Resume skipped: the form already holds a file.';
     case 'ambiguous':
       return `Resume not attached: more than one upload box looked like the resume field (${r.labels.join(', ')}).`;
+    case 'skipped':
+      return 'Resume not attached: you chose not to attach one.';
     case 'not-stored':
       return 'Resume not attached: no resume is stored. Add one on the options page.';
     default:
       return null;
   }
+}
+
+// The Resume row: the file name for one resume, a count for several.
+function resumeSummary(resumes: ExtensionProfile['resumes']): string {
+  return resumes.length === 0 ? 'None' : resumes.length === 1 ? resumes[0].fileName : `${resumes.length} resumes`;
 }
 
 export default function App() {
@@ -101,9 +108,14 @@ export default function App() {
         </li>
         <li className="flex justify-between gap-3">
           <span className="text-slate-600 dark:text-slate-400">Resume</span>
-          <span className="truncate">{profile ? (profile.resume ? profile.resume.fileName : 'None') : '...'}</span>
+          <span className="truncate">{profile ? resumeSummary(profile.resumes) : '...'}</span>
         </li>
       </ul>
+      {busy && (profile?.resumes.length ?? 0) > 1 && (
+        <p role="status" className="text-sm text-slate-700 dark:text-slate-300">
+          If asked, pick a resume on the page.
+        </p>
+      )}
       {blocked && (
         <p role="status" className={note}>
           Autofill is off on Indeed and LinkedIn. Their terms may ban tools like this, and your account could be at risk.

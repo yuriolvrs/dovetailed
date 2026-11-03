@@ -2,6 +2,13 @@
 
 Each entry: **Context** (what prompted it), **Decision** (what we chose), **Reason** (why), **Status** (Accepted / Proposed).
 
+## 2026-11-03 — Several resumes, chosen on the page (plan 04, task 4.15)
+
+**Context:** The user keeps more than one resume and wants to choose one for each application.
+**Decision:** Up to 10 resumes are stored. A fill asks only when the form has a resume upload box and more than one resume is stored. The question is a panel next to that box in a closed shadow root, and only a real click or key counts. "Don't attach" is always offered.
+**Reason:** Asking on the page works the same from the popup and the in-page button, and never asks on forms without a resume box. A closed root and the trusted-event check stop the page from reading the file names or choosing for the user.
+**Status:** Accepted
+
 ## 2026-11-02 — Dovetailed link is a same-browser copy, with no accounts (plan 04, task 4.14)
 
 **Context:** The user asked for sign-in and sync. Dovetailed has no accounts, and the PRD rules out accounts, sync and server-side storage.

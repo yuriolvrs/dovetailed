@@ -303,8 +303,11 @@ export async function fillPage(
   root: Document | ShadowRoot | Element = document,
   opts: {
     listboxTimeoutMs?: number;
-    /** Supplies the stored resume. Called only when this frame has the chosen file input. */
-    resume?: { getFile: () => Promise<File | null> };
+    /**
+     * Supplies the stored resume. Called only when this frame has the chosen file input, and given that input.
+     * It returns null when none is stored, and 'skipped' when the user chose not to attach one.
+     */
+    resume?: { getFile: (input: HTMLInputElement) => Promise<File | null | 'skipped'> };
     stableMs?: number;
     /** Wait after a combobox pick before the blank-field check. Default 400. */
     settleMs?: number;
@@ -324,8 +327,10 @@ export async function fillPage(
       if (choice.input.files && choice.input.files.length > 0) {
         resume = { status: 'already' };
       } else {
-        const file = await opts.resume.getFile();
-        if (!file) {
+        const file = await opts.resume.getFile(choice.input);
+        if (file === 'skipped') {
+          resume = { status: 'skipped' };
+        } else if (!file) {
           resume = { status: 'not-stored' };
         } else {
           const before = new Map(fields.map((f) => [f.el, (f.el as HTMLInputElement).value]));

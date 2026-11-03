@@ -1,8 +1,8 @@
-// What this file is: the data shapes for the extension profile and its stored resume file.
+// What this file is: the data shapes for the extension profile and its stored resume files.
 // In plain terms: the list of facts the extension keeps about you, used to fill forms.
 import type { ContactLink, ExperienceEntry, EducationEntry } from '../../../src/types';
 
-export const EXTENSION_PROFILE_VERSION = 1;
+export const EXTENSION_PROFILE_VERSION = 2;
 
 export interface PhoneNumber {
   /** Digits only, no plus: "63". */
@@ -50,7 +50,8 @@ export interface ExtensionProfile {
   links: ContactLink[];
   experience: ExperienceEntry[];
   education: EducationEntry[];
-  resume?: ResumeFileRef;
+  /** Stored resumes, in upload order. At most 10. */
+  resumes: ResumeFileRef[];
   /** Plain stored answers, filled only into a clear match. */
   expectedSalary?: string;
   noticePeriod?: string;

@@ -13,6 +13,7 @@ export type ResumeOutcome =
   | { status: 'attached'; fileName: string }
   | { status: 'already' }
   | { status: 'ambiguous'; labels: string[] }
+  | { status: 'skipped' }
   | { status: 'not-stored' }
   | { status: 'not-found' };
 
@@ -42,7 +43,7 @@ export interface MergedResult {
   resume: ResumeOutcome;
 }
 
-const RESUME_PRIORITY: ResumeOutcome['status'][] = ['attached', 'already', 'ambiguous', 'not-stored', 'not-found'];
+const RESUME_PRIORITY: ResumeOutcome['status'][] = ['attached', 'already', 'ambiguous', 'skipped', 'not-stored', 'not-found'];
 
 /** The most informative resume outcome among the frames. */
 function bestResume(frames: FrameResult[]): ResumeOutcome {

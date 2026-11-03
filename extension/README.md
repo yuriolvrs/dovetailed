@@ -44,6 +44,7 @@ The popup lists required fields it left blank. It does not fill Indeed or Linked
 - **Fill button on forms:** an off-by-default setting. Chrome asks for access to all sites when you turn it on.
 - **Fill profile from resume:** sends your resume's text through the Dovetailed proxy to the AI provider that reads it. Nothing is sent until you click Continue.
 
+- **Several resumes:** you can store up to 10. When a form has a resume upload box and you store more than one, a small panel on the page asks which file to attach. Choose "Don't attach" to skip it.
 - **Copy from Dovetailed:** a manual, one-way copy of your Dovetailed profile into the form. The extension asks for access to the Dovetailed site when you click, reads the profile in this browser, and stops. It does not sync between devices or browsers, and it never writes to Dovetailed.
 
 ## Test

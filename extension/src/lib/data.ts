@@ -18,17 +18,17 @@ export function getProfile(): Promise<ExtensionProfile> {
   return request<ExtensionProfile>({ type: 'data/getProfile' });
 }
 
-/** Saves the profile. The stored resume reference is kept as it is. */
+/** Saves the profile. The stored resume references are kept as they are. */
 export async function saveProfile(profile: ExtensionProfile): Promise<void> {
   await request<null>({ type: 'data/saveProfile', profile });
 }
 
 /**
- * Returns the stored resume as a File, or null.
- * In plain terms: gives back your resume file, ready to attach to a form.
+ * Returns one stored resume as a File, or null.
+ * In plain terms: gives back the resume you picked, ready to attach to a form.
  */
-export async function getResume(): Promise<File | null> {
-  const payload = await request<ResumePayload | null>({ type: 'data/getResume' });
+export async function getResume(id: string): Promise<File | null> {
+  const payload = await request<ResumePayload | null>({ type: 'data/getResume', id });
   if (!payload) return null;
   return new File([base64ToBytes(payload.base64) as BlobPart], payload.ref.fileName, {
     type: payload.ref.mimeType,
@@ -36,15 +36,20 @@ export async function getResume(): Promise<File | null> {
   });
 }
 
-/** Stores a resume file (PDF or DOCX, up to 15 MB). It replaces any old one. */
+/** Returns the stored resume references, with no file bytes. */
+export function listResumes(): Promise<ResumeFileRef[]> {
+  return request<ResumeFileRef[]>({ type: 'data/listResumes' });
+}
+
+/** Adds a resume file (PDF or DOCX, up to 15 MB). Up to 10 are kept. */
 export async function saveResume(file: File): Promise<ResumeFileRef> {
   const base64 = bytesToBase64(new Uint8Array(await file.arrayBuffer()));
   return request<ResumeFileRef>({ type: 'data/saveResume', fileName: file.name, mimeType: file.type, base64 });
 }
 
-/** Deletes the stored resume. */
-export async function deleteResume(): Promise<void> {
-  await request<null>({ type: 'data/deleteResume' });
+/** Deletes one stored resume. */
+export async function deleteResume(id: string): Promise<void> {
+  await request<null>({ type: 'data/deleteResume', id });
 }
 
 /** Returns the settings. The in-page button is off until the user turns it on. */

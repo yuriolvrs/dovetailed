@@ -58,7 +58,7 @@ const row: DovetailedRow = {
   experience: [{ company: 'Acme', title: 'Dev', current: false, bullets: ['Built it'] }],
   education: [{ school: 'State U', degree: 'BS', current: false }],
 };
-const empty: ExtensionProfile = { version: 1, firstName: '', lastName: '', email: '', links: [], experience: [], education: [] };
+const empty: ExtensionProfile = { version: 1, resumes: [], firstName: '', lastName: '', email: '', links: [], experience: [], education: [] };
 const full: ExtensionProfile = {
   version: 1,
   firstName: 'Old',
@@ -69,7 +69,7 @@ const full: ExtensionProfile = {
   links: [{ label: 'Site', url: 'https://old.example.invalid' }],
   experience: [{ company: 'Old Co', title: 'Dev', current: false, bullets: [] }],
   education: [{ school: 'Old U', degree: 'BA', current: false }],
-  resume: { id: 'r', fileName: 'r.pdf', mimeType: 'application/pdf', sizeBytes: 1, updatedAt: 1, storage: 'local' },
+  resumes: [{ id: 'r', fileName: 'r.pdf', mimeType: 'application/pdf', sizeBytes: 1, updatedAt: 1, storage: 'local' }],
   expectedSalary: '100',
   noticePeriod: '2 weeks',
 };
@@ -119,7 +119,7 @@ describe('mergeDovetailed', () => {
     const next = mergeDovetailed(full, incoming, 'replace');
     expect(next).toMatchObject({ firstName: 'Testa', lastName: 'Examplo', email: 'testa@example.invalid' });
     expect(next.address).toEqual({ street: '1 Main', city: 'Manila', postalCode: '12345', countryCode: 'PH' });
-    expect(next.resume).toBe(full.resume);
+    expect(next.resumes).toBe(full.resumes);
     expect(next.expectedSalary).toBe('100');
     expect(next.noticePeriod).toBe('2 weeks');
     expect(next.version).toBe(1);

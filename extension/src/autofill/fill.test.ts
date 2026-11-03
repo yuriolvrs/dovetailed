@@ -10,6 +10,7 @@ import type { ExtensionProfile } from '../types/profile';
 
 const profile: ExtensionProfile = {
   version: 1,
+  resumes: [],
   firstName: 'Testa',
   lastName: 'Examplo',
   email: 'testa@example.invalid',

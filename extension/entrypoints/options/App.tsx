@@ -36,9 +36,9 @@ export default function App() {
     }
   }
 
-  // The resume is stored at once; here the form only mirrors the new reference.
-  const setResume = (resume: ResumeFileRef | undefined) =>
-    setProfile((p) => (p ? { ...p, resume } : p));
+  // Resumes are stored at once; here the form only mirrors the new references.
+  const setResumes = (resumes: ResumeFileRef[]) =>
+    setProfile((p) => (p ? { ...p, resumes } : p));
 
   return (
     <main className="mx-auto max-w-4xl px-6 pt-10 text-slate-900 dark:text-slate-100 sm:px-10">
@@ -49,7 +49,7 @@ export default function App() {
         <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Loading...'}</p>
       ) : (
         <>
-          <ResumeSection resume={profile.resume} onChange={setResume} profile={profile} onProfile={setProfile} />
+          <ResumeSection resumes={profile.resumes} onChange={setResumes} profile={profile} onProfile={setProfile} />
           <DovetailedSection profile={profile} onProfile={setProfile} />
           <ProfileEditor value={profile} onChange={setProfile} />
           <FillButtonSection />

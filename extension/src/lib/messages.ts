@@ -5,6 +5,7 @@ import {
   dbGetProfile,
   dbGetResume,
   dbGetSettings,
+  dbListResumes,
   dbSaveProfile,
   dbSaveResume,
   dbSaveSettings,
@@ -18,9 +19,10 @@ export { base64ToBytes, bytesToBase64 };
 export type DataRequest =
   | { type: 'data/getProfile' }
   | { type: 'data/saveProfile'; profile: ExtensionProfile }
-  | { type: 'data/getResume' }
+  | { type: 'data/getResume'; id: string }
+  | { type: 'data/listResumes' }
   | { type: 'data/saveResume'; fileName: string; mimeType: string; base64: string }
-  | { type: 'data/deleteResume' }
+  | { type: 'data/deleteResume'; id: string }
   | { type: 'data/getSettings' }
   | { type: 'data/saveSettings'; settings: ExtensionSettings };
 
@@ -46,19 +48,21 @@ export async function handleDataRequest(req: DataRequest): Promise<DataResponse>
         await dbSaveProfile(req.profile);
         return { ok: true, value: null };
       case 'data/getResume': {
-        const found = await dbGetResume();
+        const found = await dbGetResume(req.id);
         const value: ResumePayload | null = found
           ? { ref: found.ref, base64: bytesToBase64(new Uint8Array(await found.blob.arrayBuffer())) }
           : null;
         return { ok: true, value };
       }
+      case 'data/listResumes':
+        return { ok: true, value: await dbListResumes() };
       case 'data/saveResume': {
         const bytes = base64ToBytes(req.base64);
         const ref = await dbSaveResume(req.fileName, req.mimeType, bytes.buffer as ArrayBuffer);
         return { ok: true, value: ref };
       }
       case 'data/deleteResume':
-        await dbDeleteResume();
+        await dbDeleteResume(req.id);
         return { ok: true, value: null };
       case 'data/getSettings':
         return { ok: true, value: await dbGetSettings() };
